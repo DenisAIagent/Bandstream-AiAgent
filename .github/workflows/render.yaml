@@ -1,25 +1,17 @@
-# Exported from Render on 2025-03-18T14:22:33Z
-services:
-- type: web
-  name: Bandstream-AiAgent
-  runtime: docker
-  repo: https://github.com/DenisAIagent/Bandstream-AiAgent
-  plan: free
-  envVars:
-  - key: GOOGLE_OAUTH_CLIENT_SECRET
-    sync: false
-  - key: DEEZER_ACCESS_TOKEN
-    sync: false
-  - key: SPOTIFY_CLIENT_SECRET
-    sync: false
-  - key: SPOTIFY_CLIENT_ID
-    sync: false
-  - key: SERPAPI_KEY
-    sync: false
-  region: oregon
-  healthCheckPath: /health
-  dockerContext: ./api_server
-  dockerfilePath: ./api_server/Dockerfile
-  previews:
-    generation: manual
-version: "1"
+March 18, 2025 at 2:01 PM
+building
+11f86cb
+Add files via upload
+Cancel deploy
+
+All logs
+Search
+Search
+
+Live tail
+GMT
+
+
+==> Cloning from https://github.com/DenisAIagent/Bandstream-AiAgent
+==> Checking out commit 11f86cbc6ed0cb86baec1e20b3a933ecd800498c in branch main
+error: could not find /opt/render/project/src/api_server: stat /opt/render/project/src/api_server: no such file or directory
