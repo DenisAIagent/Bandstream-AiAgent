@@ -1,82 +1,25 @@
+# Exported from Render on 2025-03-18T14:22:33Z
 services:
-  # Service principal (webapp)
-  - type: web
-    name: band-stream-crew
-    env: python
-    buildCommand: pip install -r campaign_supervisor/requirements.txt
-    startCommand: cd campaign_supervisor && python campaign_supervisor.py
-    envVars:
-      - key: API_SERVER_URL
-        value: https://band-stream-api.onrender.com
-      - key: ANALYST_URL
-        value: https://band-stream-analyst.onrender.com
-      - key: OPTIMIZER_URL
-        value: https://band-stream-optimizer.onrender.com
-      - key: MARKETING_URL
-        value: https://band-stream-marketing.onrender.com
-      - key: SERPAPI_KEY
-        sync: false
-      - key: SPOTIFY_CLIENT_ID
-        sync: false
-      - key: SPOTIFY_CLIENT_SECRET
-        sync: false
-      - key: DEEZER_ACCESS_TOKEN
-        sync: false
-      - key: ANYTHINGLLM_API_KEY
-        sync: false
-
-  # API Server
-  - type: web
-    name: band-stream-api
-    env: python
-    buildCommand: pip install -r api_server/requirements.txt
-    startCommand: cd api_server && python api_server.py
-    envVars:
-      - key: SERPAPI_KEY
-        sync: false
-      - key: SPOTIFY_CLIENT_ID
-        sync: false
-      - key: SPOTIFY_CLIENT_SECRET
-        sync: false
-      - key: DEEZER_ACCESS_TOKEN
-        sync: false
-      - key: ANYTHINGLLM_API_KEY
-        sync: false
-
-  # Campaign Analyst
-  - type: web
-    name: band-stream-analyst
-    env: python
-    buildCommand: pip install -r campaign_analyst/requirements.txt
-    startCommand: cd campaign_analyst && python campaign_analyst.py
-    envVars:
-      - key: API_SERVER_URL
-        value: https://band-stream-api.onrender.com
-      - key: SERPAPI_KEY
-        sync: false
-      - key: SPOTIFY_CLIENT_ID
-        sync: false
-      - key: SPOTIFY_CLIENT_SECRET
-        sync: false
-      - key: DEEZER_ACCESS_TOKEN
-        sync: false
-
-  # Campaign Optimizer
-  - type: web
-    name: band-stream-optimizer
-    env: python
-    buildCommand: pip install -r campaign_optimizer/requirements.txt
-    startCommand: cd campaign_optimizer && python campaign_optimizer.py
-    envVars:
-      - key: API_SERVER_URL
-        value: https://band-stream-api.onrender.com
-
-  # Marketing Agents
-  - type: web
-    name: band-stream-marketing
-    env: python
-    buildCommand: pip install -r marketing_agents/requirements.txt
-    startCommand: cd marketing_agents && python marketing_agents.py
-    envVars:
-      - key: API_SERVER_URL
-        value: https://band-stream-api.onrender.com
+- type: web
+  name: Bandstream-AiAgent
+  runtime: docker
+  repo: https://github.com/DenisAIagent/Bandstream-AiAgent
+  plan: free
+  envVars:
+  - key: GOOGLE_OAUTH_CLIENT_SECRET
+    sync: false
+  - key: DEEZER_ACCESS_TOKEN
+    sync: false
+  - key: SPOTIFY_CLIENT_SECRET
+    sync: false
+  - key: SPOTIFY_CLIENT_ID
+    sync: false
+  - key: SERPAPI_KEY
+    sync: false
+  region: oregon
+  healthCheckPath: /health
+  dockerContext: ./api_server
+  dockerfilePath: ./api_server/Dockerfile
+  previews:
+    generation: manual
+version: "1"
