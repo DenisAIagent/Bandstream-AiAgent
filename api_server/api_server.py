@@ -1,6 +1,7 @@
 import os
 import json
 from flask import Flask, request, jsonify
+from urllib.parse import quote as url_quote  # Import corrigé pour url_quote
 from dotenv import load_dotenv
 
 # Charger les variables d'environnement
@@ -60,19 +61,4 @@ def clear_data(key):
     elif key == "optimized_campaign":
         data_store[key] = {}
     
-    return jsonify({"status": "success", "message": f"Data cleared for {key}"}), 200
-
-@app.route('/clear_all', methods=['DELETE'])
-def clear_all_data():
-    """Efface toutes les données du magasin temporaire"""
-    data_store["trending_artists"] = []
-    data_store["lookalike_artists"] = []
-    data_store["campaign_insights"] = {}
-    data_store["ad_drafts"] = []
-    data_store["optimized_campaign"] = {}
-    
-    return jsonify({"status": "success", "message": "All data cleared"}), 200
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    return jsonify({"status": "succes
