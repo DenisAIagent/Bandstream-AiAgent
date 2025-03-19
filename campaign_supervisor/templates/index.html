@@ -66,15 +66,15 @@
     <div class="error">{{ error }}</div>
     {% endif %}
     
-    <form action="/campaign" method="post">
+    <form action="/generate_campaign" method="post">
         <div class="form-group">
-            <label for="artist_name">Nom de l'artiste *</label>
-            <input type="text" id="artist_name" name="artist_name" required placeholder="Ex: Gojira">
+            <label for="artist">Nom de l'artiste *</label>
+            <input type="text" id="artist" name="artist" required placeholder="Ex: Gojira">
         </div>
         
         <div class="form-group">
-            <label for="music_style">Style musical</label>
-            <input type="text" id="music_style" name="music_style" placeholder="Ex: metal progressif">
+            <label for="style">Style musical</label>
+            <input type="text" id="style" name="style" placeholder="Ex: metal progressif">
         </div>
         
         <div class="form-group">
