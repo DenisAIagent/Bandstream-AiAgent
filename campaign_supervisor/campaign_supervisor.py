@@ -19,6 +19,11 @@ MARKETING_URL = os.getenv('MARKETING_URL', 'http://marketing_agents:5003')
 def home():
     return render_template('index.html')
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Endpoint de vérification de santé pour Render"""
+    return jsonify({"status": "ok", "message": "Campaign Supervisor is running"}), 200
+
 @app.route('/generate_campaign', methods=['POST'])
 def generate_campaign():
     artist = request.form.get('artist')
