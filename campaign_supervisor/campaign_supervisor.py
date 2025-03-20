@@ -15,10 +15,10 @@ load_dotenv()
 app = Flask(__name__)
 
 # URLs des APIs (utiliser les URLs publiques de Railway)
-API_SERVER_URL = os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')
-ANALYST_URL = os.getenv('ANALYST_URL', 'https://analyst-production.up.railway.app')
-OPTIMIZER_URL = os.getenv('OPTIMIZER_URL', 'https://optimizer-production.up.railway.app')
-MARKETING_URL = os.getenv('MARKETING_URL', 'https://marketing-agent-production.up.railway.app')
+API_SERVER_URL = os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app') 
+ANALYST_URL = os.getenv('ANALYST_URL', 'https://analyst-production.up.railway.app') 
+OPTIMIZER_URL = os.getenv('OPTIMIZER_URL', 'https://optimizer-production.up.railway.app') 
+MARKETING_URL = os.getenv('MARKETING_URL', 'https://marketing-agent-production.up.railway.app') 
 
 @app.route('/')
 def home():
@@ -55,13 +55,12 @@ def generate_campaign():
         logger.error(f"Error communicating with campaign_analyst: {str(e)}")
         return jsonify({"error": "Failed to communicate with campaign_analyst", "details": str(e)}), 500
 
-    # Étape 2 : Envoyer les données à marketing_agents
+    # Étape 2 : Envoyer les données à marketing_agents (CORRIGÉ)
     try:
-        logger.info(f"Sending request to marketing_agents at {MARKETING_URL}/generate_ads with data: {{'artist': {artist}, 'lyrics': {lyrics}, 'bio': {bio}}}")
+        logger.info(f"Sending request to marketing_agents at {MARKETING_URL}/generate_ads with data: {{'artist_name': {artist}, 'genre': {style}}}")
         marketing_response = requests.post(f"{MARKETING_URL}/generate_ads", json={
-            "artist": artist,
-            "lyrics": lyrics,
-            "bio": bio
+            "artist_name": artist,
+            "genre": style
         })
         marketing_response.raise_for_status()
         ad_drafts = marketing_response.json().get('drafts', [])
