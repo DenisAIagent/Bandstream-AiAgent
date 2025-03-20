@@ -47,9 +47,7 @@ def get_trends_and_lookalikes(artist, style):
         )
         
         raw_text = response.choices[0].message.content.strip()
-        logger.info(f"Raw response
-```python
-from OpenAI: {raw_text}")
+        logger.info(f"Raw response from OpenAI: {raw_text}")
         
         # Parser la réponse JSON
         data = json.loads(raw_text)
@@ -85,4 +83,22 @@ def analyze():
     
     # Stocker les données dans api_server
     try:
-        requests.post(f"{os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')}/store/trending_artists", json={"tr
+        requests.post(f"{os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')}/store/trending_artists", json={"trends": trends})
+        requests.post(f"{os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')}/store/lookalike_artists", json={"lookalike_artists": lookalike_artists})
+    except Exception as e:
+        logger.error(f"Error storing data in api_server: {str(e)}")
+    
+    return jsonify({
+        "trends": trends,
+        "lookalike_artists": lookalike_artists,
+        "style": style
+    }), 200
+
+# Endpoint de santé
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "ok", "message": "Campaign Analyst is running"}), 200
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
