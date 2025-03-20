@@ -47,7 +47,9 @@ def get_trends_and_lookalikes(artist, style):
         )
         
         raw_text = response.choices[0].message.content.strip()
-        logger.info(f"Raw response from OpenAI: {raw_text}")
+        logger.info(f"Raw response
+```python
+from OpenAI: {raw_text}")
         
         # Parser la réponse JSON
         data = json.loads(raw_text)
@@ -81,7 +83,6 @@ def analyze():
     trends = result["trends"]
     lookalike_artists = result["lookalike_artists"]
     
-    # Stocker les données dans api_server (simplifié ici)
+    # Stocker les données dans api_server
     try:
-        requests.post(f"{os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')}/store/trending_artists", json={"trends": trends})
-        requests.post(f"{os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')}/store/lookalike_artists", json={"look
+        requests.post(f"{os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')}/store/trending_artists", json={"tr
