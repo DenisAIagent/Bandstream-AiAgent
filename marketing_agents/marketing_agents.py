@@ -13,12 +13,12 @@ app = Flask(__name__)
 # Configuration de l'API OpenAI
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-# Configuration de l'API centrale
-API_SERVER_URL = os.getenv('API_SERVER_URL', 'https://votre-api-server.railway.app') 
+# Configuration de l'API centrale avec l'URL réelle
+API_SERVER_URL = os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app') 
 
 # Mots-clés interdits et caractères spéciaux à éviter
 FORBIDDEN_KEYWORDS = ["gratuit", "téléchargement", "streaming illégal", "offert"]
-FORBIDDEN_CHARS = ["%", "$", "€", "£", "¥", "©", "®", "™", "😀", "👍", "🎵", "🎸", "🎧","!',"?""/","$"]
+FORBIDDEN_CHARS = ["%", "$", "€", "£", "¥", "©", "®", "™", "😀", "👍", "🎵", "🎸", "🎧", "!", "'", "?", "/"]
 
 def get_lookalike_artists():
     """Récupère les artistes similaires depuis l'API centrale"""
@@ -59,28 +59,28 @@ def generate_ai_ads(artist_name, genre, lookalike_artists, insights):
         
         Règles strictes à respecter:
         1. Titre: Exactement 30 caractères maximum (pas un de plus)
-        2. Contenu: Exactement 90 caractères maximum (pas un de plus)
+        2. Description: Exactement 90 caractères maximum (pas un de plus)
         3. Ne pas utiliser les mots: gratuit, téléchargement, streaming illégal, offert
-        4. Ne pas utiliser de caractères spéciaux comme %, $, €, £, ¥, ©, ®, ™ ou des émojis
-        5. Créer un sentiment d'urgence (FOMO: Fear Of Missing Out)
-        6. Mentionner au moins un artiste similaire dans chaque annonce
+        4. Ne pas utiliser de caractères spéciaux comme %, $, €, £, ¥, ©, ®, ™,?,! ou des émojis
+        5. Créer un sentiment d'urgence (FOMO: Fear Of Missing Out) tout en étant descriptif
+        6. Ne jamais mentionner d'artiste similaire
         7. Chaque annonce doit être pour une plateforme différente (Instagram, Facebook, YouTube)
         
         Format de réponse (JSON):
         [
           {{
             "titre": "Titre de l'annonce 1",
-            "contenu": "Contenu de l'annonce 1",
+            "description": "Description de l'annonce 1",
             "plateforme": "Instagram"
           }},
           {{
             "titre": "Titre de l'annonce 2",
-            "contenu": "Contenu de l'annonce 2",
+            "description": "Description de l'annonce 2",
             "plateforme": "Facebook"
           }},
           {{
             "titre": "Titre de l'annonce 3",
-            "contenu": "Contenu de l'annonce 3",
+            "description": "Description de l'annonce 3",
             "plateforme": "YouTube"
           }}
         ]
@@ -106,8 +106,8 @@ def generate_ai_ads(artist_name, genre, lookalike_artists, insights):
             for ad in ads:
                 if len(ad["titre"]) > 30:
                     ad["titre"] = ad["titre"][:30]
-                if len(ad["contenu"]) > 90:
-                    ad["contenu"] = ad["contenu"][:90]
+                if len(ad["description"]) > 90:
+                    ad["description"] = ad["description"][:90]
             return ads
         except json.JSONDecodeError:
             logging.error("Erreur lors du parsing de la réponse OpenAI")
