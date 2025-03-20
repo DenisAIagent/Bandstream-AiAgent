@@ -1,4 +1,5 @@
 import os
+import json
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import logging
@@ -22,16 +23,25 @@ if not openai.api_key:
 # Fonction pour générer des drafts d'annonces avec OpenAI
 def generate_ad_drafts(artist, genre, lyrics="", bio=""):
     try:
-        prompt = f"Generate 3 advertising drafts for a musician. Use the following details:\n" \
-                 f"- Artist: {artist}\n" \
-                 f"- Genre: {genre}\n" \
-                 f"- Lyrics (optional): {lyrics if lyrics else 'Not provided'}\n" \
-                 f"- Bio (optional): {bio if bio else 'Not provided'}\n" \
-                 "Each draft should include:\n" \
-                 "- A short title (max 30 characters)\n" \
-                 "- A description (max 90 characters)\n" \
-                 "- A platform (Instagram, YouTube, or Google Ads)\n" \
-                 "Return the drafts in JSON format."
+        prompt = f"""
+        You are a marketing assistant for musicians. Generate 3 advertising drafts for the following artist:
+        - Artist: {artist}
+        - Genre: {genre}
+        - Lyrics (optional): {lyrics if lyrics else 'Not provided'}
+        - Bio (optional): {bio if bio else 'Not provided'}
+
+        Each draft must include:
+        - A short title (max 30 characters)
+        - A description (max 90 characters)
+        - A platform (choose between Instagram, YouTube, or Google Ads)
+
+        Return the response in the following JSON format:
+        [
+            {{"title": "<title>", "content": "<description>", "platform": "<platform>"}},
+            {{"title": "<title>", "content": "<description>", "platform": "<platform>"}},
+            {{"title": "<title>", "content": "<description>", "platform": "<platform>"}}
+        ]
+        """
         
         response = openai.ChatCompletion.create(
             model="gpt-4",
@@ -40,41 +50,27 @@ def generate_ad_drafts(artist, genre, lyrics="", bio=""):
             temperature=0.7
         )
         
-        # Supposons que GPT-4 renvoie un texte brut, on le parse manuellement ici
-        # En pratique, on pourrait demander à GPT de retourner directement du JSON
         raw_text = response.choices[0].message.content.strip()
         logger.info(f"Raw response from OpenAI: {raw_text}")
         
-        # Exemple de parsing simple (à adapter selon le format réel renvoyé par GPT)
-        drafts = []
-        lines = raw_text.split("\n")
-        for i in range(0, len(lines), 4):
-            if i + 2 < len(lines):
-                title = lines[i].strip()[:30]
-                desc = lines[i+1].strip()[:90]
-                platform = lines[i+2].strip()
-                drafts.append({
-                    "title": title,
-                    "content": desc,
-                    "platform": platform,
-                    "character_counts": {
-                        "title": len(title),
-                        "content": len(desc)
-                    }
-                })
+        # Parser la réponse JSON
+        drafts = json.loads(raw_text)
         
-        return drafts if drafts else [
-            {"title": f"Discover {artist} Now!", "content": f"New {genre} hit awaits!", "platform": "Instagram", "character_counts": {"title": 20, "content": 22}},
-            {"title": f"{artist} Rocks {genre}", "content": f"Feel the {genre} vibe with {artist}", "platform": "YouTube", "character_counts": {"title": 18, "content": 30}},
-            {"title": f"{artist} New Single", "content": f"Top {genre} artist {artist} drops now", "platform": "Google Ads", "character_counts": {"title": 17, "content": 35}}
-        ]
+        # Ajouter les character_counts pour chaque draft
+        for draft in drafts:
+            draft["character_counts"] = {
+                "title": len(draft["title"]),
+                "content": len(draft["content"])
+            }
+        
+        return drafts
     except Exception as e:
         logger.error(f"Error generating ad drafts with OpenAI: {str(e)}")
         # Retourner des drafts par défaut en cas d'erreur
         return [
-            {"title": f"Discover {artist} Now!", "content": f"New {genre} hit awaits!", "platform": "Instagram", "character_counts": {"title": 20, "content": 22}},
-            {"title": f"{artist} Rocks {genre}", "content": f"Feel the {genre} vibe with {artist}", "platform": "YouTube", "character_counts": {"title": 18, "content": 30}},
-            {"title": f"{artist} New Single", "content": f"Top {genre} artist {artist} drops now", "platform": "Google Ads", "character_counts": {"title": 17, "content": 35}}
+            {"title": f"Discover {artist}!", "content": f"New {genre} hit awaits!", "platform": "Instagram", "character_counts": {"title": 14 + len(artist), "content": 22}},
+            {"title": f"{artist} Rocks", "content": f"Feel the {genre} vibe with {artist}!", "platform": "YouTube", "character_counts": {"title": 10 + len(artist), "content": 28 + len(artist)}},
+            {"title": f"{artist} New Hit", "content": f"Top {genre} artist {artist} drops now!", "platform": "Google Ads", "character_counts": {"title": 11 + len(artist), "content": 31 + len(artist)}}
         ]
 
 # Endpoint principal pour générer les drafts
