@@ -1,7 +1,6 @@
+from flask import Flask, jsonify, request
 import os
 import requests
-from flask import Flask, request, jsonify
-from urllib.parse import quote as url_quote  # Import corrigé pour url_quote
 from dotenv import load_dotenv
 
 # Charger les variables d'environnement
@@ -9,116 +8,61 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# URLs des APIs
-API_SERVER_URL = os.getenv('API_SERVER_URL', 'http://api_server:5005')
+# URL de l'API Server (utiliser l'URL publique de Railway)
+API_SERVER_URL = os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')
+
+# Clés API (à remplir avec tes clés réelles)
 SERPAPI_KEY = os.getenv('SERPAPI_KEY')
 SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 DEEZER_ACCESS_TOKEN = os.getenv('DEEZER_ACCESS_TOKEN')
 
-# Fonction pour rechercher des artistes similaires (lookalikes) via Deezer
-def get_lookalike_artists_deezer(artist_name):
-    try:
-        url = f"https://api.deezer.com/search/artist?q={artist_name}"
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-        if 'data' in data and len(data['data']) > 0:
-            artist_id = data['data'][0]['id']
-            related_url = f"https://api.deezer.com/artist/{artist_id}/related"
-            related_response = requests.get(related_url)
-            related_response.raise_for_status()
-            related_data = related_response.json()
-            return [artist['name'] for artist in related_data['data'][:3]]
-        return []
-    except requests.RequestException as e:
-        print(f"Erreur Deezer: {e}")
-        return []
-
-# Fonction pour rechercher des tendances via SerpApi (Google Trends)
-def get_trends_serpapi(artist_name):
-    try:
-        url = "https://serpapi.com/search"
-        params = {
-            "engine": "google_trends",
-            "q": artist_name,
-            "api_key": SERPAPI_KEY
-        }
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        return data.get('interest_over_time', {}).get('timeline_data', [])
-    except requests.RequestException as e:
-        print(f"Erreur SerpApi: {e}")
-        return []
-
-# Fonction pour rechercher des artistes similaires via Spotify
-def get_lookalike_artists_spotify(artist_name):
-    try:
-        # Obtenir un token d'accès Spotify
-        token_url = "https://accounts.spotify.com/api/token"
-        response = requests.post(token_url, data={
-            "grant_type": "client_credentials",
-            "client_id": SPOTIFY_CLIENT_ID,
-            "client_secret": SPOTIFY_CLIENT_SECRET
-        })
-        response.raise_for_status()
-        token = response.json()['access_token']
-
-        # Rechercher l'artiste
-        search_url = "https://api.spotify.com/v1/search"
-        headers = {"Authorization": f"Bearer {token}"}
-        params = {"q": artist_name, "type": "artist", "limit": 1}
-        search_response = requests.get(search_url, headers=headers, params=params)
-        search_response.raise_for_status()
-        artist_id = search_response.json()['artists']['items'][0]['id']
-
-        # Obtenir des artistes similaires
-        related_url = f"https://api.spotify.com/v1/artists/{artist_id}/related-artists"
-        related_response = requests.get(related_url, headers=headers)
-        related_response.raise_for_status()
-        return [artist['name'] for artist in related_response.json()['artists'][:3]]
-    except requests.RequestException as e:
-        print(f"Erreur Spotify: {e}")
-        return []
-
+# Route pour analyser les données
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    data = request.json
+    if not request.is_json:
+        return jsonify({"error": "Request must be JSON"}), 400
+
+    data = request.get_json()
     artist = data.get('artist')
     style = data.get('style')
 
     if not artist or not style:
         return jsonify({"error": "Artist and style are required"}), 400
 
-    # Rechercher des artistes similaires
-    lookalikes_deezer = get_lookalike_artists_deezer(artist)
-    lookalikes_spotify = get_lookalike_artists_spotify(artist)
+    # Simuler une analyse (remplace ceci par une vraie logique d'analyse)
     trends = get_trends_serpapi(artist)
-
-    # Combiner les lookalikes
-    lookalikes = list(set(lookalikes_deezer + lookalikes_spotify))
+    lookalike_artists = get_lookalike_artists(artist)
 
     # Stocker les données dans api_server
-    response = requests.post(f"{API_SERVER_URL}/store/trending_artists", json={
-        "artist": artist,
-        "trending_artists": trends
-    })
-    response.raise_for_status()
-
-    response = requests.post(f"{API_SERVER_URL}/store/lookalike_artists", json={
-        "artist": artist,
-        "lookalike_artists": lookalikes
-    })
-    response.raise_for_status()
+    requests.post(f"{API_SERVER_URL}/store/trending_artists", json={"artists": trends})
+    requests.post(f"{API_SERVER_URL}/store/lookalike_artists", json={"artists": lookalike_artists})
 
     return jsonify({
-        "artist": artist,
-        "style": style,
-        "lookalikes": lookalikes,
-        "trends": trends
+        "trends": trends,
+        "lookalike_artists": lookalike_artists,
+        "style": style
     }), 200
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5001))
-    app.run(host='0.0.0.0', port=port, debug=True)
+# Fonction pour obtenir les tendances via SerpApi (simulée)
+def get_trends_serpapi(artist):
+    if not SERPAPI_KEY:
+        return ["Trend 1", "Trend 2"]  # Simulé
+    # Logique réelle avec SerpApi ici
+    return ["Trend 1", "Trend 2"]
+
+# Fonction pour obtenir des artistes similaires (simulée)
+def get_lookalike_artists(artist):
+    if not (SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET and DEEZER_ACCESS_TOKEN):
+        return ["Artist 1", "Artist 2"]  # Simulé
+    # Logique réelle avec Spotify et Deezer ici
+    return ["Artist 1", "Artist 2"]
+
+# Route pour vérifier la santé du serveur
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "success", "message": "Campaign Analyst is running"}), 200
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host="0.0.0.0", port=port, debug=True)
