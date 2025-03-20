@@ -1,7 +1,7 @@
 import os
 import requests
 from flask import Flask, request, jsonify, render_template, redirect, url_for
-from urllib.parse import quote as url_quote  # Import corrigé pour url_quote
+from urllib.parse import quote as url_quote
 from dotenv import load_dotenv
 
 # Charger les variables d'environnement
@@ -9,11 +9,11 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# URLs des APIs
-API_SERVER_URL = os.getenv('API_SERVER_URL', 'http://api_server:5005')
-ANALYST_URL = os.getenv('ANALYST_URL', 'http://campaign_analyst:5001')
-OPTIMIZER_URL = os.getenv('OPTIMIZER_URL', 'http://campaign_optimizer:5002')
-MARKETING_URL = os.getenv('MARKETING_URL', 'http://marketing_agents:5003')
+# URLs des APIs (utiliser les URLs publiques de Railway)
+API_SERVER_URL = os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')
+ANALYST_URL = os.getenv('ANALYST_URL', 'https://analyst-production.up.railway.app')
+OPTIMIZER_URL = os.getenv('OPTIMIZER_URL', 'https://optimizer-production.up.railway.app')
+MARKETING_URL = os.getenv('MARKETING_URL', 'https://marketing-agent-production.up.railway.app')
 
 @app.route('/')
 def home():
@@ -21,7 +21,7 @@ def home():
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Endpoint de vérification de santé pour Render"""
+    """Endpoint de vérification de santé pour Railway"""
     return jsonify({"status": "ok", "message": "Campaign Supervisor is running"}), 200
 
 @app.route('/generate_campaign', methods=['POST'])
