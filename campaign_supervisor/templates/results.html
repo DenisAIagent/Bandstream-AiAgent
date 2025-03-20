@@ -3,91 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Résultats de la campagne</title>
+    <title>Générateur d'Annonces Publicitaires Musicales</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
-        }
-        h1, h2 {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
             color: #333;
         }
-        .section {
-            background-color: #fff;
+        header {
+            background: linear-gradient(135deg, #6e45e2, #88d3ce);
+            color: white;
+            text-align: center;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .artist-info {
+            background-color: white;
+            border-radius: 10px;
             padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
-        .ad-draft {
-            border: 1px solid #ddd;
-            padding: 10px;
+        .artist-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .artist-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            margin-right: 20px;
+            background-size: cover;
+            background-position: center;
+        }
+        .artist-details h1 {
+            margin: 0;
+            font-size: 2rem;
+            color: #333;
+        }
+        .artist-details h2 {
+            margin: 5px 0 0;
+            font-size: 1.5rem;
+            color: #6e45e2;
+        }
+        .similar-artists {
+            margin-bottom: 20px;
+        }
+        .similar-artists h3 {
             margin-bottom: 10px;
-            border-radius: 5px;
+            color: #555;
         }
-        .button {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #333;
-            color: #fff;
-            text-decoration: none;
+        .similar-artists ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+        .similar-artists li {
+            margin-bottom: 5px;
+        }
+        .content-section {
+            margin-bottom: 30px;
+        }
+        .content-section h3 {
+            border-bottom: 2px solid #6e45e2;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            color: #444;
+        }
+        .content-box {
+            background-color: white;
             border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .content-box h4 {
+            margin-top: 0;
+            color: #6e45e2;
+        }
+        .content-box p {
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #333;
+            color: white;
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
-    <h1>Campagne marketing pour</h1>
+    <header>
+        <div class="container">
+            <h1>Générateur d'Annonces Publicitaires</h1>
+        </div>
+    </header>
 
-    <div class="section">
-        <h2>Informations de base</h2>
-        <p><strong>Artiste :</strong> {{ artist | default("Non spécifié") }}</p>
-        <p><strong>Style musical :</strong> {{ style | default("Non spécifié") }}</p>
-    </div>
-
-    <div class="section">
-        <h2>Insights</h2>
-        {% if analysis %}
-            <p><strong>Tendances :</strong> {{ analysis.trends | join(", ") | default("Aucune tendance disponible") }}</p>
-            <p><strong>Artistes similaires :</strong> {{ analysis.lookalike_artists | join(", ") | default("Aucun artiste similaire disponible") }}</p>
-        {% else %}
-            <p>Aucune donnée d'analyse disponible.</p>
-        {% endif %}
-    </div>
-
-    <div class="section">
-        <h2>Drafts d'annonces</h2>
-        {% if ad_drafts %}
-            {% for ad in ad_drafts %}
-                <div class="ad-draft">
-                    <p><strong>Titre :</strong> {{ ad.title | default("Titre non spécifié") }} ({{ ad.character_counts.title | default(0) }}/30 caractères)</p>
-                    <p><strong>Contenu :</strong> {{ ad.content | default("Contenu non spécifié") }} ({{ ad.character_counts.content | default(0) }}/90 caractères)</p>
-                    <p><strong>Plateforme :</strong> {{ ad.platform | default("Plateforme non spécifiée") }}</p>
+    <div class="container">
+        <div class="artist-info">
+            <div class="artist-header">
+                <div class="artist-image" id="artist-image"></div>
+                <div class="artist-details">
+                    <h1 id="artist-name">{{ artist_name }}</h1>
+                    <h2 id="single-name">{{ single_name }}</h2>
                 </div>
+            </div>
+            
+            <div class="similar-artists">
+                <h3>Artistes Similaires</h3>
+                <ul id="similar-artists-list">
+                    {% for artist in similar_artists %}
+                    <li>{{ artist }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="content-section">
+            <h3>Titres Courts (5)</h3>
+            {% for title in short_titles %}
+            <div class="content-box">
+                <h4>Titre {{ loop.index }}</h4>
+                <p>{{ title }}</p>
+            </div>
             {% endfor %}
-        {% else %}
-            <p>Aucune annonce disponible.</p>
-        {% endif %}
+        </div>
+
+        <div class="content-section">
+            <h3>Titres Longs (5)</h3>
+            {% for title in long_titles %}
+            <div class="content-box">
+                <h4>Titre Long {{ loop.index }}</h4>
+                <p>{{ title }}</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="content-section">
+            <h3>Descriptions Longues (5)</h3>
+            {% for description in long_descriptions %}
+            <div class="content-box">
+                <h4>Description {{ loop.index }}</h4>
+                <p>{{ description }}</p>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 
-    <div class="section">
-        <h2>Stratégie optimisée</h2>
-        {% if strategy %}
-            <p><strong>Public cible :</strong> {{ strategy.target_audience | default("Non spécifié") }}</p>
-            <p><strong>Canaux :</strong> {{ strategy.channels | join(", ") | default("Aucun canal spécifié") }}</p>
-            <p><strong>Allocation du budget :</strong></p>
-            <ul>
-                {% for channel, allocation in strategy.budget_allocation.items() %}
-                    <li>{{ channel }} : {{ (allocation * 100) | round(2) }}%</li>
-                {% else %}
-                    <li>Aucune allocation de budget spécifiée.</li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>Aucune stratégie optimisée disponible.</p>
-        {% endif %}
-    </div>
+    <footer>
+        <div class="container">
+            <p>© 2025 Générateur d'Annonces Publicitaires Musicales</p>
+        </div>
+    </footer>
 
-    <a href="/" class="button">Retour à l'accueil</a>
+    <script>
+        // Script pour définir l'image de l'artiste si disponible
+        document.addEventListener('DOMContentLoaded', function() {
+            const artistImageUrl = "{{ artist_image_url }}";
+            if (artistImageUrl) {
+                document.getElementById('artist-image').style.backgroundImage = `url(${artistImageUrl})`;
+            }
+        });
+    </script>
 </body>
 </html>
