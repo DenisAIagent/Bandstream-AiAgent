@@ -1,5 +1,6 @@
 import os
 import requests
+import json  # Ajout de l'importation du module json
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import logging
