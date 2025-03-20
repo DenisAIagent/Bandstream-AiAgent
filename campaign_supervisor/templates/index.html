@@ -4,95 +4,191 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Band Stream Crew IA Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Poppins:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 300; /* Light pour le texte courant */
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            background-color: #EBF5DF; /* Vert clair de Band Stream */
+            color: #000000; /* Noir de Band Stream */
+            line-height: 1.6;
+        }
+        header {
+            background-color: #000000; /* Noir de Band Stream */
+            color: #FFFFFF; /* Blanc pour le texte */
+            text-align: center;
+            padding: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50"><path d="M25 5C15 5 5 15 5 25C5 35 15 45 25 45C35 45 45 35 45 25C45 15 35 5 25 5ZM25 15L35 25L25 35L15 25L25 15Z" fill="%230ED894" fill-opacity="0.1"/></svg>');
+            background-repeat: repeat;
+            opacity: 0.2;
+        }
+        .header-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            position: relative;
+        }
+        .header-content img {
+            height: 60px;
+            margin-bottom: 10px;
+        }
+        .header-content h1 {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 2rem;
+            font-weight: 700; /* Bold pour le titre principal */
+            margin: 0;
+            color: #FFFFFF; /* Blanc */
+        }
+        .header-content p {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 400; /* Medium pour le slogan */
+            font-size: 1.2rem;
+            margin: 10px 0 0;
+            color: #FFFFFF; /* Blanc */
+            position: relative;
+        }
+        .header-content p::before, .header-content p::after {
+            content: '“';
+            font-size: 2rem;
+            color: #0ED894; /* Vert Band Stream */
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .header-content p::before {
+            left: -30px;
+        }
+        .header-content p::after {
+            right: -30px;
+        }
+        .container {
             max-width: 800px;
             margin: 0 auto;
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
+            padding: 20px;
         }
         form {
-            background: #f4f4f4;
-            padding: 20px;
-            border-radius: 5px;
+            background: #FFFFFF; /* Fond blanc pour le formulaire */
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
         }
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
         label {
             display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
+            margin-bottom: 8px;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 600; /* Medium pour les labels */
+            font-size: 1.1rem;
+            color: #000000; /* Noir de Band Stream */
         }
         input[type="text"], textarea {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 10px;
+            border: 2px solid #0ED894; /* Vert Band Stream */
+            border-radius: 5px;
             box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 300; /* Light pour le texte */
+            font-size: 1rem;
+            color: #000000; /* Noir de Band Stream */
+            background-color: #F9FAFB; /* Fond gris très clair */
+            transition: border-color 0.3s ease;
+        }
+        input[type="text"]:focus, textarea:focus {
+            border-color: #0BBF7A; /* Vert plus foncé pour le focus */
+            outline: none;
         }
         textarea {
-            height: 100px;
+            height: 120px;
+            resize: vertical;
         }
         button {
-            background: #333;
-            color: #fff;
-            padding: 10px 15px;
+            background: #0ED894; /* Vert Band Stream */
+            color: #000000; /* Noir pour le texte */
+            padding: 12px 20px;
             border: none;
-            border-radius: 4px;
+            border-radius: 5px;
             cursor: pointer;
-            font-size: 16px;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 600; /* Medium pour le bouton */
+            font-size: 1.1rem;
+            transition: background-color 0.3s ease;
+            display: block;
+            margin: 0 auto;
         }
         button:hover {
-            background: #555;
+            background: #0BBF7A; /* Vert plus foncé pour le survol */
         }
         .error {
-            color: red;
-            margin-bottom: 15px;
+            color: #FF0000; /* Rouge pour les erreurs */
+            margin-bottom: 20px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 400; /* Medium pour le texte d'erreur */
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <h1>Band Stream Crew IA Agent</h1>
-    
-    {% if error %}
-    <div class="error">{{ error }}</div>
-    {% endif %}
-    
-    <form action="/generate_campaign" method="post">
-        <div class="form-group">
-            <label for="artist">Nom de l'artiste *</label>
-            <input type="text" id="artist" name="artist" required placeholder="Ex: Gojira">
+    <header>
+        <div class="header-content">
+            <img src="https://i.postimg.cc/Y0dCw2sK/Bandstream-logo-quadri-noir.png" alt="Band Stream Logo">
+            <h1>Band Stream Crew IA Agent</h1>
+            <p>No fluff, just results.</p>
         </div>
+    </header>
+
+    <div class="container">
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
         
-        <div class="form-group">
-            <label for="style">Style musical</label>
-            <input type="text" id="style" name="style" placeholder="Ex: metal progressif">
-        </div>
-        
-        <div class="form-group">
-            <label for="song">Chanson</label>
-            <input type="text" id="song" name="song" placeholder="Ex: L'Enfant Sauvage">
-        </div>
-        
-        <div class="form-group">
-            <label for="lyrics">Paroles</label>
-            <textarea id="lyrics" name="lyrics" placeholder="Entrez quelques paroles significatives..."></textarea>
-        </div>
-        
-        <div class="form-group">
-            <label for="bio">Biographie</label>
-            <textarea id="bio" name="bio" placeholder="Entrez une courte biographie de l'artiste..."></textarea>
-        </div>
-        
-        <button type="submit">Générer la campagne</button>
-    </form>
+        <form action="/generate_campaign" method="post">
+            <div class="form-group">
+                <label for="artist">Nom de l'artiste *</label>
+                <input type="text" id="artist" name="artist" required placeholder="Ex: Gojira">
+            </div>
+            
+            <div class="form-group">
+                <label for="style">Style musical</label>
+                <input type="text" id="style" name="style" placeholder="Ex: metal progressif">
+            </div>
+            
+            <div class="form-group">
+                <label for="song">Chanson</label>
+                <input type="text" id="song" name="song" placeholder="Ex: L'Enfant Sauvage">
+            </div>
+            
+            <div class="form-group">
+                <label for="lyrics">Paroles</label>
+                <textarea id="lyrics" name="lyrics" placeholder="Entrez quelques paroles significatives..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="bio">Biographie</label>
+                <textarea id="bio" name="bio" placeholder="Entrez une courte biographie de l'artiste..."></textarea>
+            </div>
+            
+            <button type="submit">Générer la campagne</button>
+        </form>
+    </div>
 </body>
 </html>
