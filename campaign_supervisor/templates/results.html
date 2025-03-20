@@ -16,29 +16,66 @@
             line-height: 1.6;
         }
         header {
-            background: linear-gradient(135deg, #0ED894, #EBF5DF); /* Dégradé vert Band Stream à vert clair */
-            color: #000000; /* Noir pour le texte */
+            background-color: #000000; /* Noir de Band Stream */
+            color: #FFFFFF; /* Blanc pour le texte */
             text-align: center;
-            padding: 1.5rem 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50"><path d="M25 5C15 5 5 15 5 25C5 35 15 45 25 45C35 45 45 35 45 25C45 15 35 5 25 5ZM25 15L35 25L25 35L15 25L25 15Z" fill="%230ED894" fill-opacity="0.1"/></svg>');
+            background-repeat: repeat;
+            opacity: 0.2;
         }
         .header-content {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 20px;
+            position: relative;
         }
         .header-content img {
-            height: 50px;
-            margin-right: 20px;
+            height: 60px;
+            margin-bottom: 10px;
         }
         .header-content h1 {
             font-family: 'Quicksand', sans-serif;
             font-size: 2rem;
             font-weight: 700; /* Bold pour le titre principal */
             margin: 0;
+            color: #FFFFFF; /* Blanc */
+        }
+        .header-content p {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 400; /* Medium pour le slogan */
+            font-size: 1.2rem;
+            margin: 10px 0 0;
+            color: #FFFFFF; /* Blanc */
+            position: relative;
+        }
+        .header-content p::before, .header-content p::after {
+            content: '“';
+            font-size: 1.5rem;
+            color: #0ED894; /* Vert Band Stream */
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .header-content p::before {
+            left: -20px;
+        }
+        .header-content p::after {
+            right: -20px;
         }
         .container {
             max-width: 1200px;
@@ -67,6 +104,10 @@
             border-radius: 50%;
             background-color: #e0e0e0;
             margin-right: 25px;
+            background-size: cover;
+            background-position: center;
+            /* Placeholder pour l'image du groupe */
+            background-image: url('https://via.placeholder.com/120?text=Gojira');
         }
         .artist-details h1 {
             margin: 0;
@@ -173,7 +214,7 @@
     <header>
         <div class="header-content">
             <img src="https://i.postimg.cc/Y0dCw2sK/Bandstream-logo-quadri-noir.png" alt="Band Stream Logo">
-            <h1>Générateur d'Annonces Publicitaires</h1>
+            <p>No fluff, just results.</p>
         </div>
     </header>
 
@@ -183,108 +224,4 @@
                 <div class="artist-image"></div>
                 <div class="artist-details">
                     <h1 id="artist-name">{{ artist | default("Nom d'Artiste") | e }}</h1>
-                    <h2 id="single-name">{{ style | default("Nom du Single") | e }}</h2>
-                </div>
-            </div>
-            
-            <div class="trends">
-                <h3>Tendances</h3>
-                {% if analysis and analysis.trends %}
-                    <ul>
-                        {% for trend in analysis.trends %}
-                            <li>{{ trend | e }}</li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>Aucune tendance disponible.</p>
-                {% endif %}
-            </div>
-
-            <div class="similar-artists">
-                <h3>Artistes Similaires</h3>
-                {% if analysis and analysis.lookalike_artists %}
-                    <ul id="similar-artists-list">
-                        {% for artist in analysis.lookalike_artists %}
-                            <li>{{ artist | e }}</li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>Aucun artiste similaire disponible.</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="content-section">
-            <h3>Titres Courts (5)</h3>
-            {% if short_titles %}
-                {% for title in short_titles %}
-                    <div class="content-box">
-                        <h4>Titre {{ loop.index }}</h4>
-                        <p>{{ title.title | default("Titre non spécifié") | e }} ({{ title.character_count | default(0) }}/30 caractères)</p>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p>Aucun titre court disponible.</p>
-            {% endif %}
-        </div>
-
-        <div class="content-section">
-            <h3>Titres Longs (5)</h3>
-            {% if long_titles %}
-                {% for title in long_titles %}
-                    <div class="content-box">
-                        <h4>Titre Long {{ loop.index }}</h4>
-                        <p>{{ title.title | default("Titre long non spécifié") | e }} ({{ title.character_count | default(0) }} caractères)</p>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p>Aucun titre long disponible.</p>
-            {% endif %}
-        </div>
-
-        <div class="content-section">
-            <h3>Descriptions Longues (5)</h3>
-            {% if long_descriptions %}
-                {% for desc in long_descriptions %}
-                    <div class="content-box">
-                        <h4>Description {{ loop.index }}</h4>
-                        <p>{{ desc.description | default("Description non spécifiée") | e }} ({{ desc.character_count | default(0) }} caractères)</p>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p>Aucune description longue disponible.</p>
-            {% endif %}
-        </div>
-
-        <div class="content-section">
-            <h3>Stratégie optimisée</h3>
-            {% if strategy %}
-                <p><strong>Public cible :</strong> {{ strategy.target_audience | default("Non spécifié") | e }}</p>
-                <p><strong>Canaux :</strong> {{ strategy.channels | join(", ") | default("Aucun canal spécifié") | e }}</p>
-                <p><strong>Allocation du budget :</strong></p>
-                <ul>
-                    {% if strategy.budget_allocation %}
-                        {% for channel, allocation in strategy.budget_allocation.items() %}
-                            <li>{{ channel | e }} : {{ (allocation * 100) | round(2) }}%</li>
-                        {% else %}
-                            <li>Aucune allocation de budget spécifiée.</li>
-                        {% endfor %}
-                    {% else %}
-                        <li>Aucune allocation de budget spécifiée.</li>
-                    {% endif %}
-                </ul>
-            {% else %}
-                <p>Aucune stratégie optimisée disponible.</p>
-            {% endif %}
-        </div>
-
-        <a href="/" class="button">Retour à l'accueil</a>
-    </div>
-
-    <footer>
-        <div class="container">
-            <p>© 2025 Générateur d'Annonces Publicitaires Musicales - Band Stream</p>
-        </div>
-    </footer>
-</body>
-</html>
+                    <h2 id="single
