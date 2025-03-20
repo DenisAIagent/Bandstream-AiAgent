@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Band Stream Crew AI Agent</title>
+    <title>Générateur d'Annonces Publicitaires - Band Stream</title>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Poppins:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -65,17 +65,17 @@
         }
         .header-content p::before, .header-content p::after {
             content: '“';
-            font-size: 1.5rem;
+            font-size: 2rem;
             color: #0ED894; /* Vert Band Stream */
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
         }
         .header-content p::before {
-            left: -20px;
+            left: -30px;
         }
         .header-content p::after {
-            right: -20px;
+            right: -30px;
         }
         .container {
             max-width: 1200px;
@@ -102,12 +102,10 @@
             width: 120px;
             height: 120px;
             border-radius: 50%;
-            background-color: #e0e0e0;
-            margin-right: 25px;
             background-size: cover;
             background-position: center;
-            /* Placeholder pour l'image du groupe */
-            background-image: url('https://via.placeholder.com/120?text=Gojira');
+            background-image: url('{{ analysis.artist_image_url | default("https://via.placeholder.com/120?text=Artist") }}');
+            margin-right: 25px;
         }
         .artist-details h1 {
             margin: 0;
@@ -214,6 +212,7 @@
     <header>
         <div class="header-content">
             <img src="https://i.postimg.cc/Y0dCw2sK/Bandstream-logo-quadri-noir.png" alt="Band Stream Logo">
+            <h1>Générateur d'Annonces Publicitaires</h1>
             <p>No fluff, just results.</p>
         </div>
     </header>
@@ -224,4 +223,108 @@
                 <div class="artist-image"></div>
                 <div class="artist-details">
                     <h1 id="artist-name">{{ artist | default("Nom d'Artiste") | e }}</h1>
-                    <h2 id="single
+                    <h2 id="single-name">{{ style | default("Nom du Single") | e }}</h2>
+                </div>
+            </div>
+            
+            <div class="trends">
+                <h3>Tendances</h3>
+                {% if analysis and analysis.trends %}
+                    <ul>
+                        {% for trend in analysis.trends %}
+                            <li>{{ trend | e }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Aucune tendance disponible.</p>
+                {% endif %}
+            </div>
+
+            <div class="similar-artists">
+                <h3>Artistes Similaires</h3>
+                {% if analysis and analysis.lookalike_artists %}
+                    <ul id="similar-artists-list">
+                        {% for artist in analysis.lookalike_artists %}
+                            <li>{{ artist | e }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Aucun artiste similaire disponible.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="content-section">
+            <h3>Titres Courts (5)</h3>
+            {% if short_titles %}
+                {% for title in short_titles %}
+                    <div class="content-box">
+                        <h4>Titre {{ loop.index }}</h4>
+                        <p>{{ title.title | default("Titre non spécifié") | e }} ({{ title.character_count | default(0) }}/30 caractères)</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>Aucun titre court disponible.</p>
+            {% endif %}
+        </div>
+
+        <div class="content-section">
+            <h3>Titres Longs (5)</h3>
+            {% if long_titles %}
+                {% for title in long_titles %}
+                    <div class="content-box">
+                        <h4>Titre Long {{ loop.index }}</h4>
+                        <p>{{ title.title | default("Titre long non spécifié") | e }} ({{ title.character_count | default(0) }} caractères)</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>Aucun titre long disponible.</p>
+            {% endif %}
+        </div>
+
+        <div class="content-section">
+            <h3>Descriptions Longues (5)</h3>
+            {% if long_descriptions %}
+                {% for desc in long_descriptions %}
+                    <div class="content-box">
+                        <h4>Description {{ loop.index }}</h4>
+                        <p>{{ desc.description | default("Description non spécifiée") | e }} ({{ desc.character_count | default(0) }} caractères)</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>Aucune description longue disponible.</p>
+            {% endif %}
+        </div>
+
+        <div class="content-section">
+            <h3>Stratégie optimisée</h3>
+            {% if strategy %}
+                <p><strong>Public cible :</strong> {{ strategy.target_audience | default("Non spécifié") | e }}</p>
+                <p><strong>Canaux :</strong> {{ strategy.channels | join(", ") | default("Aucun canal spécifié") | e }}</p>
+                <p><strong>Allocation du budget :</strong></p>
+                <ul>
+                    {% if strategy.budget_allocation %}
+                        {% for channel, allocation in strategy.budget_allocation.items() %}
+                            <li>{{ channel | e }} : {{ (allocation * 100) | round(2) }}%</li>
+                        {% else %}
+                            <li>Aucune allocation de budget spécifiée.</li>
+                        {% endfor %}
+                    {% else %}
+                        <li>Aucune allocation de budget spécifiée.</li>
+                    {% endif %}
+                </ul>
+            {% else %}
+                <p>Aucune stratégie optimisée disponible.</p>
+            {% endif %}
+        </div>
+
+        <a href="/" class="button">Retour à l'accueil</a>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>© 2025 Générateur d'Annonces Publicitaires Musicales - Band Stream</p>
+        </div>
+    </footer>
+</body>
+</html>
