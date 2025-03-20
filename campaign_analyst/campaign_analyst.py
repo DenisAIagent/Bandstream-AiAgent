@@ -1,68 +1,87 @@
-from flask import Flask, jsonify, request
 import os
 import requests
+from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+import logging
+import openai
+
+# Configurer les logs
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Charger les variables d'environnement
 load_dotenv()
 
 app = Flask(__name__)
 
-# URL de l'API Server (utiliser l'URL publique de Railway)
-API_SERVER_URL = os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')
+# Configurer OpenAI
+openai.api_key = os.getenv("OPENAI_API_KEY")
+if not openai.api_key:
+    logger.error("OPENAI_API_KEY is not set in environment variables")
+    raise ValueError("OPENAI_API_KEY is required")
 
-# Clés API (à remplir avec tes clés réelles)
-SERPAPI_KEY = os.getenv('SERPAPI_KEY')
-SPOTIFY_CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
-SPOTIFY_CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
-DEEZER_ACCESS_TOKEN = os.getenv('DEEZER_ACCESS_TOKEN')
+# Fonction pour obtenir les tendances et artistes similaires avec OpenAI
+def get_trends_and_lookalikes(artist, style):
+    try:
+        prompt = f"""
+        You are a music industry expert. Provide information for the following artist and genre:
+        - Artist: {artist}
+        - Genre: {style}
 
-# Route pour analyser les données
+        Generate the following:
+        - A list of 2 current trends in the {style} genre (short phrases, max 50 characters each).
+        - A list of 15 trending artists in the {style} genre (just the artist names, no additional text).
+
+        Return the response in the following JSON format:
+        {{
+            "trends": ["<trend1>", "<trend2>"],
+            "lookalike_artists": ["<artist1>", "<artist2>", ..., "<artist15>"]
+        }}
+        """
+        
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            temperature=0.7
+        )
+        
+        raw_text = response.choices[0].message.content.strip()
+        logger.info(f"Raw response from OpenAI: {raw_text}")
+        
+        # Parser la réponse JSON
+        data = json.loads(raw_text)
+        
+        return {
+            "trends": data.get("trends", ["No trends found"]),
+            "lookalike_artists": data.get("lookalike_artists", ["No similar artists found"])
+        }
+    except Exception as e:
+        logger.error(f"Error fetching trends and lookalikes with OpenAI: {str(e)}")
+        return {
+            "trends": ["Trend 1", "Trend 2"],
+            "lookalike_artists": ["Artist 1", "Artist 2"]
+        }  # Fallback
+
+# Endpoint principal
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    if not request.is_json:
-        return jsonify({"error": "Request must be JSON"}), 400
-
     data = request.get_json()
-    artist = data.get('artist')
-    style = data.get('style')
-
-    if not artist or not style:
-        return jsonify({"error": "Artist and style are required"}), 400
-
-    # Simuler une analyse (remplace ceci par une vraie logique d'analyse)
-    trends = get_trends_serpapi(artist)
-    lookalike_artists = get_lookalike_artists(artist)
-
-    # Stocker les données dans api_server
-    requests.post(f"{API_SERVER_URL}/store/trending_artists", json={"artists": trends})
-    requests.post(f"{API_SERVER_URL}/store/lookalike_artists", json={"artists": lookalike_artists})
-
-    return jsonify({
-        "trends": trends,
-        "lookalike_artists": lookalike_artists,
-        "style": style
-    }), 200
-
-# Fonction pour obtenir les tendances via SerpApi (simulée)
-def get_trends_serpapi(artist):
-    if not SERPAPI_KEY:
-        return ["Trend 1", "Trend 2"]  # Simulé
-    # Logique réelle avec SerpApi ici
-    return ["Trend 1", "Trend 2"]
-
-# Fonction pour obtenir des artistes similaires (simulée)
-def get_lookalike_artists(artist):
-    if not (SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET and DEEZER_ACCESS_TOKEN):
-        return ["Artist 1", "Artist 2"]  # Simulé
-    # Logique réelle avec Spotify et Deezer ici
-    return ["Artist 1", "Artist 2"]
-
-# Route pour vérifier la santé du serveur
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({"status": "success", "message": "Campaign Analyst is running"}), 200
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5001))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    if not data or "artist" not in data or "style" not in data:
+        logger.error("Missing required fields 'artist' or 'style' in request")
+        return jsonify({"error": "Missing required fields 'artist' or 'style'"}), 400
+    
+    artist = data.get("artist")
+    style = data.get("style")
+    
+    logger.info(f"Analyzing trends and lookalike artists for artist: {artist}, style: {style}")
+    
+    # Obtenir les tendances et artistes similaires
+    result = get_trends_and_lookalikes(artist, style)
+    trends = result["trends"]
+    lookalike_artists = result["lookalike_artists"]
+    
+    # Stocker les données dans api_server (simplifié ici)
+    try:
+        requests.post(f"{os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')}/store/trending_artists", json={"trends": trends})
+        requests.post(f"{os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')}/store/lookalike_artists", json={"look
