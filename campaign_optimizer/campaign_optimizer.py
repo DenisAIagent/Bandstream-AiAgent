@@ -1,7 +1,6 @@
+from flask import Flask, jsonify, request
 import os
 import requests
-from flask import Flask, request, jsonify
-from urllib.parse import quote as url_quote  # Import corrigé pour url_quote
 from dotenv import load_dotenv
 
 # Charger les variables d'environnement
@@ -9,39 +8,39 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# URLs des APIs
-API_SERVER_URL = os.getenv('API_SERVER_URL', 'http://api_server:5005')
+# URL de l'API Server (utiliser l'URL publique de Railway)
+API_SERVER_URL = os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')
 
+# Route pour optimiser une campagne
 @app.route('/optimize', methods=['POST'])
 def optimize():
-    data = request.json
+    if not request.is_json:
+        return jsonify({"error": "Request must be JSON"}), 400
+
+    data = request.get_json()
     artist = data.get('artist')
 
     if not artist:
         return jsonify({"error": "Artist is required"}), 400
 
-    # Récupérer les tendances et lookalikes depuis api_server
-    trends_response = requests.get(f"{API_SERVER_URL}/retrieve/trending_artists?artist={artist}")
-    trends_response.raise_for_status()
-    trends = trends_response.json().get('data', [])
-
-    lookalikes_response = requests.get(f"{API_SERVER_URL}/retrieve/lookalike_artists?artist={artist}")
-    lookalikes_response.raise_for_status()
-    lookalikes = lookalikes_response.json().get('data', [])
-
-    # Générer une stratégie optimisée
+    # Simuler une optimisation (remplace ceci par une vraie logique d'optimisation)
     strategy = {
         "artist": artist,
-        "promote_videos": [trend['title'] for trend in trends[:2] if 'title' in trend],
-        "target_lookalikes": lookalikes
+        "target_audience": "Fans of similar artists",
+        "channels": ["Spotify", "YouTube"],
+        "budget_allocation": {"Spotify": 0.6, "YouTube": 0.4}
     }
 
-    # Stocker la stratégie dans api_server
-    response = requests.post(f"{API_SERVER_URL}/store/optimized_campaign", json=strategy)
-    response.raise_for_status()
+    # Stocker les données dans api_server
+    requests.post(f"{API_SERVER_URL}/store/optimized_campaign", json={"campaign": strategy})
 
-    return jsonify({"status": "success", "strategy": strategy}), 200
+    return jsonify({"strategy": strategy}), 200
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5002))
-    app.run(host='0.0.0.0', port=port, debug=True)
+# Route pour vérifier la santé du serveur
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "success", "message": "Campaign Optimizer is running"}), 200
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5002))
+    app.run(host="0.0.0.0", port=port, debug=True)
