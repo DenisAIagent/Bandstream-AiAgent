@@ -32,8 +32,8 @@ def generate_ad_content(artist, genre, lyrics="", bio=""):
 
         Generate the following:
         - 5 short titles (max 30 characters each)
-        - 5 long titles (more descriptive, no strict limit but around 50-70 characters)
-        - 5 long descriptions (detailed, around 80 characters each, exploring influences, lyrics, production, cultural impact, with call to action.)
+        - 5 long titles (more descriptive, around 50-70 characters)
+        - 5 long descriptions (detailed, max 90 characters each, exploring influences, lyrics, production, cultural impact, etc.)
 
         Return the response in the following JSON format:
         {{
@@ -73,8 +73,8 @@ def generate_ad_content(artist, genre, lyrics="", bio=""):
         # Ajouter les character_counts pour les long_descriptions
         for i in range(len(content["long_descriptions"])):
             content["long_descriptions"][i] = {
-                "description": content["long_descriptions"][i],
-                "character_count": len(content["long_descriptions"][i])
+                "description": content["long_descriptions"][i][:90],  # S'assurer que la description ne dépasse pas 90 caractères
+                "character_count": len(content["long_descriptions"][i][:90])
             }
         
         return content
@@ -97,11 +97,11 @@ def generate_ad_content(artist, genre, lyrics="", bio=""):
                 {"title": f"Unleash Your Inner Fan with {artist}'s {genre} Hit", "character_count": 27 + len(artist) + len(genre)}
             ],
             "long_descriptions": [
-                {"description": f"Explore {artist}'s latest {genre} single, a powerful blend of raw energy and intricate melodies that redefine the genre. A must-listen for fans!", "character_count": 92 + len(artist) + len(genre)},
-                {"description": f"{artist} brings {genre} to new heights with this single, showcasing their evolution as artists. Dive into their world of sound and emotion.", "character_count": 90 + len(artist) + len(genre)},
-                {"description": f"With this {genre} release, {artist} proves why they’re a force in music. Expect heavy riffs, deep lyrics, and an unforgettable experience.", "character_count": 90 + len(artist) + len(genre)},
-                {"description": f"{artist}'s new {genre} track is a cultural milestone, resonating with fans through its bold themes and innovative production techniques.", "character_count": 88 + len(artist) + len(genre)},
-                {"description": f"Join the {genre} revolution with {artist}'s latest single, a testament to their artistry, complete with stunning visuals and live energy.", "character_count": 88 + len(artist) + len(genre)}
+                {"description": f"Explore {artist}'s {genre} single, a blend of energy!", "character_count": 37 + len(artist) + len(genre)},
+                {"description": f"{artist}'s {genre} hit mixes deep lyrics and power!", "character_count": 35 + len(artist) + len(genre)},
+                {"description": f"With {genre}, {artist} proves their music mastery!", "character_count": 34 + len(artist) + len(genre)},
+                {"description": f"{artist}'s {genre} track is a cultural milestone!", "character_count": 34 + len(artist) + len(genre)},
+                {"description": f"Join {genre} with {artist}'s latest single now!", "character_count": 32 + len(artist) + len(genre)}
             ]
         }
 
