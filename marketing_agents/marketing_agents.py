@@ -18,7 +18,7 @@ API_SERVER_URL = os.getenv('API_SERVER_URL', 'https://votre-api-server.railway.a
 
 # Mots-clés interdits et caractères spéciaux à éviter
 FORBIDDEN_KEYWORDS = ["gratuit", "téléchargement", "streaming illégal", "offert"]
-FORBIDDEN_CHARS = ["%", "$", "€", "£", "¥", "©", "®", "™", "😀", "👍", "🎵", "🎸", "🎧"]
+FORBIDDEN_CHARS = ["%", "$", "€", "£", "¥", "©", "®", "™", "😀", "👍", "🎵", "🎸", "🎧","!',"?""/","$"]
 
 def get_lookalike_artists():
     """Récupère les artistes similaires depuis l'API centrale"""
