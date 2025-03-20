@@ -33,7 +33,7 @@ def generate_ad_content(artist, genre, lyrics="", bio=""):
         Generate the following:
         - 5 short titles (max 30 characters each)
         - 5 long titles (more descriptive, no strict limit but around 50-70 characters)
-        - 5 long descriptions (detailed, around 150-200 characters each, exploring influences, lyrics, production, cultural impact, etc.)
+        - 5 long descriptions (detailed, around 80 characters each, exploring influences, lyrics, production, cultural impact, with call to action.)
 
         Return the response in the following JSON format:
         {{
