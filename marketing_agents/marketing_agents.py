@@ -25,17 +25,31 @@ def generate_ads():
     if not artist:
         return jsonify({"error": "Artist is required"}), 400
 
-    # Simuler la génération d'annonces (remplace ceci par une vraie logique de génération)
+    # Générer des annonces
+    ad1_title = f"Discover {artist} - New Single Out Now!"
+    ad1_content = f"Check out the latest single from {artist}. {bio}"
+    ad2_title = f"{artist} - Feel the Beat!"
+    ad2_content = f"Listen to {artist}'s new track with these amazing lyrics: {lyrics[:50]}..."
+
+    # Calculer le nombre de caractères pour chaque annonce
     drafts = [
         {
-            "title": f"Discover {artist} - New Single Out Now!",
-            "content": f"Check out the latest single from {artist}. {bio}",
-            "platform": "Instagram"
+            "title": ad1_title,
+            "content": ad1_content,
+            "platform": "Instagram",
+            "character_counts": {
+                "title": len(ad1_title),
+                "content": len(ad1_content)
+            }
         },
         {
-            "title": f"{artist} - Feel the Beat!",
-            "content": f"Listen to {artist}'s new track with these amazing lyrics: {lyrics[:50]}...",
-            "platform": "YouTube"
+            "title": ad2_title,
+            "content": ad2_content,
+            "platform": "YouTube",
+            "character_counts": {
+                "title": len(ad2_title),
+                "content": len(ad2_content)
+            }
         }
     ]
 
