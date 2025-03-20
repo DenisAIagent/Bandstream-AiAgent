@@ -3,197 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Résultats de la campagne - {{ artist_name }}</title>
+    <title>Résultats de la campagne</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            max-width: 1000px;
-            margin: 0 auto;
+            margin: 20px;
+            background-color: #f4f4f4;
         }
-        h1, h2, h3 {
+        h1, h2 {
             color: #333;
         }
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-        }
         .section {
-            background: #f4f4f4;
+            background-color: #fff;
             padding: 20px;
-            border-radius: 5px;
             margin-bottom: 20px;
-        }
-        .card {
-            background: white;
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .strategy-item {
-            margin-bottom: 10px;
-            padding-left: 20px;
-            border-left: 3px solid #333;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
         .ad-draft {
             border: 1px solid #ddd;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-        }
-        .ad-title {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .ad-description {
-            color: #555;
-        }
-        .character-count {
-            color: #888;
-            font-size: 0.8em;
-        }
-        .error-list {
-            color: red;
-            background: #ffeeee;
             padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            border-radius: 5px;
         }
-        .lookalike-artist {
+        .button {
             display: inline-block;
-            background: #eee;
-            padding: 5px 10px;
-            margin: 5px;
-            border-radius: 15px;
-        }
-        .back-button {
-            display: block;
-            width: 200px;
-            margin: 20px auto;
-            padding: 10px;
-            background: #333;
-            color: white;
-            text-align: center;
+            padding: 10px 20px;
+            background-color: #333;
+            color: #fff;
             text-decoration: none;
-            border-radius: 4px;
-        }
-        .back-button:hover {
-            background: #555;
+            border-radius: 5px;
         }
     </style>
 </head>
 <body>
-    <h1>Campagne marketing pour {{ artist_name }}</h1>
-    
-    {% if errors and errors|length > 0 %}
-    <div class="error-list">
-        <h3>Erreurs rencontrées :</h3>
-        <ul>
-            {% for error in errors %}
-            <li>{{ error }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
-    
+    <h1>Campagne marketing pour</h1>
+
     <div class="section">
         <h2>Informations de base</h2>
-        <div class="card">
-            <p><strong>Artiste :</strong> {{ artist_name }}</p>
-            <p><strong>Style musical :</strong> {{ music_style }}</p>
-        </div>
+        <p><strong>Artiste :</strong> {{ artist | default("Non spécifié") }}</p>
+        <p><strong>Style musical :</strong> {{ style | default("Non spécifié") }}</p>
     </div>
-    
-    {% if campaign_insights and campaign_insights.lookalike_artists %}
+
     <div class="section">
-        <h2>Artistes similaires (Lookalike)</h2>
-        <div class="card">
-            {% for artist in campaign_insights.lookalike_artists %}
-            <span class="lookalike-artist">{{ artist.name }}</span>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-    
-    {% if campaign_insights and campaign_insights.youtube_trends %}
-    <div class="section">
-        <h2>Tendances YouTube</h2>
-        {% for video in campaign_insights.youtube_trends %}
-        <div class="card">
-            <h3>{{ video.title }}</h3>
-            <p><strong>Vues :</strong> {{ video.views }}</p>
-            <p><strong>Date de publication :</strong> {{ video.published_date }}</p>
-            <p><a href="{{ video.link }}" target="_blank">Voir la vidéo</a></p>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    
-    {% if optimized_campaign and optimized_campaign.strategies %}
-    <div class="section">
-        <h2>Stratégies recommandées</h2>
-        
-        {% if optimized_campaign.strategies.youtube_promotion %}
-        <div class="card">
-            <h3>Promotion YouTube</h3>
-            {% for strategy in optimized_campaign.strategies.youtube_promotion %}
-            <div class="strategy-item">
-                <p><strong>{{ strategy.action }}</strong></p>
-                <p>{{ strategy.title }}</p>
-                <p><em>Raison : {{ strategy.reason }}</em></p>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        
-        {% if optimized_campaign.strategies.lookalike_targeting %}
-        <div class="card">
-            <h3>Ciblage d'artistes similaires</h3>
-            {% for strategy in optimized_campaign.strategies.lookalike_targeting %}
-            <div class="strategy-item">
-                <p><strong>{{ strategy.action }}</strong></p>
-                <p>{{ strategy.artist }}</p>
-                <p><em>Raison : {{ strategy.reason }}</em></p>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        
-        {% if optimized_campaign.strategies.platform_focus %}
-        <div class="card">
-            <h3>Focus sur les plateformes</h3>
-            {% for strategy in optimized_campaign.strategies.platform_focus %}
-            <div class="strategy-item">
-                <p><strong>{{ strategy.action }}</strong></p>
-                <p><em>Raison : {{ strategy.reason }}</em></p>
-            </div>
-            {% endfor %}
-        </div>
+        <h2>Insights</h2>
+        {% if analysis %}
+            <p><strong>Tendances :</strong> {{ analysis.trends | join(", ") | default("Aucune tendance disponible") }}</p>
+            <p><strong>Artistes similaires :</strong> {{ analysis.lookalike_artists | join(", ") | default("Aucun artiste similaire disponible") }}</p>
+        {% else %}
+            <p>Aucune donnée d'analyse disponible.</p>
         {% endif %}
     </div>
-    {% endif %}
-    
-    {% if ad_drafts %}
+
     <div class="section">
         <h2>Drafts d'annonces</h2>
-        {% for ad in ad_drafts %}
-        <div class="ad-draft">
-            <p class="ad-title">{{ ad.title }}</p>
-            <p class="ad-title">{{ ad.long_title }}</p>
-            <p class="ad-description">{{ ad.description }}</p>
-            <p class="character-count">
-                Titre: {{ ad.character_counts.title }}/30 caractères | 
-                Titre long: {{ ad.character_counts.long_title }}/90 caractères | 
-                Description: {{ ad.character_counts.description }}/90 caractères
-            </p>
-        </div>
-        {% endfor %}
+        {% if ad_drafts %}
+            {% for ad in ad_drafts %}
+                <div class="ad-draft">
+                    <p><strong>Titre :</strong> {{ ad.title | default("Titre non spécifié") }} ({{ ad.character_counts.title | default(0) }}/30 caractères)</p>
+                    <p><strong>Contenu :</strong> {{ ad.content | default("Contenu non spécifié") }} ({{ ad.character_counts.content | default(0) }}/90 caractères)</p>
+                    <p><strong>Plateforme :</strong> {{ ad.platform | default("Plateforme non spécifiée") }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Aucune annonce disponible.</p>
+        {% endif %}
     </div>
-    {% endif %}
-    
-    <a href="/" class="back-button">Retour à l'accueil</a>
+
+    <div class="section">
+        <h2>Stratégie optimisée</h2>
+        {% if strategy %}
+            <p><strong>Public cible :</strong> {{ strategy.target_audience | default("Non spécifié") }}</p>
+            <p><strong>Canaux :</strong> {{ strategy.channels | join(", ") | default("Aucun canal spécifié") }}</p>
+            <p><strong>Allocation du budget :</strong></p>
+            <ul>
+                {% for channel, allocation in strategy.budget_allocation.items() %}
+                    <li>{{ channel }} : {{ (allocation * 100) | round(2) }}%</li>
+                {% else %}
+                    <li>Aucune allocation de budget spécifiée.</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>Aucune stratégie optimisée disponible.</p>
+        {% endif %}
+    </div>
+
+    <a href="/" class="button">Retour à l'accueil</a>
 </body>
 </html>
