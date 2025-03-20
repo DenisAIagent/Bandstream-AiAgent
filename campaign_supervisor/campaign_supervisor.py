@@ -55,12 +55,14 @@ def generate_campaign():
         logger.error(f"Error communicating with campaign_analyst: {str(e)}")
         return jsonify({"error": "Failed to communicate with campaign_analyst", "details": str(e)}), 500
 
-    # Étape 2 : Envoyer les données à marketing_agents (CORRIGÉ)
+    # Étape 2 : Envoyer les données à marketing_agents
     try:
-        logger.info(f"Sending request to marketing_agents at {MARKETING_URL}/generate_ads with data: {{'artist_name': {artist}, 'genre': {style}}}")
+        logger.info(f"Sending request to marketing_agents at {MARKETING_URL}/generate_ads with data: {{'artist': {artist}, 'genre': {style}, 'lyrics': {lyrics}, 'bio': {bio}}}")
         marketing_response = requests.post(f"{MARKETING_URL}/generate_ads", json={
-            "artist_name": artist,
-            "genre": style
+            "artist": artist,
+            "genre": style,
+            "lyrics": lyrics,
+            "bio": bio
         })
         marketing_response.raise_for_status()
         ad_drafts = marketing_response.json().get('drafts', [])
