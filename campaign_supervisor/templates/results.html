@@ -3,115 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur d'Annonces Publicitaires Musicales</title>
+    <title>Band Stream Crew AI Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Poppins:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 300; /* Light pour le texte courant */
             margin: 0;
             padding: 0;
-            background-color: #f5f5f5;
-            color: #333;
+            background-color: #EBF5DF; /* Vert clair de Band Stream */
+            color: #000000; /* Noir de Band Stream */
+            line-height: 1.6;
         }
         header {
-            background: linear-gradient(135deg, #6e45e2, #88d3ce);
-            color: white;
+            background: linear-gradient(135deg, #0ED894, #EBF5DF); /* Dégradé vert Band Stream à vert clair */
+            color: #000000; /* Noir pour le texte */
             text-align: center;
             padding: 1.5rem 0;
-            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        .container {
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 20px;
         }
+        .header-content img {
+            height: 50px;
+            margin-right: 20px;
+        }
+        .header-content h1 {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 2rem;
+            font-weight: 700; /* Bold pour le titre principal */
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
         .artist-info {
             background-color: white;
             border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            transition: transform 0.2s ease-in-out;
+        }
+        .artist-info:hover {
+            transform: translateY(-5px);
         }
         .artist-header {
             display: flex;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
         .artist-image {
-            width: 100px;
-            height: 100px;
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
             background-color: #e0e0e0;
-            margin-right: 20px;
+            margin-right: 25px;
         }
         .artist-details h1 {
             margin: 0;
-            font-size: 2rem;
-            color: #333;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 600; /* Medium pour les titres */
+            color: #000000; /* Noir de Band Stream */
         }
         .artist-details h2 {
             margin: 5px 0 0;
-            font-size: 1.5rem;
-            color: #6e45e2;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 400; /* Regular pour les sous-titres */
+            color: #0ED894; /* Vert Band Stream */
         }
-        .similar-artists {
-            margin-bottom: 20px;
-        }
-        .similar-artists h3 {
-            margin-bottom: 10px;
-            color: #555;
-        }
-        .similar-artists ul {
-            list-style-type: disc;
-            padding-left: 20px;
-        }
-        .similar-artists li {
-            margin-bottom: 5px;
-        }
-        .content-section {
+        .trends, .similar-artists {
             margin-bottom: 30px;
         }
-        .content-section h3 {
-            border-bottom: 2px solid #6e45e2;
-            padding-bottom: 10px;
+        .trends h3, .similar-artists h3 {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 600; /* Medium pour les titres */
+            color: #000000; /* Noir de Band Stream */
             margin-bottom: 15px;
-            color: #444;
+            border-bottom: 2px solid #0ED894; /* Vert Band Stream */
+            padding-bottom: 5px;
+        }
+        .trends ul, .similar-artists ul {
+            list-style-type: disc;
+            padding-left: 25px;
+        }
+        .trends li, .similar-artists li {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 300; /* Light pour le texte courant */
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: #000000; /* Noir de Band Stream */
+        }
+        .content-section {
+            margin-bottom: 40px;
+        }
+        .content-section h3 {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 600; /* Medium pour les titres */
+            color: #000000; /* Noir de Band Stream */
+            margin-bottom: 20px;
+            border-bottom: 2px solid #0ED894; /* Vert Band Stream */
+            padding-bottom: 8px;
         }
         .content-box {
             background-color: white;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease-in-out;
+        }
+        .content-box:hover {
+            transform: translateY(-3px);
         }
         .content-box h4 {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 400; /* Regular pour les sous-titres */
+            color: #0ED894; /* Vert Band Stream */
             margin-top: 0;
-            color: #6e45e2;
+            margin-bottom: 10px;
         }
         .content-box p {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 300; /* Light pour le texte courant */
+            font-size: 1rem;
+            color: #000000; /* Noir de Band Stream */
             margin-bottom: 0;
-            line-height: 1.6;
         }
         footer {
             text-align: center;
             padding: 20px;
-            background-color: #333;
-            color: white;
+            background-color: #000000; /* Noir de Band Stream */
+            color: #EBF5DF; /* Vert clair pour le texte */
             font-size: 0.9rem;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 400;
         }
         .button {
             display: inline-block;
-            padding: 10px 20px;
-            background-color: #333;
-            color: #fff;
+            padding: 12px 24px;
+            background-color: #0ED894; /* Vert Band Stream */
+            color: #000000; /* Noir pour le texte */
             text-decoration: none;
             border-radius: 5px;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 600; /* Medium pour le bouton */
             margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #0BBF7A; /* Vert légèrement plus foncé pour le survol */
         }
     </style>
 </head>
 <body>
     <header>
-        <div class="container">
+        <div class="header-content">
+            <img src="https://i.postimg.cc/Y0dCw2sK/Bandstream-logo-quadri-noir.png" alt="Band Stream Logo">
             <h1>Générateur d'Annonces Publicitaires</h1>
         </div>
     </header>
@@ -121,17 +182,30 @@
             <div class="artist-header">
                 <div class="artist-image"></div>
                 <div class="artist-details">
-                    <h1 id="artist-name">{{ artist | default("Nom d'Artiste") }}</h1>
-                    <h2 id="single-name">{{ style | default("Nom du Single") }}</h2>
+                    <h1 id="artist-name">{{ artist | default("Nom d'Artiste") | e }}</h1>
+                    <h2 id="single-name">{{ style | default("Nom du Single") | e }}</h2>
                 </div>
             </div>
             
+            <div class="trends">
+                <h3>Tendances</h3>
+                {% if analysis and analysis.trends %}
+                    <ul>
+                        {% for trend in analysis.trends %}
+                            <li>{{ trend | e }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Aucune tendance disponible.</p>
+                {% endif %}
+            </div>
+
             <div class="similar-artists">
                 <h3>Artistes Similaires</h3>
                 {% if analysis and analysis.lookalike_artists %}
                     <ul id="similar-artists-list">
                         {% for artist in analysis.lookalike_artists %}
-                            <li>{{ artist }}</li>
+                            <li>{{ artist | e }}</li>
                         {% endfor %}
                     </ul>
                 {% else %}
@@ -146,7 +220,7 @@
                 {% for title in short_titles %}
                     <div class="content-box">
                         <h4>Titre {{ loop.index }}</h4>
-                        <p>{{ title.title | default("Titre non spécifié") }} ({{ title.character_count | default(0) }}/30 caractères)</p>
+                        <p>{{ title.title | default("Titre non spécifié") | e }} ({{ title.character_count | default(0) }}/30 caractères)</p>
                     </div>
                 {% endfor %}
             {% else %}
@@ -160,7 +234,7 @@
                 {% for title in long_titles %}
                     <div class="content-box">
                         <h4>Titre Long {{ loop.index }}</h4>
-                        <p>{{ title.title | default("Titre long non spécifié") }} ({{ title.character_count | default(0) }} caractères)</p>
+                        <p>{{ title.title | default("Titre long non spécifié") | e }} ({{ title.character_count | default(0) }} caractères)</p>
                     </div>
                 {% endfor %}
             {% else %}
@@ -174,7 +248,7 @@
                 {% for desc in long_descriptions %}
                     <div class="content-box">
                         <h4>Description {{ loop.index }}</h4>
-                        <p>{{ desc.description | default("Description non spécifiée") }} ({{ desc.character_count | default(0) }} caractères)</p>
+                        <p>{{ desc.description | default("Description non spécifiée") | e }} ({{ desc.character_count | default(0) }} caractères)</p>
                     </div>
                 {% endfor %}
             {% else %}
@@ -185,15 +259,19 @@
         <div class="content-section">
             <h3>Stratégie optimisée</h3>
             {% if strategy %}
-                <p><strong>Public cible :</strong> {{ strategy.target_audience | default("Non spécifié") }}</p>
-                <p><strong>Canaux :</strong> {{ strategy.channels | join(", ") | default("Aucun canal spécifié") }}</p>
+                <p><strong>Public cible :</strong> {{ strategy.target_audience | default("Non spécifié") | e }}</p>
+                <p><strong>Canaux :</strong> {{ strategy.channels | join(", ") | default("Aucun canal spécifié") | e }}</p>
                 <p><strong>Allocation du budget :</strong></p>
                 <ul>
-                    {% for channel, allocation in strategy.budget_allocation.items() %}
-                        <li>{{ channel }} : {{ (allocation * 100) | round(2) }}%</li>
+                    {% if strategy.budget_allocation %}
+                        {% for channel, allocation in strategy.budget_allocation.items() %}
+                            <li>{{ channel | e }} : {{ (allocation * 100) | round(2) }}%</li>
+                        {% else %}
+                            <li>Aucune allocation de budget spécifiée.</li>
+                        {% endfor %}
                     {% else %}
                         <li>Aucune allocation de budget spécifiée.</li>
-                    {% endfor %}
+                    {% endif %}
                 </ul>
             {% else %}
                 <p>Aucune stratégie optimisée disponible.</p>
@@ -205,7 +283,7 @@
 
     <footer>
         <div class="container">
-            <p>© 2025 Générateur d'Annonces Publicitaires Musicales</p>
+            <p>© 2025 Générateur d'Annonces Publicitaires Musicales - Band Stream</p>
         </div>
     </footer>
 </body>
