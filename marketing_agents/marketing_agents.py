@@ -50,7 +50,7 @@ def generate_ads():
         }
         language_name = language_names.get(language, "French")  # Par défaut en français
 
-        # Prompt mis à jour
+        # Prompt mis à jour avec limites renforcées
         prompt = f"""
 You are a creative marketing expert specializing in music promotion. Your task is to generate compelling ad content for the following artist and genres:
 - Artist: {artist}
@@ -59,11 +59,11 @@ You are a creative marketing expert specializing in music promotion. Your task i
 - Lyrics sample: {lyrics if lyrics else "Not provided"}
 
 Generate the following in {language_name}:
-- A list of 5 short ad titles (max 30 characters each, strictly enforced) that are catchy, energetic, and include a call to action (e.g., "discover", "experience", "unleash").
-- A list of 5 long ad titles (max 60 characters each, strictly enforced) that are bold, descriptive, and highlight the artist's unique qualities across the genres {genres_str}.
-- A list of 5 long ad descriptions (max 90 characters each, strictly enforced) that are engaging, evoke emotion, and end with a clear call to action such as "abonnez-vous maintenant", "écoutez maintenant", "like et abonnez-vous", or "regardez maintenant".
+- A list of 5 short ad titles, each exactly 30 characters or fewer, that are catchy, energetic, and include a call to action (e.g., "discover", "experience", "unleash").
+- A list of 5 long ad titles, each exactly 60 characters or fewer, that are bold, descriptive, and highlight the artist's unique qualities across the genres {genres_str}.
+- A list of 5 long ad descriptions, each exactly 90 characters or fewer, that are engaging, evoke emotion, and end with a clear call to action such as "abonnez-vous maintenant", "écoutez maintenant", "like et abonnez-vous", or "regardez maintenant".
 
-Ensure the tone is exciting, professional, and tailored to the {genres_str} genres. Use the bio and lyrics (if provided) to add specific details about the artist. Do not exceed the character limits under any circumstances. Use lowercase for all words except proper nouns (e.g., always write the artist's name as "{artist}" with the first letter capitalized, and specific titles like "Que la lumière soit" from the bio/lyrics); avoid full uppercase words like "METAL" or "DISCOVER" even if grammatically correct in {language_name}. For punctuation, only use commas (",") and periods ("."); do not use exclamation marks ("!"), question marks ("?"), semicolons (";"), slashes ("/"), or ellipses ("...") under any circumstances. Each long description must end with one of the specified calls to action.
+Ensure the tone is exciting, professional, and tailored to the {genres_str} genres. Use the bio and lyrics (if provided) to add specific details about the artist. Strictly enforce the character limits: short titles must be 30 characters or fewer, long titles 60 characters or fewer, and long descriptions 90 characters or fewer; do not exceed these limits under any circumstances. Use lowercase for all words except proper nouns (e.g., always write the artist's name as "{artist}" with the first letter capitalized, and specific titles like "Que la lumière soit" from the bio/lyrics); avoid full uppercase words like "METAL" or "DISCOVER" even if grammatically correct in {language_name}. For punctuation, only use commas (",") and periods ("."); do not use exclamation marks ("!"), question marks ("?"), semicolons (";"), slashes ("/"), or ellipses ("...") under any circumstances. Each long description must end with one of the specified calls to action.
 
 Return the response in the following JSON format:
 {{
