@@ -1,123 +1,329 @@
-import os
-import requests
-import json
-from flask import Flask, request, jsonify, render_template
-from dotenv import load_dotenv
-import logging
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Band Stream Crew AI Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Poppins:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 300; /* Light pour le texte courant */
+            margin: 0;
+            padding: 0;
+            background-color: #EBF5DF; /* Vert clair de Band Stream */
+            color: #000000; /* Noir de Band Stream */
+            line-height: 1.6;
+        }
+        header {
+            background-color: #000000; /* Noir de Band Stream */
+            color: #FFFFFF; /* Blanc pour le texte */
+            text-align: center;
+            padding: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50"><path d="M25 5C15 5 5 15 5 25C5 35 15 45 25 45C35 45 45 35 45 25C45 15 35 5 25 5ZM25 15L35 25L25 35L15 25L25 15Z" fill="%230ED894" fill-opacity="0.1"/></svg>');
+            background-repeat: repeat;
+            opacity: 0.2;
+        }
+        .header-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            position: relative;
+        }
+        .header-content img {
+            height: 60px;
+            margin-bottom: 10px;
+        }
+        .header-content h1 {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 2rem;
+            font-weight: 700; /* Bold pour le titre principal */
+            margin: 0;
+            color: #FFFFFF; /* Blanc */
+        }
+        .header-content p {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 400; /* Medium pour le slogan */
+            font-size: 1.2rem;
+            margin: 10px 0 0;
+            color: #FFFFFF; /* Blanc */
+            position: relative;
+        }
+        .header-content p::before, .header-content p::after {
+            content: '“';
+            font-size: 2rem;
+            color: #0ED894; /* Vert Band Stream */
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .header-content p::before {
+            left: -30px;
+        }
+        .header-content p::after {
+            right: -30px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .artist-info {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            transition: transform 0.2s ease-in-out;
+        }
+        .artist-info:hover {
+            transform: translateY(-5px);
+        }
+        .artist-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .artist-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            background-image: url('{{ analysis.artist_image_url | default("https://via.placeholder.com/120?text=Artist") | e }}');
+            margin-right: 25px;
+        }
+        .artist-details h1 {
+            margin: 0;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 600; /* Medium pour les titres */
+            color: #000000; /* Noir de Band Stream */
+        }
+        .artist-details h2 {
+            margin: 5px 0 0;
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 400; /* Regular pour les sous-titres */
+            color: #0ED894; /* Vert Band Stream */
+        }
+        .trends, .similar-artists {
+            margin-bottom: 30px;
+        }
+        .trends h3, .similar-artists h3 {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 600; /* Medium pour les titres */
+            color: #000000; /* Noir de Band Stream */
+            margin-bottom: 15px;
+            border-bottom: 2px solid #0ED894; /* Vert Band Stream */
+            padding-bottom: 5px;
+        }
+        .trends ul, .similar-artists ul {
+            list-style-type: disc;
+            padding-left: 25px;
+        }
+        .trends li, .similar-artists li {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 300; /* Light pour le texte courant */
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: #000000; /* Noir de Band Stream */
+        }
+        .content-section {
+            margin-bottom: 40px;
+        }
+        .content-section h3 {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 600; /* Medium pour les titres */
+            color: #000000; /* Noir de Band Stream */
+            margin-bottom: 20px;
+            border-bottom: 2px solid #0ED894; /* Vert Band Stream */
+            padding-bottom: 8px;
+        }
+        .content-box {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease-in-out;
+        }
+        .content-box:hover {
+            transform: translateY(-3px);
+        }
+        .content-box h4 {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 400; /* Regular pour les sous-titres */
+            color: #0ED894; /* Vert Band Stream */
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .content-box p {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 300; /* Light pour le texte courant */
+            font-size: 1rem;
+            color: #000000; /* Noir de Band Stream */
+            margin-bottom: 0;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #000000; /* Noir de Band Stream */
+            color: #EBF5DF; /* Vert clair pour le texte */
+            font-size: 0.9rem;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 400;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #0ED894; /* Vert Band Stream */
+            color: #000000; /* Noir pour le texte */
+            text-decoration: none;
+            border-radius: 5px;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 600; /* Medium pour le bouton */
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #0BBF7A; /* Vert légèrement plus foncé pour le survol */
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <img src="https://i.postimg.cc/G2LmHsYT/Bandstream-logo-quadri-blanc.png" alt="Band Stream Logo">
+            <h1>Générateur d'Annonces Publicitaires</h1>
+            <p>No fluff, just results.</p>
+        </div>
+    </header>
 
-# Configurer les logs
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+    <div class="container">
+        <div class="artist-info">
+            <div class="artist-header">
+                <div class="artist-image"></div>
+                <div class="artist-details">
+                    <h1 id="artist-name">{{ artist | default("Nom d'Artiste") | e }}</h1>
+                    <h2 id="single-name">{{ style | default("Nom du Single") | e }}</h2>
+                </div>
+            </div>
+            
+            <div class="trends">
+                <h3>Tendances</h3>
+                {% if analysis and analysis.trends %}
+                    <ul>
+                        {% for trend in analysis.trends %}
+                            <li>{{ trend | e }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Aucune tendance disponible.</p>
+                {% endif %}
+            </div>
 
-# Charger les variables d'environnement
-load_dotenv()
+            <div class="similar-artists">
+                <h3>Artistes Similaires</h3>
+                {% if analysis and analysis.lookalike_artists %}
+                    <ul id="similar-artists-list">
+                        {% for artist in analysis.lookalike_artists %}
+                            <li>{{ artist | e }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Aucun artiste similaire disponible.</p>
+                {% endif %}
+            </div>
+        </div>
 
-# Initialiser Flask avec un dossier de templates explicite
-app = Flask(__name__, template_folder='templates')
+        <div class="content-section">
+            <h3>Titres Courts (5)</h3>
+            {% if short_titles %}
+                {% for title in short_titles %}
+                    <div class="content-box">
+                        <h4>Titre {{ loop.index }}</h4>
+                        <p>{{ title.title | default("Titre non spécifié") | e }} ({{ title.character_count | default(0) }}/30 caractères)</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>Aucun titre court disponible.</p>
+            {% endif %}
+        </div>
 
-# URLs des services
-CAMPAIGN_ANALYST_URL = os.getenv("CAMPAIGN_ANALYST_URL", "https://analyst-production.up.railway.app")
-MARKETING_AGENTS_URL = os.getenv("MARKETING_AGENTS_URL", "https://marketing-agent-production.up.railway.app")
-CAMPAIGN_OPTIMIZER_URL = os.getenv("CAMPAIGN_OPTIMIZER_URL", "https://optimizer-production.up.railway.app")
+        <div class="content-section">
+            <h3>Titres Longs (5)</h3>
+            {% if long_titles %}
+                {% for title in long_titles %}
+                    <div class="content-box">
+                        <h4>Titre Long {{ loop.index }}</h4>
+                        <p>{{ title.title | default("Titre long non spécifié") | e }} ({{ title.character_count | default(0) }} caractères)</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>Aucun titre long disponible.</p>
+            {% endif %}
+        </div>
 
-@app.route('/')
-def index():
-    try:
-        logger.info("Rendering index.html")
-        return render_template('index.html')
-    except Exception as e:
-        logger.error(f"Error rendering index.html: {str(e)}")
-        return jsonify({"error": "Failed to render index page", "details": str(e)}), 500
+        <div class="content-section">
+            <h3>Descriptions Longues (5)</h3>
+            {% if long_descriptions %}
+                {% for desc in long_descriptions %}
+                    <div class="content-box">
+                        <h4>Description {{ loop.index }}</h4>
+                        <p>{{ desc.description | default("Description non spécifiée") | e }} ({{ desc.character_count | default(0) }} caractères)</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>Aucune description longue disponible.</p>
+            {% endif %}
+        </div>
 
-@app.route('/generate_campaign', methods=['POST'])
-def generate_campaign():
-    try:
-        # Récupérer les données du formulaire
-        artist = request.form.get('artist')
-        style = request.form.get('style')
-        song = request.form.get('song')
-        lyrics = request.form.get('lyrics')
-        bio = request.form.get('bio')
-        
-        if not artist:
-            logger.error("Missing required field 'artist' in form data")
-            return render_template('index.html', error="Le nom de l'artiste est requis."), 400
-        
-        # Étape 1 : Appeler campaign_analyst pour obtenir les tendances et artistes similaires
-        logger.info(f"Sending request to campaign_analyst at {CAMPAIGN_ANALYST_URL}/analyze with data: {{'artist': {artist}, 'style': {style}}}")
-        response = requests.post(f"{CAMPAIGN_ANALYST_URL}/analyze", json={"artist": artist, "style": style})
-        response.raise_for_status()
-        analysis_data = response.json()
-        logger.info(f"Received response from campaign_analyst: {analysis_data}")
-        
-        # Vérifier les données de campaign_analyst
-        if not isinstance(analysis_data, dict):
-            logger.error(f"campaign_analyst response is not a dictionary: {analysis_data}")
-            analysis_data = {"trends": ["Trend 1", "Trend 2"], "lookalike_artists": ["Artist 1", "Artist 2"], "style": style, "artist_image_url": "https://via.placeholder.com/120?text=Artist"}
-        
-        # Étape 2 : Appeler marketing_agents pour générer les annonces
-        logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genre': {style}, 'lyrics': {lyrics}, 'bio': {bio}}}")
-        response = requests.post(f"{MARKETING_AGENTS_URL}/generate_ads", json={"artist": artist, "genre": style, "lyrics": lyrics, "bio": bio})
-        response.raise_for_status()
-        ad_data = response.json()
-        logger.info(f"Received response from marketing_agents: {ad_data}")
+        <div class="content-section">
+            <h3>Stratégie optimisée</h3>
+            {% if strategy %}
+                <p><strong>Public cible :</strong> {{ strategy.target_audience | default("Non spécifié") | e }}</p>
+                <p><strong>Canaux :</strong> {{ strategy.channels | join(", ") | default("Aucun canal spécifié") | e }}</p>
+                <p><strong>Allocation du budget :</strong></p>
+                <ul>
+                    {% if strategy.budget_allocation %}
+                        {% for channel, allocation in strategy.budget_allocation.items() %}
+                            <!-- Correction : Retirer le : de l'expression Jinja2 et le mettre en texte statique -->
+                            <li>{{ channel | e }}: {{ (allocation * 100) | round(2) }}%</li>
+                        {% endfor %}
+                    {% else %}
+                        <li>Aucune allocation de budget spécifiée.</li>
+                    {% endif %}
+                </ul>
+            {% else %}
+                <p>Aucune stratégie optimisée disponible.</p>
+            {% endif %}
+        </div>
 
-        # Adaptation du format de données
-        short_titles = []
-        long_titles = []
-        long_descriptions = []
+        <a href="/" class="button">Retour à l'accueil</a>
+    </div>
 
-        # Vérifier si la réponse contient 'drafts' (format actuel) ou les clés spécifiques (nouveau format)
-        if "drafts" in ad_data:
-            # Format actuel : tous les titres dans 'drafts'
-            drafts = ad_data.get("drafts", [])
-            # Diviser les drafts en titres courts et longs (par exemple, les 5 premiers sont courts, les suivants longs)
-            short_titles = drafts[:5] if len(drafts) >= 5 else drafts
-            long_titles = drafts[5:10] if len(drafts) >= 10 else drafts[5:] if len(drafts) >= 5 else []
-            # Utiliser des descriptions par défaut si nécessaire
-            long_descriptions = ["Description par défaut" for _ in range(5)]
-        else:
-            # Nouveau format avec clés spécifiques
-            short_titles = ad_data.get("short_titles", [])
-            long_titles = ad_data.get("long_titles", [])
-            long_descriptions = ad_data.get("long_descriptions", [])
-        
-        # Vérifier les données de marketing_agents
-        if not isinstance(short_titles, list):
-            logger.error(f"short_titles is not a list: {short_titles}")
-            short_titles = [{"title": "Short Title 1", "character_count": 0}]
-        if not isinstance(long_titles, list):
-            logger.error(f"long_titles is not a list: {long_titles}")
-            long_titles = [{"title": "Long Title 1", "character_count": 0}]
-        if not isinstance(long_descriptions, list):
-            logger.error(f"long_descriptions is not a list: {long_descriptions}")
-            long_descriptions = [{"description": "Description 1", "character_count": 0}]
-        
-        # Étape 3 : Appeler campaign_optimizer pour optimiser la stratégie
-        logger.info(f"Sending request to campaign_optimizer at {CAMPAIGN_OPTIMIZER_URL}/optimize with data: {{'artist': {artist}}}")
-        response = requests.post(f"{CAMPAIGN_OPTIMIZER_URL}/optimize", json={"artist": artist})
-        response.raise_for_status()
-        strategy_data = response.json()
-        logger.info(f"Received response from campaign_optimizer: {strategy_data}")
-        
-        # Vérifier les données de campaign_optimizer et extraire la sous-clé "strategy"
-        if not isinstance(strategy_data, dict):
-            logger.error(f"campaign_optimizer response is not a dictionary: {strategy_data}")
-            strategy = {"target_audience": "Fans of similar artists", "channels": ["Spotify", "YouTube"], "budget_allocation": {"Spotify": 0.5, "YouTube": 0.5}}
-        else:
-            # Extraire la sous-clé "strategy" si elle existe
-            strategy = strategy_data.get("strategy", {"target_audience": "Fans of similar artists", "channels": ["Spotify", "YouTube"], "budget_allocation": {"Spotify": 0.5, "YouTube": 0.5}})
-            if not isinstance(strategy, dict):
-                logger.error(f"strategy is not a dictionary: {strategy}")
-                strategy = {"target_audience": "Fans of similar artists", "channels": ["Spotify", "YouTube"], "budget_allocation": {"Spotify": 0.5, "YouTube": 0.5}}
-        
-        # Étape 4 : Rendre les résultats
-        logger.info(f"Rendering results.html with artist={artist}, style={style}, analysis_data={analysis_data}, short_titles={short_titles}, long_titles={long_titles}, long_descriptions={long_descriptions}, strategy={strategy}")
-        return render_template('results.html', artist=artist, style=style, analysis=analysis_data, short_titles=short_titles, long_titles=long_titles, long_descriptions=long_descriptions, strategy=strategy)
-    except Exception as e:
-        logger.error(f"Error in generate_campaign: {str(e)}")
-        return jsonify({"error": "Failed to generate campaign", "details": str(e)}), 500
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    <footer>
+        <div class="container">
+            <p>© 2025 Générateur d'Annonces Publicitaires Musicales - Band Stream</p>
+        </div>
+    </footer>
+</body>
+</html>
