@@ -7,37 +7,34 @@ import openai
 from pytrends.request import TrendReq
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+import pandas as pd
 
-# Configurer les logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Charger les variables d'environnement
+pd.set_option('future.no_silent_downcasting', True)
+
 load_dotenv()
 
 app = Flask(__name__)
 
-# Configurer OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
 if not openai.api_key:
     logger.error("OPENAI_API_KEY is not set in environment variables")
     raise ValueError("OPENAI_API_KEY is required")
 
-# Configurer YouTube API
 youtube_api_key = os.getenv("YOUTUBE_API_KEY")
 if not youtube_api_key:
     logger.error("YOUTUBE_API_KEY is not set in environment variables")
     raise ValueError("YOUTUBE_API_KEY is required")
-youtube = build("youtube", "v3", developerKey=youtube_api_key)
+youtube = build("youtube", "v3", developerKey=youtube_api_key, cache_discovery=False)
 
-# Configurer Google Trends
-pytrends = TrendReq(hl='fr', tz=360)  # Langue française, fuseau horaire UTC
+pytrends = TrendReq(hl='fr', tz=360)
 
-def get_google_trends(artist, genres):
-    """Récupère les tendances Google pour l’artiste et les genres."""
+def get_google_trends(artist, song, genres):
     try:
-        keywords = [artist] + genres[:2]  # Limite à 2 genres pour éviter surcharge
-        pytrends.build_payload(keywords, cat=0, timeframe='today 3-m', geo='')  # Derniers 3 mois
+        keywords = [artist, song] + genres[:2]  # Inclut la chanson
+        pytrends.build_payload(keywords, cat=0, timeframe='today 3-m', geo='')
         interest_over_time = pytrends.interest_over_time()
         if not interest_over_time.empty:
             top_keyword = interest_over_time.sum().idxmax()
@@ -47,11 +44,10 @@ def get_google_trends(artist, genres):
         logger.error(f"Error fetching Google Trends: {str(e)}")
         return "No significant trends found"
 
-def get_youtube_stats(artist):
-    """Récupère les statistiques YouTube pour l’artiste."""
+def get_youtube_stats(artist, song):
     try:
         search_response = youtube.search().list(
-            q=artist,
+            q=f"{artist} {song}",  # Recherche avec la chanson
             part="id,snippet",
             type="video",
             maxResults=5
@@ -70,7 +66,7 @@ def get_youtube_stats(artist):
             video_count += 1
         
         avg_views = total_views / video_count if video_count > 0 else 0
-        return avg_views > 10000  # Seuil pour considérer YouTube pertinent
+        return avg_views > 10000
     except HttpError as e:
         logger.error(f"Error fetching YouTube stats: {str(e)}")
         return False
@@ -79,36 +75,33 @@ def get_youtube_stats(artist):
 def optimize():
     try:
         data = request.get_json()
-        if not data or "artist" not in data:
-            logger.error("Missing required field 'artist' in request")
-            return jsonify({"error": "Missing required field 'artist'"}), 400
+        if not data or "artist" not in data or "song" not in data:
+            logger.error("Missing required field 'artist' or 'song' in request")
+            return jsonify({"error": "Missing required field 'artist' or 'song'"}), 400
 
         artist = data.get("artist")
-        genres = data.get("genres", ["metal"])  # Par défaut si non fourni
-        logger.info(f"Optimizing campaign strategy for artist: {artist}")
+        song = data.get("song")  # Nouveau champ
+        genres = data.get("genres", ["metal"])
+        logger.info(f"Optimizing campaign strategy for artist: {artist}, song: {song}")
 
-        # Récupérer données Google Trends
-        trend = get_google_trends(artist, genres)
+        trend = get_google_trends(artist, song, genres)
         target_audience = f"Fans of {trend.split('in ')[-1]} and similar artists"
 
-        # Récupérer données YouTube
-        youtube_popular = get_youtube_stats(artist)
+        youtube_popular = get_youtube_stats(artist, song)
 
-        # Déterminer les canaux et l’allocation budgétaire
         channels = ["Spotify", "YouTube"]
         if youtube_popular:
-            budget_allocation = {"Spotify": 0.4, "YouTube": 0.6}  # Plus pour YouTube si populaire
+            budget_allocation = {"Spotify": 0.4, "YouTube": 0.6}
         else:
-            budget_allocation = {"Spotify": 0.6, "YouTube": 0.4}  # Plus pour Spotify sinon
+            budget_allocation = {"Spotify": 0.6, "YouTube": 0.4}
 
-        # Compléter avec OpenAI si nécessaire
         prompt = f"""
-        You are a marketing strategist specializing in music promotion. Optimize a campaign strategy for '{artist}' based on:
+        You are a marketing strategist specializing in music promotion. Optimize a campaign strategy for '{artist}' and their song '{song}' based on:
         - Trend: {trend}
         - YouTube popularity: {youtube_popular}
 
         Provide:
-        - Target audience (short, based on trend)
+        - Target audience (short, based on trend and song)
         - Channels: Spotify, YouTube
         - Budget allocation (percentages totaling 1.0)
 
