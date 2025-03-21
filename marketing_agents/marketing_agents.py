@@ -50,8 +50,8 @@ def generate_ads():
         }
         language_name = language_names.get(language, "French")  # Par défaut en français
 
-        # Créer un prompt plus détaillé et orienté marketing
-       prompt = f"""
+        # Prompt mis à jour avec minuscules et limites strictes
+        prompt = f"""
 You are a creative marketing expert specializing in music promotion. Your task is to generate compelling ad content for the following artist and genres:
 - Artist: {artist}
 - Genres: {genres_str}
@@ -67,12 +67,13 @@ Ensure the tone is exciting, professional, and tailored to the {genres_str} genr
 
 Return the response in the following JSON format:
 {{
-    "short_titles": ["<title1>", "<title2>", ..., "<title5>"],
-    "long_titles": ["<title1>", "<title2>", ..., "<title5>"],
-    "long_descriptions": ["<desc1>", "<desc2>", ..., "<desc5>"]
+    "short_titles": ["<title1>", "<title2>", "<title3>", "<title4>", "<title5>"],
+    "long_titles": ["<title1>", "<title2>", "<title3>", "<title4>", "<title5>"],
+    "long_descriptions": ["<desc1>", "<desc2>", "<desc3>", "<desc4>", "<desc5>"]
 }}
 """
 
+        # Appel à OpenAI
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
@@ -83,16 +84,32 @@ Return the response in the following JSON format:
         raw_text = response.choices[0].message.content.strip()
         logger.info(f"Raw response from OpenAI: {raw_text}")
 
-        data = json.loads(raw_text)
+        # Parsing sécurisé de la réponse JSON
+        try:
+            data = json.loads(raw_text)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse OpenAI response as JSON: {str(e)}")
+            return jsonify({"error": "Invalid response format from OpenAI", "details": str(e)}), 500
 
-        short_titles = [{"title": title, "character_count": len(title)} for title in data.get("short_titles", ["No short title"] * 5)]
-        long_titles = [{"title": title, "character_count": len(title)} for title in data.get("long_titles", ["No long title"] * 5)]
-        long_descriptions = [{"description": desc, "character_count": len(desc)} for desc in data.get("long_descriptions", ["No description"] * 5)]
+        # Vérification et formatage des données
+        short_titles = data.get("short_titles", ["no short title"] * 5)
+        long_titles = data.get("long_titles", ["no long title"] * 5)
+        long_descriptions = data.get("long_descriptions", ["no description"] * 5)
+
+        # Assurer que chaque liste a exactement 5 éléments
+        short_titles = (short_titles + ["no short title"] * 5)[:5]
+        long_titles = (long_titles + ["no long title"] * 5)[:5]
+        long_descriptions = (long_descriptions + ["no description"] * 5)[:5]
+
+        # Formater les résultats avec character_count
+        formatted_short_titles = [{"title": title, "character_count": len(title)} for title in short_titles]
+        formatted_long_titles = [{"title": title, "character_count": len(title)} for title in long_titles]
+        formatted_long_descriptions = [{"description": desc, "character_count": len(desc)} for desc in long_descriptions]
 
         return jsonify({
-            "short_titles": short_titles,
-            "long_titles": long_titles,
-            "long_descriptions": long_descriptions
+            "short_titles": formatted_short_titles,
+            "long_titles": formatted_long_titles,
+            "long_descriptions": formatted_long_descriptions
         }), 200
 
     except Exception as e:
