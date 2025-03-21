@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import logging
 import openai
 from datetime import datetime, timedelta
+import time
+import hashlib
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO)
@@ -22,108 +24,132 @@ if not openai.api_key:
     logger.error("OPENAI_API_KEY is not set in environment variables")
     raise ValueError("OPENAI_API_KEY is required")
 
-# Configurer RapidAPI (Billboard-API)
-RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
-if not RAPIDAPI_KEY:
-    logger.error("RAPIDAPI_KEY is not set in environment variables")
-    raise ValueError("RAPIDAPI_KEY is required")
-
 # Configurer Last.fm
 LASTFM_API_KEY = os.getenv("LASTFM_API_KEY")
 if not LASTFM_API_KEY:
     logger.error("LASTFM_API_KEY is not set in environment variables")
     raise ValueError("LASTFM_API_KEY is required")
 
-# Cache pour les données de Billboard-API (valide pendant 24 heures)
-billboard_cache = {}
+LASTFM_SHARED_SECRET = os.getenv("LASTFM_SHARED_SECRET")
+if not LASTFM_SHARED_SECRET:
+    logger.error("LASTFM_SHARED_SECRET is not set in environment variables")
+    raise ValueError("LASTFM_SHARED_SECRET is required")
+
+# Cache pour les données de Last.fm (valide pendant 24 heures)
+lastfm_cache = {}
 cache_duration = timedelta(hours=24)
 
-# Fonction pour obtenir les artistes tendance et l’image via Billboard-API
-def get_trending_artists_billboard(artist, style):
-    # Vérifier si les données sont dans le cache
-    cache_key = f"billboard_{style}"
-    if cache_key in billboard_cache:
-        cache_entry = billboard_cache[cache_key]
-        if datetime.now() - cache_entry["timestamp"] < cache_duration:
-            logger.info(f"Using cached Billboard data for style: {style}")
-            return cache_entry["trending_artists"], cache_entry["artist_image_url"]
-    
-    try:
-        # Mapper les styles musicaux aux endpoints Billboard-API
-        style_to_endpoint = {
-            "chanson française": "france-songs",
-            "metal": "hot-100",  # Exemple, à ajuster selon les styles
-            "pop": "hot-100",
-            "rock": "hot-100",
-            # Ajouter d'autres styles selon les besoins
-        }
-        endpoint = style_to_endpoint.get(style.lower(), "hot-100")  # Par défaut, utiliser Hot 100
-        
-        url = f"https://billboard-api2.p.rapidapi.com/{endpoint}"
-        headers = {
-            "X-RapidAPI-Key": RAPIDAPI_KEY,
-            "X-RapidAPI-Host": "billboard-api2.p.rapidapi.com"
-        }
-        params = {
-            "date": "2025-03-20"  # Date actuelle ou récente
-        }
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
-        
-        # Extraire les artistes tendance et l’image
-        trending_artists = []
-        artist_image_url = "https://via.placeholder.com/120?text=Artist"
-        if "content" in data:
-            for entry in data["content"][:10]:  # Limiter à 10 artistes
-                artist_name = entry.get("artist", "Unknown Artist")
-                trending_artists.append(artist_name)
-                # Récupérer l’image de l’artiste recherché (si disponible)
-                if artist_name.lower() == artist.lower() and "image" in entry:
-                    artist_image_url = entry["image"]
-                # Si l’artiste n’est pas trouvé, utiliser l’image du premier artiste comme fallback
-                elif artist_image_url == "https://via.placeholder.com/120?text=Artist" and "image" in entry:
-                    artist_image_url = entry["image"]
-        
-        # Mettre en cache les données
-        billboard_cache[cache_key] = {
-            "trending_artists": trending_artists,
-            "artist_image_url": artist_image_url,
-            "timestamp": datetime.now()
-        }
-        return trending_artists, artist_image_url
-    except Exception as e:
-        logger.error(f"Error fetching trending artists from Billboard-API: {str(e)}")
-        return [], "https://via.placeholder.com/120?text=Artist"
+# Fonction pour générer une signature OAuth pour Last.fm
+def generate_lastfm_signature(params):
+    sorted_params = sorted(params.items(), key=lambda x: x[0])
+    signature_string = "".join(f"{key}{value}" for key, value in sorted_params)
+    signature_string += LASTFM_SHARED_SECRET
+    signature = hashlib.md5(signature_string.encode('utf-8')).hexdigest()
+    return signature
 
-# Fonction pour obtenir les artistes tendance et similaires via Last.fm
-def get_artists_lastfm(artist, style):
-    trending_artists = []
-    lookalike_artists = []
+# Fonction pour obtenir les artistes tendance via Last.fm
+def get_trending_artists_lastfm(style):
+    # Vérifier si les données sont dans le cache
+    cache_key = f"lastfm_trending_{style}"
+    if cache_key in lastfm_cache:
+        cache_entry = lastfm_cache[cache_key]
+        if datetime.now() - cache_entry["timestamp"] < cache_duration:
+            logger.info(f"Using cached Last.fm trending data for style: {style}")
+            return cache_entry["trending_artists"]
     
     try:
+        # Ajouter un user-agent pour Last.fm
+        headers = {
+            "User-Agent": "BandStreamIAgent/1.0"
+        }
+        
+        # Paramètres de base pour Last.fm
+        base_params = {
+            "api_key": LASTFM_API_KEY,
+            "format": "json"
+        }
+        
         # Récupérer les artistes tendance dans le style via Last.fm
-        lastfm_trending_url = f"http://ws.audioscrobbler.com/2.0/?method=tag.gettopartists&tag={style}&api_key={LASTFM_API_KEY}&format=json"
-        response = requests.get(lastfm_trending_url)
+        params = base_params.copy()
+        params.update({
+            "method": "tag.getTopArtists",
+            "tag": style
+        })
+        params["api_sig"] = generate_lastfm_signature(params)
+        lastfm_trending_url = "http://ws.audioscrobbler.com/2.0/"
+        response = requests.get(lastfm_trending_url, headers=headers, params=params)
         response.raise_for_status()
         data = response.json()
         
+        trending_artists = []
         if "topartists" in data and "artist" in data["topartists"]:
             trending_artists = [trending_artist["name"] for trending_artist in data["topartists"]["artist"][:10]]
         
+        # Mettre en cache les données
+        lastfm_cache[cache_key] = {
+            "trending_artists": trending_artists,
+            "timestamp": datetime.now()
+        }
+        return trending_artists
+    except Exception as e:
+        logger.error(f"Error fetching trending artists from Last.fm: {str(e)}")
+        return []
+
+# Fonction pour obtenir les artistes similaires et l’image via Last.fm
+def get_similar_artists_lastfm(artist):
+    lookalike_artists = []
+    artist_image_url = "https://via.placeholder.com/120?text=Artist"
+    
+    try:
+        # Ajouter un user-agent pour Last.fm
+        headers = {
+            "User-Agent": "BandStreamIAgent/1.0"
+        }
+        
+        # Paramètres de base pour Last.fm
+        base_params = {
+            "api_key": LASTFM_API_KEY,
+            "format": "json"
+        }
+        
         # Récupérer les artistes similaires via Last.fm
-        lastfm_similar_url = f"http://ws.audioscrobbler.com/2.0/?method=artist.getsimilar&artist={artist}&api_key={LASTFM_API_KEY}&format=json"
-        response = requests.get(lastfm_similar_url)
+        params = base_params.copy()
+        params.update({
+            "method": "artist.getSimilar",
+            "artist": artist
+        })
+        params["api_sig"] = generate_lastfm_signature(params)
+        lastfm_similar_url = "http://ws.audioscrobbler.com/2.0/"
+        response = requests.get(lastfm_similar_url, headers=headers, params=params)
         response.raise_for_status()
         data = response.json()
         
         if "similarartists" in data and "artist" in data["similarartists"]:
             lookalike_artists = [similar_artist["name"] for similar_artist in data["similarartists"]["artist"][:10]]
         
-        return trending_artists, lookalike_artists
+        # Ajouter un délai pour respecter la limite de requêtes (5 req/s)
+        time.sleep(1.0)  # 1 seconde de délai
+        
+        # Récupérer l’image de l’artiste via Last.fm
+        params = base_params.copy()
+        params.update({
+            "method": "artist.getInfo",
+            "artist": artist
+        })
+        params["api_sig"] = generate_lastfm_signature(params)
+        response = requests.get(lastfm_similar_url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+        if "artist" in data and "image" in data["artist"]:
+            for image in data["artist"]["image"]:
+                if image["size"] == "large":
+                    artist_image_url = image["#text"]
+                    break
+        
+        return lookalike_artists, artist_image_url
     except Exception as e:
-        logger.error(f"Error fetching artists from Last.fm: {str(e)}")
-        return [], []
+        logger.error(f"Error fetching similar artists or image from Last.fm: {str(e)}")
+        return [], "https://via.placeholder.com/120?text=Artist"
 
 # Fonction pour obtenir les tendances et artistes similaires via OpenAI
 def get_trends_and_artists_openai(artist, style):
@@ -175,22 +201,22 @@ def analyze():
     
     logger.info(f"Analyzing trends and lookalike artists for artist: {artist}, style: {style}")
     
-    # Obtenir les artistes tendance et l’image via Billboard-API
-    billboard_artists, artist_image_url = get_trending_artists_billboard(artist, style)
+    # Obtenir les artistes tendance via Last.fm
+    lastfm_trending = get_trending_artists_lastfm(style)
     
-    # Obtenir les artistes tendance et similaires via Last.fm
-    lastfm_trending, lastfm_similar = get_artists_lastfm(artist, style)
+    # Obtenir les artistes similaires et l’image via Last.fm
+    lastfm_similar, artist_image_url = get_similar_artists_lastfm(artist)
     
     # Obtenir les tendances et artistes similaires via OpenAI
     openai_trends, openai_similar = get_trends_and_artists_openai(artist, style)
     
     # Croiser les tendances
     trends = []
-    # Prioriser les tendances basées sur les artistes tendance (Billboard et Last.fm)
-    if billboard_artists:
-        trends.append(f"Rise of {style} artists like {billboard_artists[0]}"[:50])
-    if lastfm_trending and len(trends) < 2:
-        trends.append(f"Popularity of {style} with {lastfm_trending[0]}"[:50])
+    # Prioriser les tendances basées sur les artistes tendance (Last.fm)
+    if lastfm_trending:
+        trends.append(f"Rise of {style} artists like {lastfm_trending[0]}"[:50])
+    if lastfm_trending and len(trends) < 2 and len(lastfm_trending) > 1:
+        trends.append(f"Popularity of {style} with {lastfm_trending[1]}"[:50])
     # Compléter avec les tendances d’OpenAI si nécessaire
     for trend in openai_trends:
         if len(trends) < 2 and trend not in trends:
@@ -203,26 +229,19 @@ def analyze():
     # Croiser les artistes similaires
     combined_artists = []
     # Prioriser les artistes qui apparaissent dans plusieurs sources
-    for artist_name in billboard_artists:
+    for artist_name in lastfm_trending:
         if artist_name in lastfm_similar or artist_name in openai_similar:
             combined_artists.append(artist_name)
     for artist_name in lastfm_similar:
         if artist_name in openai_similar and artist_name not in combined_artists:
             combined_artists.append(artist_name)
     # Ajouter les artistes restants
-    for artist_name in billboard_artists + lastfm_trending + lastfm_similar + openai_similar:
+    for artist_name in lastfm_trending + lastfm_similar + openai_similar:
         if artist_name not in combined_artists and len(combined_artists) < 15:
             combined_artists.append(artist_name)
     combined_artists = combined_artists[:15]  # Limiter à 15 artistes
     
-    # Stocker les données dans api_server
-    try:
-        requests.post(f"{os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')}/store/trending_artists", json={"trends": trends})
-        requests.post(f"{os.getenv('API_SERVER_URL', 'https://api-server-production-e858.up.railway.app')}/store/lookalike_artists", json={"lookalike_artists": combined_artists})
-    except Exception as e:
-        logger.error(f"Error storing data in api_server: {str(e)}")
-        # Ne pas renvoyer une erreur 500, continuer avec la réponse
-    
+    # Retourner la réponse même si certaines API échouent
     return jsonify({
         "trends": trends,
         "lookalike_artists": combined_artists,
