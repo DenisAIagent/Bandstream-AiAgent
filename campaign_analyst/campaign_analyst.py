@@ -41,11 +41,63 @@ cache_duration = timedelta(hours=24)
 
 # Fonction pour générer une signature OAuth pour Last.fm
 def generate_lastfm_signature(params):
-    sorted_params = sorted(params.items(), key=lambda x: x[0])
-    signature_string = "".join(f"{key}{value}" for key, value in sorted_params)
+    # Supprimer api_sig si présent pour éviter de l'inclure dans la signature
+    params_copy = params.copy()
+    if 'api_sig' in params_copy:
+        del params_copy['api_sig']
+    
+    # Trier les paramètres par nom
+    sorted_params = sorted(params_copy.items())
+    
+    # Construire la chaîne de signature
+    signature_string = ""
+    for key, value in sorted_params:
+        signature_string += key + str(value)
+    
+    # Ajouter la clé secrète
     signature_string += LASTFM_SHARED_SECRET
-    signature = hashlib.md5(signature_string.encode('utf-8')).hexdigest()
-    return signature
+    
+    # Calculer le hash MD5
+    return hashlib.md5(signature_string.encode('utf-8')).hexdigest()
+
+# Fonction pour effectuer des appels à l'API Last.fm avec retry
+def call_lastfm_api(method, params):
+    base_url = "http://ws.audioscrobbler.com/2.0/"
+    headers = {"User-Agent": "BandStreamIAgent/1.0"}
+    
+    # Ajouter les paramètres de base
+    api_params = {
+        "method": method,
+        "api_key": LASTFM_API_KEY,
+        "format": "json"
+    }
+    api_params.update(params) 
+    
+    # Générer la signature
+    api_params["api_sig"] = generate_lastfm_signature(api_params)
+    
+    # Effectuer la requête avec retry
+    max_retries = 3
+    retry_delay = 5
+    
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(base_url, params=api_params, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            if response.status_code == 403:
+                logger.error(f"Last.fm API returned 403 Forbidden: {str(e)}")
+                logger.info(f"Request parameters: {api_params}")
+                if attempt < max_retries - 1:
+                    logger.info(f"Retrying in {retry_delay} seconds... (Attempt {attempt+1}/{max_retries})")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Augmenter le délai exponentiellement
+                else:
+                    logger.error("Max retries reached, giving up.")
+                    raise
+            else:
+                raise
 
 # Fonction pour obtenir les artistes tendance via Last.fm
 def get_trending_artists_lastfm(style):
@@ -58,28 +110,9 @@ def get_trending_artists_lastfm(style):
             return cache_entry["trending_artists"]
     
     try:
-        # Ajouter un user-agent pour Last.fm
-        headers = {
-            "User-Agent": "BandStreamIAgent/1.0"
-        }
-        
-        # Paramètres de base pour Last.fm
-        base_params = {
-            "api_key": LASTFM_API_KEY,
-            "format": "json"
-        }
-        
         # Récupérer les artistes tendance dans le style via Last.fm
-        params = base_params.copy()
-        params.update({
-            "method": "tag.getTopArtists",
-            "tag": style
-        })
-        params["api_sig"] = generate_lastfm_signature(params)
-        lastfm_trending_url = "http://ws.audioscrobbler.com/2.0/"
-        response = requests.get(lastfm_trending_url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
+        params = {"tag": style}
+        data = call_lastfm_api("tag.getTopArtists", params)
         
         trending_artists = []
         if "topartists" in data and "artist" in data["topartists"]:
@@ -101,45 +134,19 @@ def get_similar_artists_lastfm(artist):
     artist_image_url = "https://via.placeholder.com/120?text=Artist"
     
     try:
-        # Ajouter un user-agent pour Last.fm
-        headers = {
-            "User-Agent": "BandStreamIAgent/1.0"
-        }
-        
-        # Paramètres de base pour Last.fm
-        base_params = {
-            "api_key": LASTFM_API_KEY,
-            "format": "json"
-        }
-        
         # Récupérer les artistes similaires via Last.fm
-        params = base_params.copy()
-        params.update({
-            "method": "artist.getSimilar",
-            "artist": artist
-        })
-        params["api_sig"] = generate_lastfm_signature(params)
-        lastfm_similar_url = "http://ws.audioscrobbler.com/2.0/"
-        response = requests.get(lastfm_similar_url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
+        params = {"artist": artist}
+        data = call_lastfm_api("artist.getSimilar", params)
         
         if "similarartists" in data and "artist" in data["similarartists"]:
             lookalike_artists = [similar_artist["name"] for similar_artist in data["similarartists"]["artist"][:10]]
         
         # Ajouter un délai pour respecter la limite de requêtes (5 req/s)
-        time.sleep(1.0)  # 1 seconde de délai
+        time.sleep(5.0)  # 5 secondes de délai
         
         # Récupérer l’image de l’artiste via Last.fm
-        params = base_params.copy()
-        params.update({
-            "method": "artist.getInfo",
-            "artist": artist
-        })
-        params["api_sig"] = generate_lastfm_signature(params)
-        response = requests.get(lastfm_similar_url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
+        params = {"artist": artist}
+        data = call_lastfm_api("artist.getInfo", params)
         if "artist" in data and "image" in data["artist"]:
             for image in data["artist"]["image"]:
                 if image["size"] == "large":
