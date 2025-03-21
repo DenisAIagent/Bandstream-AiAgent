@@ -8,6 +8,7 @@ import openai
 from datetime import datetime, timedelta
 import time
 import hashlib
+import urllib.parse  # Ajout pour l'encodage URL
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO)
@@ -49,10 +50,12 @@ def generate_lastfm_signature(params):
     # Trier les paramètres par nom
     sorted_params = sorted(params_copy.items())
     
-    # Construire la chaîne de signature
+    # Construire la chaîne de signature avec encodage URL des valeurs
     signature_string = ""
     for key, value in sorted_params:
-        signature_string += key + str(value)
+        # Encoder la valeur pour gérer les espaces et caractères spéciaux
+        encoded_value = urllib.parse.quote(str(value), safe='')
+        signature_string += key + encoded_value
     
     # Ajouter la clé secrète
     signature_string += LASTFM_SHARED_SECRET
@@ -86,8 +89,8 @@ def call_lastfm_api(method, params):
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as e:
-            if response.status_code == 403:
-                logger.error(f"Last.fm API returned 403 Forbidden: {str(e)}")
+            if response.status_code in [400, 403]:
+                logger.error(f"Last.fm API returned {response.status_code}: {str(e)}")
                 logger.info(f"Request parameters: {api_params}")
                 if attempt < max_retries - 1:
                     logger.info(f"Retrying in {retry_delay} seconds... (Attempt {attempt+1}/{max_retries})")
@@ -110,8 +113,10 @@ def get_trending_artists_lastfm(style):
             return cache_entry["trending_artists"]
     
     try:
+        # Normaliser le style en minuscules
+        normalized_style = style.lower()
         # Récupérer les artistes tendance dans le style via Last.fm
-        params = {"tag": style}
+        params = {"tag": normalized_style}
         data = call_lastfm_api("tag.getTopArtists", params)
         
         trending_artists = []
