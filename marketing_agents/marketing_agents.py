@@ -1,6 +1,5 @@
 import os
 import json
-import importlib.util
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import logging
@@ -51,7 +50,7 @@ def generate_ads():
         }
         language_name = language_names.get(language, "French")  # Par défaut en français
 
-        # Prompt avec toutes les contraintes
+        # Prompt mis à jour avec call to action obligatoire
         prompt = f"""
 You are a creative marketing expert specializing in music promotion. Your task is to generate compelling ad content for the following artist and genres:
 - Artist: {artist}
@@ -62,9 +61,9 @@ You are a creative marketing expert specializing in music promotion. Your task i
 Generate the following in {language_name}:
 - A list of 5 short ad titles (max 30 characters each, strictly enforced) that are catchy, energetic, and include a call to action (e.g., "discover", "experience", "unleash").
 - A list of 5 long ad titles (max 60 characters each, strictly enforced) that are bold, descriptive, and highlight the artist's unique qualities across the genres {genres_str}.
-- A list of 5 long ad descriptions (max 90 characters each, strictly enforced) that are engaging, evoke emotion, and include a call to action (e.g., "feel the power", "join the journey").
+- A list of 5 long ad descriptions (max 90 characters each, strictly enforced) that are engaging, evoke emotion, and end with a call to action (e.g., "abonne-se agora", "like e abonne-se", "veja agora").
 
-Ensure the tone is exciting, professional, and tailored to the {genres_str} genres. Use the bio and lyrics (if provided) to add specific details about the artist. Do not exceed the character limits under any circumstances. Use lowercase for all words except proper nouns (e.g., "{artist}" or specific titles like "Que a luz seja" from the bio/lyrics); avoid full uppercase words like "METAL" or "DISCOVER" even if grammatically correct in {language_name}. For punctuation, only use commas (",") and periods ("."); do not use exclamation marks ("!"), question marks ("?"), semicolons (";"), slashes ("/"), or ellipses ("...") under any circumstances.
+Ensure the tone is exciting, professional, and tailored to the {genres_str} genres. Use the bio and lyrics (if provided) to add specific details about the artist. Do not exceed the character limits under any circumstances. Use lowercase for all words except proper nouns (e.g., "{artist}" or specific titles like "Que a luz seja" from the bio/lyrics); avoid full uppercase words like "METAL" or "DISCOVER" even if grammatically correct in {language_name}. For punctuation, only use commas (",") and periods ("."); do not use exclamation marks ("!"), question marks ("?"), semicolons (";"), slashes ("/"), or ellipses ("...") under any circumstances. Each long description must end with a call to action.
 
 Return the response in the following JSON format:
 {{
