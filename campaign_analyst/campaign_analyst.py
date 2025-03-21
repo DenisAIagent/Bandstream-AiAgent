@@ -60,6 +60,14 @@ def get_trending_artists_musicbrainz(style):
 
 # Fonction pour obtenir les artistes similaires et l’image via MusicBrainz
 def get_similar_artists_musicbrainz(artist):
+    # Clé de cache pour les artistes similaires et l'image
+    cache_key = f"musicbrainz_similar_{artist}"
+    if cache_key in musicbrainz_cache:
+        cache_entry = musicbrainz_cache[cache_key]
+        if datetime.now() - cache_entry["timestamp"] < cache_duration:
+            logger.info(f"Using cached MusicBrainz similar artists and image for artist: {artist}")
+            return cache_entry["lookalike_artists"], cache_entry["artist_image_url"]
+    
     lookalike_artists = []
     artist_image_url = "https://via.placeholder.com/120?text=Artist"
     
@@ -96,6 +104,13 @@ def get_similar_artists_musicbrainz(artist):
                         break
                 except musicbrainzngs.ResponseError:
                     continue
+        
+        # Mettre en cache les résultats
+        musicbrainz_cache[cache_key] = {
+            "lookalike_artists": lookalike_artists,
+            "artist_image_url": artist_image_url,
+            "timestamp": datetime.now()
+        }
         
         return lookalike_artists, artist_image_url
     except Exception as e:
