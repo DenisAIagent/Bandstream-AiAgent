@@ -51,7 +51,7 @@ def generate_ads():
         }
         language_name = language_names.get(language, "French")  # Par défaut en français
 
-        # Prompt avec limites réduites et ton spécifié
+        # Prompt avec limites ajustées et ton spécifié
         prompt = f"""
 You are a creative marketing expert specializing in music promotion. Your task is to generate compelling ad content for the following artist and genres:
 - Artist: {artist}
@@ -60,11 +60,11 @@ You are a creative marketing expert specializing in music promotion. Your task i
 - Lyrics sample: {lyrics if lyrics else "Not provided"}
 
 Generate the following in {language_name} with a {tone} tone:
-- A list of 5 short ad titles, each exactly 25 characters or fewer, that are catchy, energetic, and include a call to action (e.g., "découvrez", "écoutez", "vivez").
+- A list of 5 short ad titles, each exactly 30 characters or fewer, that are catchy, energetic, and include a call to action (e.g., "découvrez", "écoutez", "vivez").
 - A list of 5 long ad titles, each exactly 55 characters or fewer, that are bold, descriptive, and highlight the artist's unique qualities across the genres {genres_str}.
 - A list of 5 long ad descriptions, each exactly 80 characters or fewer, that are engaging, evoke emotion, and end with one of these calls to action: "abonnez-vous maintenant", "écoutez maintenant", "like et abonnez-vous", "regardez maintenant".
 
-Ensure the tone is {tone}, professional, and tailored to the {genres_str} genres. Use the bio and lyrics (if provided) to add specific details about the artist. Strictly enforce the character limits: short titles must be 25 characters or fewer, long titles 55 characters or fewer, and long descriptions 80 characters or fewer; do not exceed these limits under any circumstances. Use lowercase for all words except proper nouns (e.g., always write the artist's name as "{artist}" with the first letter capitalized, and specific titles like "Que la lumière soit" from the bio/lyrics); avoid full uppercase words like "METAL" or "DISCOVER" even if grammatically correct in {language_name}. For punctuation, only use commas (",") and periods ("."); do not use exclamation marks ("!"), question marks ("?"), semicolons (";"), slashes ("/"), or ellipses ("...") under any circumstances. Each long description must end with one of the specified calls to action, and the call to action must be fully included within the 80-character limit.
+Ensure the tone is {tone}, professional, and tailored to the {genres_str} genres. Use the bio and lyrics (if provided) to add specific details about the artist. Strictly enforce the character limits: short titles must be 30 characters or fewer, long titles 55 characters or fewer, and long descriptions 80 characters or fewer; do not exceed these limits under any circumstances. Use lowercase for all words except proper nouns (e.g., always write the artist's name as "{artist}" with the first letter capitalized, and specific titles like "Que la lumière soit" from the bio/lyrics); avoid full uppercase words like "METAL" or "DISCOVER" even if grammatically correct in {language_name}. For punctuation, only use commas (",") and periods ("."); do not use exclamation marks ("!"), question marks ("?"), semicolons (";"), slashes ("/"), or ellipses ("...") under any circumstances. Each long description must end with one of the specified calls to action, and the call to action must be fully included within the 80-character limit without truncation.
 
 Return the response in the following JSON format:
 {{
@@ -103,9 +103,8 @@ Return the response in the following JSON format:
         long_descriptions = (long_descriptions + ["no description"] * 5)[:5]
 
         # Tronquer intelligemment pour préserver les calls to action
-        short_titles = [title[:25] for title in short_titles]
+        short_titles = [title[:30] for title in short_titles]
         long_titles = [title[:55] for title in long_titles]
-        # Pour les descriptions, tronquer avant le call to action si possible
         call_to_actions = ["abonnez-vous maintenant", "écoutez maintenant", "like et abonnez-vous", "regardez maintenant"]
         formatted_long_descriptions = []
         for desc in long_descriptions:
