@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Erreur - BandStreamIAgent</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .error { color: red; background: #ffeeee; padding: 20px; border-radius: 5px; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>Une erreur est survenue</h1>
+    <div class="error">
+        <h2>Détails de l'erreur :</h2>
+        <pre>{{ error | e }}</pre>
+    </div>
+    <p>Nous n'avons pas pu générer la campagne pour l'artiste "{{ artist | e }}" dans le style "{{ style | e }}".</p>
+    <p><a href="/">Retour à l'accueil</a></p>
+</body>
+</html>
