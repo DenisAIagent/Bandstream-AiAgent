@@ -51,27 +51,27 @@ def generate_ads():
         language_name = language_names.get(language, "French")  # Par défaut en français
 
         # Créer un prompt plus détaillé et orienté marketing
-        prompt = f"""
-        You are a creative marketing expert specializing in music promotion. Your task is to generate compelling ad content for the following artist and genres:
-        - Artist: {artist}
-        - Genres: {genres_str}
-        - Bio: {bio if bio else "Not provided"}
-        - Lyrics sample: {lyrics if lyrics else "Not provided"}
+       prompt = f"""
+You are a creative marketing expert specializing in music promotion. Your task is to generate compelling ad content for the following artist and genres:
+- Artist: {artist}
+- Genres: {genres_str}
+- Bio: {bio if bio else "Not provided"}
+- Lyrics sample: {lyrics if lyrics else "Not provided"}
 
-        Generate the following in {language_name}:
-        - A list of 5 short ad titles (max 30 characters each) that are catchy, energetic, and include a call to action (e.g., "Discover", "Experience", "Unleash").
-        - A list of 5 long ad titles (max 60 characters each) that are bold, descriptive, and highlight the artist's unique qualities across the genres {genres_str}.
-        - A list of 5 long ad descriptions (max 90 characters each) that are engaging, evoke emotion, and include a call to action (e.g., "Feel the power", "Join the journey").
+Generate the following in {language_name}:
+- A list of 5 short ad titles (max 30 characters each, strictly enforced) that are catchy, energetic, and include a call to action (e.g., "discover", "experience", "unleash").
+- A list of 5 long ad titles (max 60 characters each, strictly enforced) that are bold, descriptive, and highlight the artist's unique qualities across the genres {genres_str}.
+- A list of 5 long ad descriptions (max 90 characters each, strictly enforced) that are engaging, evoke emotion, and include a call to action (e.g., "feel the power", "join the journey").
 
-        Ensure the tone is exciting, professional, and tailored to the {genres_str} genres. Use the bio and lyrics (if provided) to add specific details about the artist.
+Ensure the tone is exciting, professional, and tailored to the {genres_str} genres. Use the bio and lyrics (if provided) to add specific details about the artist. Do not exceed the character limits under any circumstances. Use lowercase for all words except proper nouns (e.g., the artist’s name like "{artist}" or specific titles from the bio/lyrics); do not use full uppercase words like "METAL" or "DISCOVER".
 
-        Return the response in the following JSON format:
-        {{
-            "short_titles": ["<title1>", "<title2>", ..., "<title5>"],
-            "long_titles": ["<title1>", "<title2>", ..., "<title5>"],
-            "long_descriptions": ["<desc1>", "<desc2>", ..., "<desc5>"]
-        }}
-        """
+Return the response in the following JSON format:
+{{
+    "short_titles": ["<title1>", "<title2>", ..., "<title5>"],
+    "long_titles": ["<title1>", "<title2>", ..., "<title5>"],
+    "long_descriptions": ["<desc1>", "<desc2>", ..., "<desc5>"]
+}}
+"""
 
         response = openai.ChatCompletion.create(
             model="gpt-4",
