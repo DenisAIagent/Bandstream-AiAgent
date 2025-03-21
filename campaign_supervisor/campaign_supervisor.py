@@ -50,6 +50,7 @@ def generate_campaign():
     try:
         # Récupérer les données du formulaire
         artist = request.form.get('artist')
+        song = request.form.get('song')
         style_input = request.form.get('style')
         language = request.form.get('language', 'fr')
         tone = request.form.get('tone', 'engageant')
@@ -59,6 +60,10 @@ def generate_campaign():
         if not artist:
             logger.error("Missing required field 'artist' in form data")
             return render_template('index.html', error="Le nom de l'artiste est requis."), 400
+        
+        if not song:
+            logger.error("Missing required field 'song' in form data")
+            return render_template('index.html', error="Le nom de la chanson est requis."), 400
         
         if not style_input:
             logger.error("Missing required field 'style' in form data")
@@ -99,9 +104,9 @@ def generate_campaign():
         youtube_description_short = sanitize_data(youtube_description_short)
         youtube_description_full = sanitize_data(youtube_description_full)
         
-        # Étape 3 : Appeler campaign_optimizer
-        logger.info(f"Sending request to campaign_optimizer at {CAMPAIGN_OPTIMIZER_URL}/optimize with data: {{'artist': {artist}}}")
-        response = requests.post(f"{CAMPAIGN_OPTIMIZER_URL}/optimize", json={"artist": artist})
+        # Étape 3 : Appeler campaign_optimizer avec artist et song
+        logger.info(f"Sending request to campaign_optimizer at {CAMPAIGN_OPTIMIZER_URL}/optimize with data: {{'artist': {artist}, 'song': {song}}}")
+        response = requests.post(f"{CAMPAIGN_OPTIMIZER_URL}/optimize", json={"artist": artist, "song": song})
         response.raise_for_status()
         strategy_data = response.json()
         logger.info(f"Received response from campaign_optimizer: {strategy_data}")
@@ -117,10 +122,11 @@ def generate_campaign():
         strategy = sanitize_data(strategy)
         
         # Étape 4 : Rendre les résultats
-        logger.info(f"Rendering results.html with artist={artist}, style={style_display}, analysis_data={analysis_data}, short_titles={short_titles}, long_titles={long_titles}, long_descriptions={long_descriptions}, youtube_short={youtube_description_short}, youtube_full={youtube_description_full}, strategy={strategy}")
+        logger.info(f"Rendering results.html with artist={artist}, song={song}, style={style_display}, analysis_data={analysis_data}, short_titles={short_titles}, long_titles={long_titles}, long_descriptions={long_descriptions}, youtube_short={youtube_description_short}, youtube_full={youtube_description_full}, strategy={strategy}")
         try:
             return render_template('results.html', 
-                                  artist=artist, 
+                                  artist=artist,
+                                  song=song,
                                   style=style_display,  
                                   analysis=analysis_data,
                                   short_titles=short_titles, 
