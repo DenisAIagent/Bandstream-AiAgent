@@ -7,8 +7,7 @@ import logging
 import openai
 from datetime import datetime, timedelta
 import time
-import hashlib
-import urllib.parse  # Ajout pour l'encodage URL
+import musicbrainzngs  # Ajout pour MusicBrainz
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO)
@@ -25,142 +24,91 @@ if not openai.api_key:
     logger.error("OPENAI_API_KEY is not set in environment variables")
     raise ValueError("OPENAI_API_KEY is required")
 
-# Configurer Last.fm
-LASTFM_API_KEY = os.getenv("LASTFM_API_KEY")
-if not LASTFM_API_KEY:
-    logger.error("LASTFM_API_KEY is not set in environment variables")
-    raise ValueError("LASTFM_API_KEY is required")
+# Configurer MusicBrainz
+musicbrainzngs.set_useragent("BandStreamIAgent", "1.0", "https://github.com/DenisAIagent/Bandstream-AiAgent")
+musicbrainzngs.set_rate_limit(limit_or_interval=1.0)  # Limite de 1 requête par seconde
 
-LASTFM_SHARED_SECRET = os.getenv("LASTFM_SHARED_SECRET")
-if not LASTFM_SHARED_SECRET:
-    logger.error("LASTFM_SHARED_SECRET is not set in environment variables")
-    raise ValueError("LASTFM_SHARED_SECRET is required")
-
-# Cache pour les données de Last.fm (valide pendant 24 heures)
-lastfm_cache = {}
+# Cache pour les données de MusicBrainz (valide pendant 24 heures)
+musicbrainz_cache = {}
 cache_duration = timedelta(hours=24)
 
-# Fonction pour générer une signature OAuth pour Last.fm
-def generate_lastfm_signature(params):
-    # Supprimer api_sig si présent pour éviter de l'inclure dans la signature
-    params_copy = params.copy()
-    if 'api_sig' in params_copy:
-        del params_copy['api_sig']
-    
-    # Trier les paramètres par nom
-    sorted_params = sorted(params_copy.items())
-    
-    # Construire la chaîne de signature avec encodage URL des valeurs
-    signature_string = ""
-    for key, value in sorted_params:
-        # Encoder la valeur pour gérer les espaces et caractères spéciaux
-        encoded_value = urllib.parse.quote(str(value), safe='')
-        signature_string += key + encoded_value
-    
-    # Ajouter la clé secrète
-    signature_string += LASTFM_SHARED_SECRET
-    
-    # Calculer le hash MD5
-    return hashlib.md5(signature_string.encode('utf-8')).hexdigest()
-
-# Fonction pour effectuer des appels à l'API Last.fm avec retry
-def call_lastfm_api(method, params):
-    base_url = "http://ws.audioscrobbler.com/2.0/"
-    headers = {"User-Agent": "BandStreamIAgent/1.0"}
-    
-    # Ajouter les paramètres de base
-    api_params = {
-        "method": method,
-        "api_key": LASTFM_API_KEY,
-        "format": "json"
-    }
-    api_params.update(params) 
-    
-    # Générer la signature
-    api_params["api_sig"] = generate_lastfm_signature(api_params)
-    
-    # Effectuer la requête avec retry
-    max_retries = 3
-    retry_delay = 5
-    
-    for attempt in range(max_retries):
-        try:
-            response = requests.get(base_url, params=api_params, headers=headers)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.HTTPError as e:
-            if response.status_code in [400, 403]:
-                logger.error(f"Last.fm API returned {response.status_code}: {str(e)}")
-                logger.info(f"Request parameters: {api_params}")
-                if attempt < max_retries - 1:
-                    logger.info(f"Retrying in {retry_delay} seconds... (Attempt {attempt+1}/{max_retries})")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # Augmenter le délai exponentiellement
-                else:
-                    logger.error("Max retries reached, giving up.")
-                    raise
-            else:
-                raise
-
-# Fonction pour obtenir les artistes tendance via Last.fm
-def get_trending_artists_lastfm(style):
+# Fonction pour obtenir les artistes tendance via MusicBrainz
+def get_trending_artists_musicbrainz(style):
     # Vérifier si les données sont dans le cache
-    cache_key = f"lastfm_trending_{style}"
-    if cache_key in lastfm_cache:
-        cache_entry = lastfm_cache[cache_key]
+    cache_key = f"musicbrainz_trending_{style}"
+    if cache_key in musicbrainz_cache:
+        cache_entry = musicbrainz_cache[cache_key]
         if datetime.now() - cache_entry["timestamp"] < cache_duration:
-            logger.info(f"Using cached Last.fm trending data for style: {style}")
+            logger.info(f"Using cached MusicBrainz trending data for style: {style}")
             return cache_entry["trending_artists"]
     
     try:
         # Normaliser le style en minuscules
         normalized_style = style.lower()
-        # Récupérer les artistes tendance dans le style via Last.fm
-        params = {"tag": normalized_style}
-        data = call_lastfm_api("tag.getTopArtists", params)
-        
+        # Rechercher des artistes par tag (genre)
+        result = musicbrainzngs.search_artists(query=f'tag:"{normalized_style}"', limit=10)
         trending_artists = []
-        if "topartists" in data and "artist" in data["topartists"]:
-            trending_artists = [trending_artist["name"] for trending_artist in data["topartists"]["artist"][:10]]
-        
+        if "artist-list" in result:
+            for artist in result["artist-list"]:
+                if "name" in artist:
+                    trending_artists.append(artist["name"])
         # Mettre en cache les données
-        lastfm_cache[cache_key] = {
+        musicbrainz_cache[cache_key] = {
             "trending_artists": trending_artists,
             "timestamp": datetime.now()
         }
         return trending_artists
     except Exception as e:
-        logger.error(f"Error fetching trending artists from Last.fm: {str(e)}")
+        logger.error(f"Error fetching trending artists from MusicBrainz: {str(e)}")
         return []
 
-# Fonction pour obtenir les artistes similaires et l’image via Last.fm
-def get_similar_artists_lastfm(artist):
+# Fonction pour obtenir les artistes similaires et l’image via MusicBrainz
+def get_similar_artists_musicbrainz(artist):
     lookalike_artists = []
     artist_image_url = "https://via.placeholder.com/120?text=Artist"
     
     try:
-        # Récupérer les artistes similaires via Last.fm
-        params = {"artist": artist}
-        data = call_lastfm_api("artist.getSimilar", params)
+        # Rechercher l’artiste
+        result = musicbrainzngs.search_artists(artist=artist, limit=1)
+        if "artist-list" not in result or not result["artist-list"]:
+            return lookalike_artists, artist_image_url
         
-        if "similarartists" in data and "artist" in data["similarartists"]:
-            lookalike_artists = [similar_artist["name"] for similar_artist in data["similarartists"]["artist"][:10]]
+        artist_data = result["artist-list"][0]
+        artist_id = artist_data["id"]
         
-        # Ajouter un délai pour respecter la limite de requêtes (5 req/s)
-        time.sleep(5.0)  # 5 secondes de délai
+        # Ajouter un délai pour respecter la limite de taux (1 req/s)
+        time.sleep(1.0)
         
-        # Récupérer l’image de l’artiste via Last.fm
-        params = {"artist": artist}
-        data = call_lastfm_api("artist.getInfo", params)
-        if "artist" in data and "image" in data["artist"]:
-            for image in data["artist"]["image"]:
-                if image["size"] == "large":
-                    artist_image_url = image["#text"]
-                    break
+        # Récupérer les relations de l’artiste
+        relations = musicbrainzngs.get_artist_by_id(artist_id, includes=["artist-rels"])
+        if "artist" in relations and "artist-relation-list" in relations["artist"]:
+            for relation in relations["artist"]["artist-relation-list"]:
+                if relation["type"] in ["associated with", "influenced by", "collaborates with"]:
+                    if "artist" in relation and "name" in relation["artist"]:
+                        lookalike_artists.append(relation["artist"]["name"])
+        lookalike_artists = lookalike_artists[:10]  # Limiter à 10 artistes
+        
+        # Ajouter un délai pour respecter la limite de taux (1 req/s)
+        time.sleep(1.0)
+        
+        # Récupérer une image via Cover Art Archive
+        releases = musicbrainzngs.get_artist_by_id(artist_id, includes=["release-groups"])
+        if "artist" in releases and "release-group-list" in releases["artist"]:
+            for release_group in releases["artist"]["release-group-list"]:
+                release_group_id = release_group["id"]
+                try:
+                    # Ajouter un délai pour respecter la limite de taux (1 req/s)
+                    time.sleep(1.0)
+                    cover_art = musicbrainzngs.get_release_group_image_list(release_group_id)
+                    if "images" in cover_art and cover_art["images"]:
+                        artist_image_url = cover_art["images"][0]["image"]
+                        break
+                except musicbrainzngs.ResponseError:
+                    continue
         
         return lookalike_artists, artist_image_url
     except Exception as e:
-        logger.error(f"Error fetching similar artists or image from Last.fm: {str(e)}")
+        logger.error(f"Error fetching similar artists or image from MusicBrainz: {str(e)}")
         return [], "https://via.placeholder.com/120?text=Artist"
 
 # Fonction pour obtenir les tendances et artistes similaires via OpenAI
@@ -213,22 +161,22 @@ def analyze():
     
     logger.info(f"Analyzing trends and lookalike artists for artist: {artist}, style: {style}")
     
-    # Obtenir les artistes tendance via Last.fm
-    lastfm_trending = get_trending_artists_lastfm(style)
+    # Obtenir les artistes tendance via MusicBrainz
+    musicbrainz_trending = get_trending_artists_musicbrainz(style)
     
-    # Obtenir les artistes similaires et l’image via Last.fm
-    lastfm_similar, artist_image_url = get_similar_artists_lastfm(artist)
+    # Obtenir les artistes similaires et l’image via MusicBrainz
+    musicbrainz_similar, artist_image_url = get_similar_artists_musicbrainz(artist)
     
     # Obtenir les tendances et artistes similaires via OpenAI
     openai_trends, openai_similar = get_trends_and_artists_openai(artist, style)
     
     # Croiser les tendances
     trends = []
-    # Prioriser les tendances basées sur les artistes tendance (Last.fm)
-    if lastfm_trending:
-        trends.append(f"Rise of {style} artists like {lastfm_trending[0]}"[:50])
-    if lastfm_trending and len(trends) < 2 and len(lastfm_trending) > 1:
-        trends.append(f"Popularity of {style} with {lastfm_trending[1]}"[:50])
+    # Prioriser les tendances basées sur les artistes tendance (MusicBrainz)
+    if musicbrainz_trending:
+        trends.append(f"Rise of {style} artists like {musicbrainz_trending[0]}"[:50])
+    if musicbrainz_trending and len(trends) < 2 and len(musicbrainz_trending) > 1:
+        trends.append(f"Popularity of {style} with {musicbrainz_trending[1]}"[:50])
     # Compléter avec les tendances d’OpenAI si nécessaire
     for trend in openai_trends:
         if len(trends) < 2 and trend not in trends:
@@ -241,19 +189,19 @@ def analyze():
     # Croiser les artistes similaires
     combined_artists = []
     # Prioriser les artistes qui apparaissent dans plusieurs sources
-    for artist_name in lastfm_trending:
-        if artist_name in lastfm_similar or artist_name in openai_similar:
+    for artist_name in musicbrainz_trending:
+        if artist_name in musicbrainz_similar or artist_name in openai_similar:
             combined_artists.append(artist_name)
-    for artist_name in lastfm_similar:
+    for artist_name in musicbrainz_similar:
         if artist_name in openai_similar and artist_name not in combined_artists:
             combined_artists.append(artist_name)
     # Ajouter les artistes restants
-    for artist_name in lastfm_trending + lastfm_similar + openai_similar:
+    for artist_name in musicbrainz_trending + musicbrainz_similar + openai_similar:
         if artist_name not in combined_artists and len(combined_artists) < 15:
             combined_artists.append(artist_name)
     combined_artists = combined_artists[:15]  # Limiter à 15 artistes
     
-    # Retourner la réponse même si certaines API échouent
+    # Retourner la réponse
     return jsonify({
         "trends": trends,
         "lookalike_artists": combined_artists,
