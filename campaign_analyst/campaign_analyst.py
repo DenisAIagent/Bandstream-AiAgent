@@ -30,7 +30,7 @@ musicbrainzngs.set_useragent("BandStreamIAgent", "1.0", "https://github.com/Deni
 musicbrainzngs.set_rate_limit(limit_or_interval=1.0)  # Limite de 1 requête par seconde
 
 # Définir un timeout pour les appels à MusicBrainz (en secondes)
-MUSICBRAINZ_TIMEOUT = 5  # 5 secondes
+MUSICBRAINZ_TIMEOUT = 5
 
 # Cache pour les données de MusicBrainz (valide pendant 24 heures)
 musicbrainz_cache = {}
@@ -42,7 +42,6 @@ def timeout_handler(signum, frame):
 
 # Fonction pour obtenir les artistes tendance via MusicBrainz
 def get_trending_artists_musicbrainz(styles):
-    # Créer une clé de cache unique pour la combinaison de styles
     cache_key = f"musicbrainz_trending_{'_'.join(sorted(styles))}"
     if cache_key in musicbrainz_cache:
         cache_entry = musicbrainz_cache[cache_key]
@@ -54,7 +53,6 @@ def get_trending_artists_musicbrainz(styles):
         signal.signal(signal.SIGALRM, timeout_handler)
         signal.alarm(MUSICBRAINZ_TIMEOUT)
         
-        # Rechercher des artistes pour chaque style
         trending_artists = set()
         for style in styles:
             normalized_style = style.lower()
@@ -132,8 +130,7 @@ def get_similar_artists_musicbrainz(artist):
                     signal.alarm(MUSICBRAINZ_TIMEOUT)
                     cover_art = musicbrainzngs.get_release_group_image_list(release_group_id)
                     if "images" in cover_art and cover_art["images"]:
-                        artist_image_url = cover_art["images"][0]["image"]
-                        artist_image_url = artist_image_url.rstrip(';').strip()
+                        artist_image_url = cover_art["images"][0]["image"].rstrip(';').strip()
                         signal.alarm(0)
                         break
                     signal.alarm(0)
@@ -205,11 +202,12 @@ def analyze():
     
     artist = data.get("artist")
     styles = data.get("styles", [])
+    optimizer_similar_artists = data.get("optimizer_similar_artists", [])
     if not styles:
         logger.error("Styles list is empty")
         return jsonify({"error": "At least one style is required"}), 400
     
-    logger.info(f"Analyzing trends and lookalike artists for artist: {artist}, styles: {styles}")
+    logger.info(f"Analyzing trends and lookalike artists for artist: {artist}, styles: {styles}, optimizer_similar_artists: {optimizer_similar_artists}")
     
     musicbrainz_trending = get_trending_artists_musicbrainz(styles)
     
@@ -229,22 +227,30 @@ def analyze():
         trends = ["Trend 1", "Trend 2"]
     trends = trends[:2]
     
+    # Fusionner les artistes similaires
     combined_artists = []
+    # Priorité aux artistes de campaign_optimizer
+    for artist_name in optimizer_similar_artists:
+        if artist_name not in combined_artists and artist_name != artist:
+            combined_artists.append(artist_name)
+    
+    # Ajouter les artistes de MusicBrainz et OpenAI
     for artist_name in musicbrainz_trending:
         if artist_name in musicbrainz_similar or artist_name in openai_similar:
-            combined_artists.append(artist_name)
+            if artist_name not in combined_artists and artist_name != artist:
+                combined_artists.append(artist_name)
     for artist_name in musicbrainz_similar:
-        if artist_name in openai_similar and artist_name not in combined_artists:
+        if artist_name in openai_similar and artist_name not in combined_artists and artist_name != artist:
             combined_artists.append(artist_name)
     for artist_name in musicbrainz_trending + musicbrainz_similar + openai_similar:
-        if artist_name not in combined_artists and len(combined_artists) < 15:
+        if artist_name not in combined_artists and len(combined_artists) < 15 and artist_name != artist:
             combined_artists.append(artist_name)
     combined_artists = combined_artists[:15]
     
     return jsonify({
         "trends": trends,
         "lookalike_artists": combined_artists,
-        "style": ", ".join(styles),  # Joindre les styles pour l'affichage
+        "style": ", ".join(styles),
         "artist_image_url": artist_image_url
     }), 200
 
