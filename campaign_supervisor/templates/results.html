@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Band Stream - Résultats de la Campagne</title>
+    <title>Band Stream Crew AI Agent</title>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Poppins:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/png" href="https://i.postimg.cc/6q9gHcqq/favicon-bandstream.png">
     <style>
         body { font-family: 'Poppins', sans-serif; font-weight: 300; margin: 0; padding: 0; background-color: #EBF5DF; color: #000000; line-height: 1.6; }
         header { background-color: #000000; color: #FFFFFF; text-align: center; padding: 2rem 0; position: relative; overflow: hidden; }
@@ -13,25 +12,59 @@
         .header-content { display: flex; flex-direction: column; align-items: center; justify-content: center; max-width: 1200px; margin: 0 auto; padding: 0 20px; position: relative; }
         .header-content img { height: 60px; margin-bottom: 10px; }
         .header-content h1 { font-family: 'Quicksand', sans-serif; font-size: 2rem; font-weight: 700; margin: 0; color: #FFFFFF; }
-        .header-content p { font-family: 'Poppins', sans-serif; font-weight: 400; font-size: 1.2rem; margin: 10px 0 0; color: #FFFFFF; }
-        .container { max-width: 1200px; margin: 40px auto; padding: 20px; }
-        .results-section { background-color: white; border-radius: 10px; padding: 30px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); margin-bottom: 20px; }
-        .results-section h2 { font-family: 'Quicksand', sans-serif; font-size: 1.8rem; font-weight: 600; color: #000000; margin-bottom: 20px; cursor: pointer; }
-        .results-section h3 { font-family: 'Quicksand', sans-serif; font-size: 1.4rem; font-weight: 400; color: #000000; }
-        .artist-info { margin-bottom: 20px; }
-        .artist-details h1 { font-size: 2rem; margin: 0; }
-        .artist-details h2 { font-size: 1.6rem; margin: 5px 0; } /* Nouveau pour le nom de la chanson */
-        .artist-details h3 { font-size: 1.2rem; margin: 5px 0; }
-        .ad-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .ad-item { padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-        .ad-item p { margin: 5px 0; }
-        .copy-button { padding: 5px 10px; background-color: #0ED894; color: #000000; border: none; border-radius: 5px; cursor: pointer; }
-        .copy-button:hover { background-color: #0BBF7A; }
-        .return-link { text-align: center; margin-top: 20px; }
-        .return-link a { color: #0ED894; text-decoration: none; font-weight: 500; }
-        .return-link a:hover { text-decoration: underline; }
-        footer { text-align: center; padding: 20px; font-size: 0.9rem; color: #666; }
+        .header-content p { font-family: 'Poppins', sans-serif; font-weight: 400; font-size: 1.2rem; margin: 10px 0 0; color: #FFFFFF; position: relative; }
+        .header-content p::before, .header-content p::after { content: '“'; font-size: 2rem; color: #0ED894; position: absolute; top: 50%; transform: translateY(-50%); }
+        .header-content p::before { left: -30px; }
+        .header-content p::after { right: -30px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .artist-info { background-color: white; border-radius: 10px; padding: 30px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); margin-bottom: 30px; transition: transform 0.2s ease-in-out; }
+        .artist-info:hover { transform: translateY(-5px); }
+        .artist-header { display: flex; align-items: center; margin-bottom: 30px; }
+        .artist-image { width: 120px; height: 120px; border-radius: 50%; background-size: cover; background-position: center; background-image: url('{{ analysis.artist_image_url | default("https://via.placeholder.com/120?text=Artist") | e }}'); margin-right: 25px; }
+        .artist-details h1 { margin: 0; font-family: 'Quicksand', sans-serif; font-size: 2.2rem; font-weight: 600; color: #000000; }
+        .artist-details h2 { margin: 5px 0 0; font-family: 'Quicksand', sans-serif; font-size: 1.6rem; font-weight: 400; color: #0ED894; }
+        .content-section { margin-bottom: 20px; }
+        .content-section h3 { font-family: 'Quicksand', sans-serif; font-size: 1.6rem; font-weight: 600; color: #000000; margin-bottom: 10px; border-bottom: 2px solid #0ED894; padding-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .content-section h3::after { content: '▼'; font-size: 1rem; transition: transform 0.3s ease; }
+        .content-section.collapsed h3::after { transform: rotate(180deg); }
+        .content-section .content { display: block; transition: all 0.3s ease; }
+        .content-section.collapsed .content { display: none; }
+        .content-box { background-color: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); transition: transform 0.2s ease-in-out; }
+        .content-box:hover { transform: translateY(-3px); }
+        .content-box h4 { font-family: 'Quicksand', sans-serif; font-size: 1.2rem; font-weight: 400; color: #0ED894; margin-top: 0; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .content-box p { font-family: 'Poppins', sans-serif; font-weight: 300; font-size: 1rem; color: #000000; margin-bottom: 0; display: inline-block; }
+        .copy-btn { background-color: #0ED894; color: #000000; border: none; border-radius: 5px; padding: 5px 10px; font-family: 'Quicksand', sans-serif; font-weight: 600; cursor: pointer; transition: background-color 0.3s ease; font-size: 0.8rem; }
+        .copy-btn:hover { background-color: #0BBF7A; }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .grid-item { background-color: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+        .grid-item h4 { font-family: 'Quicksand', sans-serif; font-size: 1.2rem; font-weight: 400; color: #0ED894; margin-top: 0; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .grid-item p { font-family: 'Poppins', sans-serif; font-weight: 300; font-size: 1rem; color: #000000; margin-bottom: 0; display: inline-block; }
+        footer { text-align: center; padding: 20px; background-color: #000000; color: #EBF5DF; font-size: 0.9rem; font-family: 'Quicksand', sans-serif; font-weight: 400; }
+        .button { display: inline-block; padding: 12px 24px; background-color: #0ED894; color: #000000; text-decoration: none; border-radius: 5px; font-family: 'Quicksand', sans-serif; font-weight: 600; margin-top: 20px; transition: background-color 0.3s ease; }
+        .button:hover { background-color: #0BBF7A; }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => {
+                const header = section.querySelector('h3');
+                header.addEventListener('click', () => {
+                    section.classList.toggle('collapsed');
+                });
+            });
+
+            const copyButtons = document.querySelectorAll('.copy-btn');
+            copyButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const text = button.getAttribute('data-text');
+                    navigator.clipboard.writeText(text).then(() => {
+                        button.textContent = 'Copié !';
+                        setTimeout(() => { button.textContent = 'Copier'; }, 2000);
+                    }).catch(err => { console.error('Erreur lors de la copie : ', err); });
+                });
+            });
+        });
+    </script>
 </head>
 <body>
     <header>
@@ -43,95 +76,136 @@
     </header>
 
     <div class="container">
-        <div class="results-section">
-            <div class="artist-info">
+        <div class="artist-info">
+            <div class="artist-header">
+                <div class="artist-image"></div>
                 <div class="artist-details">
                     <h1 id="artist-name">{{ artist | default("Nom d'Artiste") | e }}</h1>
-                    <h2 id="song-name">{{ song | default("Nom de la Chanson") | e }}</h2>
-                    <h3 id="style-name">{{ style | default("Styles Musicaux") | e }}</h3>
+                    <h2 id="single-name">{{ style | default("Nom du Single") | e }}</h2>
+                </div>
+            </div>
+            
+            <div class="content-section">
+                <h3>Tendances</h3>
+                <div class="content">
+                    {% if analysis and analysis.trends %}
+                        <ul>
+                            {% for trend in analysis.trends %}
+                                <li>{{ trend | e }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>Aucune tendance disponible.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="content-section">
+                <h3>Artistes Similaires</h3>
+                <div class="content">
+                    {% if analysis and analysis.lookalike_artists %}
+                        <ul id="similar-artists-list">
+                            {% for artist in analysis.lookalike_artists %}
+                                <li>{{ artist | e }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>Aucun artiste similaire disponible.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
 
-        <div class="results-section">
-            <h2>Tendances</h2>
-            {% if analysis.trends %}
-                {% for trend in analysis.trends %}
-                    <p>{{ trend }}</p>
-                {% endfor %}
-            {% else %}
-                <p>Aucune tendance disponible.</p>
-            {% endif %}
-        </div>
-
-        <div class="results-section">
-            <h2>Artistes Similaires</h2>
-            {% if analysis.lookalike_artists %}
-                {% for artist in analysis.lookalike_artists %}
-                    <p>{{ artist }}</p>
-                {% endfor %}
-            {% else %}
-                <p>Aucun artiste similaire disponible.</p>
-            {% endif %}
-        </div>
-
-        <div class="results-section">
-            <h2>Titres Courts (5)</h2>
-            <div class="ad-list">
-                {% for item in short_titles %}
-                    <div class="ad-item">
-                        <p>{{ item.title }} ({{ item.character_count }}/30 caractères)</p>
-                        <button class="copy-button" onclick="navigator.clipboard.writeText('{{ item.title }}')">Copier</button>
+        <div class="content-section">
+            <h3>Titres Courts (5)</h3>
+            <div class="content">
+                {% if short_titles %}
+                    <div class="grid-container">
+                        {% for title in short_titles %}
+                            <div class="grid-item">
+                                <h4>
+                                    Titre {{ loop.index }}
+                                    <button class="copy-btn" data-text="{{ title.title | e }}">Copier</button>
+                                </h4>
+                                <p>{{ title.title | default("Titre non spécifié") | e }} ({{ title.character_count | default(0) }}/30 caractères)</p>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
+                {% else %}
+                    <p>Aucun titre court disponible.</p>
+                {% endif %}
             </div>
         </div>
 
-        <div class="results-section">
-            <h2>Titres Longs (5)</h2>
-            <div class="ad-list">
-                {% for item in long_titles %}
-                    <div class="ad-item">
-                        <p>{{ item.title }} ({{ item.character_count }}/55 caractères)</p>
-                        <button class="copy-button" onclick="navigator.clipboard.writeText('{{ item.title }}')">Copier</button>
+        <div class="content-section">
+            <h3>Titres Longs (5)</h3>
+            <div class="content">
+                {% if long_titles %}
+                    <div class="grid-container">
+                        {% for title in long_titles %}
+                            <div class="grid-item">
+                                <h4>
+                                    Titre {{ loop.index }}
+                                    <button class="copy-btn" data-text="{{ title.title | e }}">Copier</button>
+                                </h4>
+                                <p>{{ title.title | default("Titre non spécifié") | e }} ({{ title.character_count | default(0) }}/55 caractères)</p>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
+                {% else %}
+                    <p>Aucun titre long disponible.</p>
+                {% endif %}
             </div>
         </div>
 
-        <div class="results-section">
-            <h2>Descriptions Longues (5)</h2>
-            <div class="ad-list">
-                {% for item in long_descriptions %}
-                    <div class="ad-item">
-                        <p>{{ item.description }} ({{ item.character_count }}/80 caractères)</p>
-                        <button class="copy-button" onclick="navigator.clipboard.writeText('{{ item.description }}')">Copier</button>
+        <div class="content-section">
+            <h3>Descriptions Longues (5)</h3>
+            <div class="content">
+                {% if long_descriptions %}
+                    <div class="grid-container">
+                        {% for desc in long_descriptions %}
+                            <div class="grid-item">
+                                <h4>
+                                    Description {{ loop.index }}
+                                    <button class="copy-btn" data-text="{{ desc.description | e }}">Copier</button>
+                                </h4>
+                                <p>{{ desc.description | default("Description non spécifiée") | e }} ({{ desc.character_count | default(0) }}/80 caractères)</p>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
+                {% else %}
+                    <p>Aucune description longue disponible.</p>
+                {% endif %}
             </div>
         </div>
 
-        <div class="results-section">
-            <h2>Stratégie optimisée</h2>
-            {% if strategy.target_audience and strategy.channels and strategy.budget_allocation %}
-                <h3>Public cible : {{ strategy.target_audience }}</h3>
-                <h3>Canaux : {{ strategy.channels | join(', ') }}</h3>
-                <h3>Allocation du budget :</h3>
-                {% for channel, percentage in strategy.budget_allocation.items() %}
-                    <p>{{ channel }}: {{ (percentage * 100) | round(1) }}%</p>
-                {% endfor %}
-            {% else %}
-                <p>Aucune stratégie optimisée disponible.</p>
-            {% endif %}
+        <div class="content-section">
+            <h3>Description YouTube</h3>
+            <div class="content">
+                {% if youtube_description_short and youtube_description_full %}
+                    <div class="content-box">
+                        <h4>
+                            Description courte
+                            <button class="copy-btn" data-text="{{ youtube_description_short.description | e }}">Copier</button>
+                        </h4>
+                        <p>{{ youtube_description_short.description | default("Description courte non spécifiée") | e }} ({{ youtube_description_short.character_count | default(0) }}/120 caractères)</p>
+                    </div>
+                    <div class="content-box">
+                        <h4>
+                            Description complète
+                            <button class="copy-btn" data-text="{{ youtube_description_full.description | e }}">Copier</button>
+                        </h4>
+                        <p style="white-space: pre-wrap;">{{ youtube_description_full.description | default("Description complète non spécifiée") | e }} ({{ youtube_description_full.character_count | default(0) }} caractères)</p>
+                    </div>
+                {% else %}
+                    <p>Aucune description YouTube disponible.</p>
+                {% endif %}
+            </div>
         </div>
 
-        <div class="return-link">
-            <a href="/">Retour à l'accueil</a>
-        </div>
-    </div>
-
-    <footer>
-        <p>© 2025 Générateur d'Annonces Publicitaires Musicales - Band Stream</p>
-    </footer>
-</body>
-</html>
+        <div class="content-section">
+            <h3>Stratégie optimisée</h3>
+            <div class="content">
+                {% if strategy %}
+                    <div class="content-box">
+                        <p><strong>Public cible :</strong> {{ strategy.target_audience | 
