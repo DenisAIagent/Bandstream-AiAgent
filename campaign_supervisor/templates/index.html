@@ -107,7 +107,7 @@
             font-weight: 400;
             color: #000000;
         }
-        .form-section input, .form-section textarea {
+        .form-section input, .form-section textarea, .form-section select {
             font-family: 'Poppins', sans-serif;
             font-weight: 300;
             font-size: 1rem;
@@ -173,6 +173,16 @@
                 <label for="style">Style Musical *</label>
                 <input type="text" id="style" name="style" required placeholder="Ex: Metal, deathmetal, hardcore">
                 <p class="help-text">Entrez plusieurs styles séparés par des virgules.</p>
+
+                <label for="language">Langue des Annonces *</label>
+                <select id="language" name="language" required>
+                    <option value="fr">Français</option>
+                    <option value="en">Anglais</option>
+                    <option value="de">Allemand</option>
+                    <option value="es">Espagnol</option>
+                    <option value="pt">Portugais</option>
+                </select>
+                <p class="help-text">Choisissez la langue pour les annonces générées.</p>
 
                 <label for="lyrics">Paroles (facultatif)</label>
                 <textarea id="lyrics" name="lyrics" placeholder="Entrez un extrait des paroles..."></textarea>
