@@ -32,7 +32,6 @@ def sanitize_data(data):
     elif isinstance(data, list):
         return [sanitize_data(item) for item in data]
     elif isinstance(data, str):
-        # Nettoyer les chaînes de caractères
         return data.strip().rstrip(';')
     else:
         return data
@@ -51,7 +50,7 @@ def generate_campaign():
     try:
         # Récupérer les données du formulaire
         artist = request.form.get('artist')
-        style = request.form.get('style')
+        style_input = request.form.get('style')
         song = request.form.get('song')
         lyrics = request.form.get('lyrics')
         bio = request.form.get('bio')
@@ -60,9 +59,18 @@ def generate_campaign():
             logger.error("Missing required field 'artist' in form data")
             return render_template('index.html', error="Le nom de l'artiste est requis."), 400
         
+        if not style_input:
+            logger.error("Missing required field 'style' in form data")
+            return render_template('index.html', error="Le style musical est requis."), 400
+
+        # Splitter les styles musicaux en une liste
+        styles = [style.strip() for style in style_input.split(',')]
+        # Joindre les styles pour l'affichage dans results.html
+        style_display = ', '.join(styles)
+
         # Étape 1 : Appeler campaign_analyst pour obtenir les tendances et artistes similaires
-        logger.info(f"Sending request to campaign_analyst at {CAMPAIGN_ANALYST_URL}/analyze with data: {{'artist': {artist}, 'style': {style}}}")
-        response = requests.post(f"{CAMPAIGN_ANALYST_URL}/analyze", json={"artist": artist, "style": style})
+        logger.info(f"Sending request to campaign_analyst at {CAMPAIGN_ANALYST_URL}/analyze with data: {{'artist': {artist}, 'styles': {styles}}}")
+        response = requests.post(f"{CAMPAIGN_ANALYST_URL}/analyze", json={"artist": artist, "styles": styles})
         response.raise_for_status()
         analysis_data = response.json()
         logger.info(f"Received response from campaign_analyst: {analysis_data}")
@@ -70,14 +78,14 @@ def generate_campaign():
         # Vérifier les données de campaign_analyst
         if not isinstance(analysis_data, dict):
             logger.error(f"campaign_analyst response is not a dictionary: {analysis_data}")
-            analysis_data = {"trends": ["Trend 1", "Trend 2"], "lookalike_artists": ["Artist 1", "Artist 2"], "style": style, "artist_image_url": "https://via.placeholder.com/120?text=Artist"}
+            analysis_data = {"trends": ["Trend 1", "Trend 2"], "lookalike_artists": ["Artist 1", "Artist 2"], "style": style_display, "artist_image_url": "https://via.placeholder.com/120?text=Artist"}
         
         # Nettoyer les données de campaign_analyst
         analysis_data = sanitize_data(analysis_data)
         
         # Étape 2 : Appeler marketing_agents pour générer les annonces
-        logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genre': {style}, 'lyrics': {lyrics}, 'bio': {bio}}}")
-        response = requests.post(f"{MARKETING_AGENTS_URL}/generate_ads", json={"artist": artist, "genre": style, "lyrics": lyrics, "bio": bio})
+        logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genres': {styles}, 'lyrics': {lyrics}, 'bio': {bio}}}")
+        response = requests.post(f"{MARKETING_AGENTS_URL}/generate_ads", json={"artist": artist, "genres": styles, "lyrics": lyrics, "bio": bio})
         response.raise_for_status()
         ad_data = response.json()
         logger.info(f"Received response from marketing_agents: {ad_data}")
@@ -134,11 +142,11 @@ def generate_campaign():
         strategy = sanitize_data(strategy)
         
         # Étape 4 : Rendre les résultats
-        logger.info(f"Rendering results.html with artist={artist}, style={style}, analysis_data={analysis_data}, short_titles={short_titles}, long_titles={long_titles}, long_descriptions={long_descriptions}, strategy={strategy}")
+        logger.info(f"Rendering results.html with artist={artist}, style={style_display}, analysis_data={analysis_data}, short_titles={short_titles}, long_titles={long_titles}, long_descriptions={long_descriptions}, strategy={strategy}")
         try:
             return render_template('results.html', 
                                   artist=artist, 
-                                  style=style, 
+                                  style=style_display,  # Utiliser la version affichable des styles
                                   analysis=analysis_data,
                                   short_titles=short_titles, 
                                   long_titles=long_titles, 
@@ -149,7 +157,7 @@ def generate_campaign():
             return render_template('error.html', 
                                   error=str(e), 
                                   artist=artist, 
-                                  style=style), 500
+                                  style=style_display), 500
     except Exception as e:
         logger.error(f"Error in generate_campaign: {str(e)}")
         return jsonify({"error": "Failed to generate campaign", "details": str(e)}), 500
