@@ -61,9 +61,26 @@ def generate_campaign():
         response.raise_for_status()
         ad_data = response.json()
         logger.info(f"Received response from marketing_agents: {ad_data}")
-        short_titles = ad_data.get("short_titles", [])
-        long_titles = ad_data.get("long_titles", [])
-        long_descriptions = ad_data.get("long_descriptions", [])
+
+        # Adaptation du format de données
+        short_titles = []
+        long_titles = []
+        long_descriptions = []
+
+        # Vérifier si la réponse contient 'drafts' (format actuel) ou les clés spécifiques (nouveau format)
+        if "drafts" in ad_data:
+            # Format actuel : tous les titres dans 'drafts'
+            drafts = ad_data.get("drafts", [])
+            # Diviser les drafts en titres courts et longs (par exemple, les 5 premiers sont courts, les suivants longs)
+            short_titles = drafts[:5] if len(drafts) >= 5 else drafts
+            long_titles = drafts[5:10] if len(drafts) >= 10 else drafts[5:] if len(drafts) >= 5 else []
+            # Utiliser des descriptions par défaut si nécessaire
+            long_descriptions = ["Description par défaut" for _ in range(5)]
+        else:
+            # Nouveau format avec clés spécifiques
+            short_titles = ad_data.get("short_titles", [])
+            long_titles = ad_data.get("long_titles", [])
+            long_descriptions = ad_data.get("long_descriptions", [])
         
         # Vérifier les données de marketing_agents
         if not isinstance(short_titles, list):
