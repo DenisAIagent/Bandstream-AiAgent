@@ -8,16 +8,16 @@
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            font-weight: 300; /* Light pour le texte courant */
+            font-weight: 300;
             margin: 0;
             padding: 0;
-            background-color: #EBF5DF; /* Vert clair de Band Stream */
-            color: #000000; /* Noir de Band Stream */
+            background-color: #EBF5DF;
+            color: #000000;
             line-height: 1.6;
         }
         header {
-            background-color: #000000; /* Noir de Band Stream */
-            color: #FFFFFF; /* Blanc pour le texte */
+            background-color: #000000;
+            color: #FFFFFF;
             text-align: center;
             padding: 2rem 0;
             position: relative;
@@ -51,22 +51,22 @@
         .header-content h1 {
             font-family: 'Quicksand', sans-serif;
             font-size: 2rem;
-            font-weight: 700; /* Bold pour le titre principal */
+            font-weight: 700;
             margin: 0;
-            color: #FFFFFF; /* Blanc */
+            color: #FFFFFF;
         }
         .header-content p {
             font-family: 'Poppins', sans-serif;
-            font-weight: 400; /* Medium pour le slogan */
+            font-weight: 400;
             font-size: 1.2rem;
             margin: 10px 0 0;
-            color: #FFFFFF; /* Blanc */
+            color: #FFFFFF;
             position: relative;
         }
         .header-content p::before, .header-content p::after {
             content: '“';
             font-size: 2rem;
-            color: #0ED894; /* Vert Band Stream */
+            color: #0ED894;
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
@@ -111,56 +111,52 @@
             margin: 0;
             font-family: 'Quicksand', sans-serif;
             font-size: 2.2rem;
-            font-weight: 600; /* Medium pour les titres */
-            color: #000000; /* Noir de Band Stream */
+            font-weight: 600;
+            color: #000000;
         }
         .artist-details h2 {
             margin: 5px 0 0;
             font-family: 'Quicksand', sans-serif;
             font-size: 1.6rem;
-            font-weight: 400; /* Regular pour les sous-titres */
-            color: #0ED894; /* Vert Band Stream */
-        }
-        .trends, .similar-artists {
-            margin-bottom: 30px;
-        }
-        .trends h3, .similar-artists h3 {
-            font-family: 'Quicksand', sans-serif;
-            font-size: 1.4rem;
-            font-weight: 600; /* Medium pour les titres */
-            color: #000000; /* Noir de Band Stream */
-            margin-bottom: 15px;
-            border-bottom: 2px solid #0ED894; /* Vert Band Stream */
-            padding-bottom: 5px;
-        }
-        .trends ul, .similar-artists ul {
-            list-style-type: disc;
-            padding-left: 25px;
-        }
-        .trends li, .similar-artists li {
-            font-family: 'Poppins', sans-serif;
-            font-weight: 300; /* Light pour le texte courant */
-            font-size: 1.1rem;
-            margin-bottom: 10px;
-            color: #000000; /* Noir de Band Stream */
+            font-weight: 400;
+            color: #0ED894;
         }
         .content-section {
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
         .content-section h3 {
             font-family: 'Quicksand', sans-serif;
             font-size: 1.6rem;
-            font-weight: 600; /* Medium pour les titres */
-            color: #000000; /* Noir de Band Stream */
-            margin-bottom: 20px;
-            border-bottom: 2px solid #0ED894; /* Vert Band Stream */
+            font-weight: 600;
+            color: #000000;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #0ED894;
             padding-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .content-section h3::after {
+            content: '▼';
+            font-size: 1rem;
+            transition: transform 0.3s ease;
+        }
+        .content-section.collapsed h3::after {
+            transform: rotate(180deg);
+        }
+        .content-section .content {
+            display: block;
+            transition: all 0.3s ease;
+        }
+        .content-section.collapsed .content {
+            display: none;
         }
         .content-box {
             background-color: white;
             border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             transition: transform 0.2s ease-in-out;
         }
@@ -170,23 +166,72 @@
         .content-box h4 {
             font-family: 'Quicksand', sans-serif;
             font-size: 1.2rem;
-            font-weight: 400; /* Regular pour les sous-titres */
-            color: #0ED894; /* Vert Band Stream */
+            font-weight: 400;
+            color: #0ED894;
             margin-top: 0;
             margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .content-box p {
             font-family: 'Poppins', sans-serif;
-            font-weight: 300; /* Light pour le texte courant */
+            font-weight: 300;
             font-size: 1rem;
-            color: #000000; /* Noir de Band Stream */
+            color: #000000;
             margin-bottom: 0;
+            display: inline-block;
+        }
+        .copy-btn {
+            background-color: #0ED894;
+            color: #000000;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 0.8rem;
+        }
+        .copy-btn:hover {
+            background-color: #0BBF7A;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .grid-item {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .grid-item h4 {
+            font-family: 'Quicksand', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 400;
+            color: #0ED894;
+            margin-top: 0;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .grid-item p {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 300;
+            font-size: 1rem;
+            color: #000000;
+            margin-bottom: 0;
+            display: inline-block;
         }
         footer {
             text-align: center;
             padding: 20px;
-            background-color: #000000; /* Noir de Band Stream */
-            color: #EBF5DF; /* Vert clair pour le texte */
+            background-color: #000000;
+            color: #EBF5DF;
             font-size: 0.9rem;
             font-family: 'Quicksand', sans-serif;
             font-weight: 400;
@@ -194,19 +239,47 @@
         .button {
             display: inline-block;
             padding: 12px 24px;
-            background-color: #0ED894; /* Vert Band Stream */
-            color: #000000; /* Noir pour le texte */
+            background-color: #0ED894;
+            color: #000000;
             text-decoration: none;
             border-radius: 5px;
             font-family: 'Quicksand', sans-serif;
-            font-weight: 600; /* Medium pour le bouton */
+            font-weight: 600;
             margin-top: 20px;
             transition: background-color 0.3s ease;
         }
         .button:hover {
-            background-color: #0BBF7A; /* Vert légèrement plus foncé pour le survol */
+            background-color: #0BBF7A;
         }
     </style>
+    <script>
+        // Script pour gérer les sections pliables
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => {
+                const header = section.querySelector('h3');
+                header.addEventListener('click', () => {
+                    section.classList.toggle('collapsed');
+                });
+            });
+
+            // Script pour copier le texte
+            const copyButtons = document.querySelectorAll('.copy-btn');
+            copyButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const text = button.getAttribute('data-text');
+                    navigator.clipboard.writeText(text).then(() => {
+                        button.textContent = 'Copié !';
+                        setTimeout(() => {
+                            button.textContent = 'Copier';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Erreur lors de la copie : ', err);
+                    });
+                });
+            });
+        });
+    </script>
 </head>
 <body>
     <header>
@@ -227,94 +300,120 @@
                 </div>
             </div>
             
-            <div class="trends">
+            <div class="content-section">
                 <h3>Tendances</h3>
-                {% if analysis and analysis.trends %}
-                    <ul>
-                        {% for trend in analysis.trends %}
-                            <li>{{ trend | e }}</li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>Aucune tendance disponible.</p>
-                {% endif %}
+                <div class="content">
+                    {% if analysis and analysis.trends %}
+                        <ul>
+                            {% for trend in analysis.trends %}
+                                <li>{{ trend | e }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>Aucune tendance disponible.</p>
+                    {% endif %}
+                </div>
             </div>
 
-            <div class="similar-artists">
+            <div class="content-section">
                 <h3>Artistes Similaires</h3>
-                {% if analysis and analysis.lookalike_artists %}
-                    <ul id="similar-artists-list">
-                        {% for artist in analysis.lookalike_artists %}
-                            <li>{{ artist | e }}</li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>Aucun artiste similaire disponible.</p>
-                {% endif %}
+                <div class="content">
+                    {% if analysis and analysis.lookalike_artists %}
+                        <ul id="similar-artists-list">
+                            {% for artist in analysis.lookalike_artists %}
+                                <li>{{ artist | e }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>Aucun artiste similaire disponible.</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
         <div class="content-section">
             <h3>Titres Courts (5)</h3>
-            {% if short_titles %}
-                {% for title in short_titles %}
-                    <div class="content-box">
-                        <h4>Titre {{ loop.index }}</h4>
-                        <p>{{ title.title | default("Titre non spécifié") | e }} ({{ title.character_count | default(0) }}/30 caractères)</p>
+            <div class="content">
+                {% if short_titles %}
+                    <div class="grid-container">
+                        {% for title in short_titles %}
+                            <div class="grid-item">
+                                <h4>
+                                    Titre {{ loop.index }}
+                                    <button class="copy-btn" data-text="{{ title.title | e }}">Copier</button>
+                                </h4>
+                                <p>{{ title.title | default("Titre non spécifié") | e }} ({{ title.character_count | default(0) }}/30 caractères)</p>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
-            {% else %}
-                <p>Aucun titre court disponible.</p>
-            {% endif %}
+                {% else %}
+                    <p>Aucun titre court disponible.</p>
+                {% endif %}
+            </div>
         </div>
 
         <div class="content-section">
             <h3>Titres Longs (5)</h3>
-            {% if long_titles %}
-                {% for title in long_titles %}
-                    <div class="content-box">
-                        <h4>Titre Long {{ loop.index }}</h4>
-                        <p>{{ title.title | default("Titre long non spécifié") | e }} ({{ title.character_count | default(0) }} caractères)</p>
+            <div class="content">
+                {% if long_titles %}
+                    <div class="grid-container">
+                        {% for title in long_titles %}
+                            <div class="grid-item">
+                                <h4>
+                                    Titre Long {{ loop.index }}
+                                    <button class="copy-btn" data-text="{{ title.title | e }}">Copier</button>
+                                </h4>
+                                <p>{{ title.title | default("Titre long non spécifié") | e }} ({{ title.character_count | default(0) }} caractères)</p>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
-            {% else %}
-                <p>Aucun titre long disponible.</p>
-            {% endif %}
+                {% else %}
+                    <p>Aucun titre long disponible.</p>
+                {% endif %}
+            </div>
         </div>
 
         <div class="content-section">
             <h3>Descriptions Longues (5)</h3>
-            {% if long_descriptions %}
-                {% for desc in long_descriptions %}
-                    <div class="content-box">
-                        <h4>Description {{ loop.index }}</h4>
-                        <p>{{ desc.description | default("Description non spécifiée") | e }} ({{ desc.character_count | default(0) }} caractères)</p>
+            <div class="content">
+                {% if long_descriptions %}
+                    <div class="grid-container">
+                        {% for desc in long_descriptions %}
+                            <div class="grid-item">
+                                <h4>
+                                    Description {{ loop.index }}
+                                    <button class="copy-btn" data-text="{{ desc.description | e }}">Copier</button>
+                                </h4>
+                                <p>{{ desc.description | default("Description non spécifiée") | e }} ({{ desc.character_count | default(0) }} caractères)</p>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
-            {% else %}
-                <p>Aucune description longue disponible.</p>
-            {% endif %}
+                {% else %}
+                    <p>Aucune description longue disponible.</p>
+                {% endif %}
+            </div>
         </div>
 
         <div class="content-section">
             <h3>Stratégie optimisée</h3>
-            {% if strategy %}
-                <p><strong>Public cible :</strong> {{ strategy.target_audience | default("Non spécifié") | e }}</p>
-                <p><strong>Canaux :</strong> {{ strategy.channels | join(", ") | default("Aucun canal spécifié") | e }}</p>
-                <p><strong>Allocation du budget :</strong></p>
-                <ul>
-                    {% if strategy.budget_allocation %}
-                        {% for channel, allocation in strategy.budget_allocation.items() %}
-                            <!-- Correction : Retirer le : de l'expression Jinja2 et le mettre en texte statique -->
-                            <li>{{ channel | e }}: {{ (allocation * 100) | round(2) }}%</li>
-                        {% endfor %}
-                    {% else %}
-                        <li>Aucune allocation de budget spécifiée.</li>
-                    {% endif %}
-                </ul>
-            {% else %}
-                <p>Aucune stratégie optimisée disponible.</p>
-            {% endif %}
+            <div class="content">
+                {% if strategy %}
+                    <p><strong>Public cible :</strong> {{ strategy.target_audience | default("Non spécifié") | e }}</p>
+                    <p><strong>Canaux :</strong> {{ strategy.channels | join(", ") | default("Aucun canal spécifié") | e }}</p>
+                    <p><strong>Allocation du budget :</strong></p>
+                    <ul>
+                        {% if strategy.budget_allocation %}
+                            {% for channel, allocation in strategy.budget_allocation.items() %}
+                                <li>{{ channel | e }}: {{ (allocation * 100) | round(2) }}%</li>
+                            {% endfor %}
+                        {% else %}
+                            <li>Aucune allocation de budget spécifiée.</li>
+                        {% endif %}
+                    </ul>
+                {% else %}
+                    <p>Aucune stratégie optimisée disponible.</p>
+                {% endif %}
+            </div>
         </div>
 
         <a href="/" class="button">Retour à l'accueil</a>
