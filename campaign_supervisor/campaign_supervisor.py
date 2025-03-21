@@ -52,6 +52,7 @@ def generate_campaign():
         artist = request.form.get('artist')
         style_input = request.form.get('style')
         language = request.form.get('language', 'fr')  # Français par défaut
+        tone = request.form.get('tone', 'engageant')  # Engageant par défaut
         song = request.form.get('song')
         lyrics = request.form.get('lyrics')
         bio = request.form.get('bio')
@@ -84,9 +85,9 @@ def generate_campaign():
         # Nettoyer les données de campaign_analyst
         analysis_data = sanitize_data(analysis_data)
         
-        # Étape 2 : Appeler marketing_agents pour générer les annonces
-        logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genres': {styles}, 'language': {language}, 'lyrics': {lyrics}, 'bio': {bio}}}")
-        response = requests.post(f"{MARKETING_AGENTS_URL}/generate_ads", json={"artist": artist, "genres": styles, "language": language, "lyrics": lyrics, "bio": bio})
+        # Étape 2 : Appeler marketing_agents pour générer les annonces avec le ton spécifié
+        logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genres': {styles}, 'language': {language}, 'tone': {tone}, 'lyrics': {lyrics}, 'bio': {bio}}}")
+        response = requests.post(f"{MARKETING_AGENTS_URL}/generate_ads", json={"artist": artist, "genres": styles, "language": language, "tone": tone, "lyrics": lyrics, "bio": bio})
         response.raise_for_status()
         ad_data = response.json()
         logger.info(f"Received response from marketing_agents: {ad_data}")
@@ -147,7 +148,7 @@ def generate_campaign():
         try:
             return render_template('results.html', 
                                   artist=artist, 
-                                  style=style_display,  # Utiliser la version affichable des styles
+                                  style=style_display,  
                                   analysis=analysis_data,
                                   short_titles=short_titles, 
                                   long_titles=long_titles, 
