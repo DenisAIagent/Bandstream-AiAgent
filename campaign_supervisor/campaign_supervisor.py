@@ -97,13 +97,19 @@ def generate_campaign():
         logger.info(f"Sending request to campaign_optimizer at {CAMPAIGN_OPTIMIZER_URL}/optimize with data: {{'artist': {artist}}}")
         response = requests.post(f"{CAMPAIGN_OPTIMIZER_URL}/optimize", json={"artist": artist})
         response.raise_for_status()
-        strategy = response.json()
-        logger.info(f"Received response from campaign_optimizer: {strategy}")
+        strategy_data = response.json()
+        logger.info(f"Received response from campaign_optimizer: {strategy_data}")
         
-        # Vérifier les données de campaign_optimizer
-        if not isinstance(strategy, dict):
-            logger.error(f"campaign_optimizer response is not a dictionary: {strategy}")
+        # Vérifier les données de campaign_optimizer et extraire la sous-clé "strategy"
+        if not isinstance(strategy_data, dict):
+            logger.error(f"campaign_optimizer response is not a dictionary: {strategy_data}")
             strategy = {"target_audience": "Fans of similar artists", "channels": ["Spotify", "YouTube"], "budget_allocation": {"Spotify": 0.5, "YouTube": 0.5}}
+        else:
+            # Extraire la sous-clé "strategy" si elle existe
+            strategy = strategy_data.get("strategy", {"target_audience": "Fans of similar artists", "channels": ["Spotify", "YouTube"], "budget_allocation": {"Spotify": 0.5, "YouTube": 0.5}})
+            if not isinstance(strategy, dict):
+                logger.error(f"strategy is not a dictionary: {strategy}")
+                strategy = {"target_audience": "Fans of similar artists", "channels": ["Spotify", "YouTube"], "budget_allocation": {"Spotify": 0.5, "YouTube": 0.5}}
         
         # Étape 4 : Rendre les résultats
         logger.info(f"Rendering results.html with artist={artist}, style={style}, analysis_data={analysis_data}, short_titles={short_titles}, long_titles={long_titles}, long_descriptions={long_descriptions}, strategy={strategy}")
