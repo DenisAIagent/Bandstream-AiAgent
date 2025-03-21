@@ -102,6 +102,8 @@ def get_similar_artists_musicbrainz(artist):
                     cover_art = musicbrainzngs.get_release_group_image_list(release_group_id)
                     if "images" in cover_art and cover_art["images"]:
                         artist_image_url = cover_art["images"][0]["image"]
+                        # Nettoyer l'URL pour supprimer tout caractère inattendu comme ';'
+                        artist_image_url = artist_image_url.rstrip(';').strip()
                         break
                 except musicbrainzngs.ResponseError:
                     continue
