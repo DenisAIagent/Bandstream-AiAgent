@@ -8,6 +8,7 @@ import openai
 from datetime import datetime, timedelta
 import time
 import musicbrainzngs
+import signal
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO)
@@ -28,9 +29,16 @@ if not openai.api_key:
 musicbrainzngs.set_useragent("BandStreamIAgent", "1.0", "https://github.com/DenisAIagent/Bandstream-AiAgent")
 musicbrainzngs.set_rate_limit(limit_or_interval=1.0)  # Limite de 1 requête par seconde
 
+# Définir un timeout pour les appels à MusicBrainz (en secondes)
+MUSICBRAINZ_TIMEOUT = 5  # 5 secondes
+
 # Cache pour les données de MusicBrainz (valide pendant 24 heures)
 musicbrainz_cache = {}
 cache_duration = timedelta(hours=24)
+
+# Gestionnaire de timeout avec signal
+def timeout_handler(signum, frame):
+    raise TimeoutError("MusicBrainz API call timed out")
 
 # Fonction pour obtenir les artistes tendance via MusicBrainz
 def get_trending_artists_musicbrainz(style):
@@ -42,6 +50,10 @@ def get_trending_artists_musicbrainz(style):
             return cache_entry["trending_artists"]
     
     try:
+        # Définir un timeout pour l'appel
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(MUSICBRAINZ_TIMEOUT)
+        
         normalized_style = style.lower()
         result = musicbrainzngs.search_artists(query=f'tag:"{normalized_style}"', limit=10)
         trending_artists = []
@@ -49,18 +61,26 @@ def get_trending_artists_musicbrainz(style):
             for artist in result["artist-list"]:
                 if "name" in artist:
                     trending_artists.append(artist["name"])
+        
+        # Désactiver l'alarme après l'appel
+        signal.alarm(0)
+        
         musicbrainz_cache[cache_key] = {
             "trending_artists": trending_artists,
             "timestamp": datetime.now()
         }
         return trending_artists
-    except Exception as e:
+    except TimeoutError:
+        logger.error(f"Timeout fetching trending artists from MusicBrainz: {style}")
+        return []
+    except (musicbrainzngs.WebServiceError, Exception) as e:
         logger.error(f"Error fetching trending artists from MusicBrainz: {str(e)}")
         return []
+    finally:
+        signal.alarm(0)  # S'assurer que l'alarme est désactivée
 
 # Fonction pour obtenir les artistes similaires et l’image via MusicBrainz
 def get_similar_artists_musicbrainz(artist):
-    # Clé de cache pour les artistes similaires et l'image
     cache_key = f"musicbrainz_similar_{artist}"
     if cache_key in musicbrainz_cache:
         cache_entry = musicbrainz_cache[cache_key]
@@ -72,15 +92,24 @@ def get_similar_artists_musicbrainz(artist):
     artist_image_url = "https://via.placeholder.com/120?text=Artist"
     
     try:
+        # Définir un timeout pour l'appel
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(MUSICBRAINZ_TIMEOUT)
+        
         result = musicbrainzngs.search_artists(artist=artist, limit=1)
         if "artist-list" not in result or not result["artist-list"]:
+            signal.alarm(0)
             return lookalike_artists, artist_image_url
         
         artist_data = result["artist-list"][0]
         artist_id = artist_data["id"]
         
+        signal.alarm(0)  # Désactiver l'alarme après le premier appel
+        
         time.sleep(1.0)
         
+        # Deuxième appel avec timeout
+        signal.alarm(MUSICBRAINZ_TIMEOUT)
         relations = musicbrainzngs.get_artist_by_id(artist_id, includes=["artist-rels"])
         if "artist" in relations and "artist-relation-list" in relations["artist"]:
             for relation in relations["artist"]["artist-relation-list"]:
@@ -89,23 +118,32 @@ def get_similar_artists_musicbrainz(artist):
                         lookalike_artists.append(relation["artist"]["name"])
         lookalike_artists = lookalike_artists[:10]
         
+        signal.alarm(0)  # Désactiver l'alarme après le deuxième appel
+        
         time.sleep(1.0)
         
+        # Troisième appel avec timeout
+        signal.alarm(MUSICBRAINZ_TIMEOUT)
         releases = musicbrainzngs.get_artist_by_id(artist_id, includes=["release-groups"])
         if "artist" in releases and "release-group-list" in releases["artist"]:
             for release_group in releases["artist"]["release-group-list"]:
                 release_group_id = release_group["id"]
                 try:
                     time.sleep(1.0)
+                    # Quatrième appel avec timeout
+                    signal.alarm(MUSICBRAINZ_TIMEOUT)
                     cover_art = musicbrainzngs.get_release_group_image_list(release_group_id)
                     if "images" in cover_art and cover_art["images"]:
                         artist_image_url = cover_art["images"][0]["image"]
                         artist_image_url = artist_image_url.rstrip(';').strip()  # Nettoyage du ';'
+                        signal.alarm(0)
                         break
+                    signal.alarm(0)
                 except musicbrainzngs.ResponseError:
                     continue
         
-        # Mettre en cache les résultats
+        signal.alarm(0)  # Désactiver l'alarme après le troisième appel
+        
         musicbrainz_cache[cache_key] = {
             "lookalike_artists": lookalike_artists,
             "artist_image_url": artist_image_url,
@@ -113,9 +151,14 @@ def get_similar_artists_musicbrainz(artist):
         }
         
         return lookalike_artists, artist_image_url
-    except Exception as e:
+    except TimeoutError:
+        logger.error(f"Timeout fetching similar artists or image from MusicBrainz for artist: {artist}")
+        return [], "https://via.placeholder.com/120?text=Artist"
+    except (musicbrainzngs.WebServiceError, Exception) as e:
         logger.error(f"Error fetching similar artists or image from MusicBrainz: {str(e)}")
         return [], "https://via.placeholder.com/120?text=Artist"
+    finally:
+        signal.alarm(0)  # S'assurer que l'alarme est désactivée
 
 # Fonction pour obtenir les tendances et artistes similaires via OpenAI
 def get_trends_and_artists_openai(artist, style):
