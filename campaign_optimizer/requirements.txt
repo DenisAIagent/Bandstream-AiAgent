@@ -7,3 +7,4 @@ openai==0.28.1
 pytrends
 google-api-python-client
 serpapi
+asgiref==3.8.1
