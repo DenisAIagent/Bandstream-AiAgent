@@ -4,7 +4,6 @@ import aiohttp
 from flask import Flask, request, render_template
 from dotenv import load_dotenv
 import logging
-from asgiref.wsgi import WsgiToAsgi
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO)
@@ -41,7 +40,7 @@ def sanitize_data(data):
 async def fetch_data(session, url, data, retries=5, delay=1):
     for attempt in range(retries):
         try:
-            async with session.post(url, json=data, timeout=30) as response:
+            async with session.post(url, json=data, timeout=60) as response:  # Augmenter le timeout à 60 secondes
                 response.raise_for_status()
                 result = await response.json()
                 logger.info(f"Successfully fetched data from {url}: {result}")
@@ -54,7 +53,7 @@ async def fetch_data(session, url, data, retries=5, delay=1):
             await asyncio.sleep(delay)
 
 @app.route('/')
-async def index():
+def index():
     try:
         logger.info("Rendering index.html")
         return render_template('index.html')
@@ -210,14 +209,10 @@ async def generate_campaign():
         return render_template('error.html', error=str(e), artist=artist, style=style_input), 500
 
 @app.errorhandler(500)
-async def handle_500(error):
+def handle_500(error):
     logger.error(f"Template error: {str(error)}", exc_info=True)
     return render_template('error.html', error=str(error), artist="Unknown Artist", style="Unknown Style"), 500
 
-# Convertir l'application Flask (WSGI) en ASGI pour uvicorn
-app = WsgiToAsgi(app)
-
 if __name__ == '__main__':
-    import uvicorn
     port = int(os.environ.get('PORT', 5000))
-    uvicorn.run(app, host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port)
