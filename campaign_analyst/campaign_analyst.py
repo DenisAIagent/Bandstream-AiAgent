@@ -1,6 +1,8 @@
 import os
 import requests
 import json
+import asyncio
+import aiohttp
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import logging
@@ -25,6 +27,12 @@ if not openai.api_key:
     logger.error("OPENAI_API_KEY is not set in environment variables")
     raise ValueError("OPENAI_API_KEY is required")
 
+# Configurer SerpAPI
+SERPAPI_KEY = os.getenv("SERPAPI_KEY")
+if not SERPAPI_KEY:
+    logger.error("SERPAPI_KEY is not set in environment variables")
+    raise ValueError("SERPAPI_KEY is required for search functionality")
+
 # Configurer MusicBrainz
 musicbrainzngs.set_useragent("BandStreamIAgent", "1.0", "https://github.com/DenisAIagent/Bandstream-AiAgent")
 musicbrainzngs.set_rate_limit(limit_or_interval=1.0)  # Limite de 1 requête par seconde
@@ -39,6 +47,68 @@ cache_duration = timedelta(hours=24)
 # Gestionnaire de timeout avec signal
 def timeout_handler(signum, frame):
     raise TimeoutError("MusicBrainz API call timed out")
+
+# Fonction pour effectuer une recherche via SerpAPI
+async def search_with_serpapi(query):
+    url = "https://serpapi.com/search"
+    params = {
+        "q": query,
+        "api_key": SERPAPI_KEY,
+        "num": 10  # Limiter à 10 résultats
+    }
+    
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url, params=params) as response:
+                response.raise_for_status()
+                data = await response.json()
+                logger.info(f"SerpAPI response for query '{query}': {data}")
+                
+                # Extraire les artistes des résultats organiques
+                artists = []
+                if "organic_results" in data:
+                    for result in data.get("organic_results", []):
+                        title = result.get("title", "").lower()
+                        snippet = result.get("snippet", "").lower()
+                        # Rechercher des noms d'artistes connus ou des mots-clés liés à des artistes
+                        known_artists = [
+                            "korn", "slipknot", "octavion", "various artists", "kiss", "grabbitz", "the beatles",
+                            "machine head", "riot", "rammstein", "linkin park", "marilyn manson", "disturbed",
+                            "nine inch nails", "hatebreed", "converge", "terror", "knocked loose", "turnstile",
+                            "code orange", "every time i die", "the ghost inside", "don omar", "wisin & yandel",
+                            "sean paul", "enrique iglesias", "jennifer lopez", "j balvin", "bad bunny", "maluma",
+                            "ozuna", "nicky jam", "farruko", "daddy yankee", "anuel aa", "arcángel", "sech"
+                        ]
+                        for artist in known_artists:
+                            if artist.lower() in title or artist.lower() in snippet:
+                                artists.append(artist)
+                
+                # Si aucun artiste n'est trouvé, retourner une liste vide
+                return list(set(artists))  # Éliminer les doublons
+        except Exception as e:
+            logger.error(f"Error during SerpAPI search for query '{query}': {str(e)}")
+            return []
+
+# Fonction pour rechercher les mots-clés long tail et extraire les artistes et tendances
+async def search_long_tail_keywords(style):
+    # Exemple de mots-clés long tail basés sur le style musical
+    keywords = [
+        f"best {style} song 2025",
+        f"top {style} artists 2025",
+        f"new {style} releases 2025",
+        f"best {style} bands 2025"
+    ]
+
+    relevant_artists = set()
+    relevant_keywords = []
+
+    for keyword in keywords:
+        artists = await search_with_serpapi(keyword)
+        if artists:  # Si des artistes sont trouvés, ajouter le mot-clé aux tendances
+            relevant_artists.update(artists)
+            relevant_keywords.append(keyword)
+
+    return list(relevant_artists), relevant_keywords
 
 # Fonction pour obtenir les artistes tendance via MusicBrainz
 def get_trending_artists_musicbrainz(styles):
@@ -194,7 +264,7 @@ def get_trends_and_artists_openai(artist, styles):
 
 # Endpoint principal
 @app.route('/analyze', methods=['POST'])
-def analyze():
+async def analyze():
     data = request.get_json()
     if not data or "artist" not in data or "styles" not in data:
         logger.error("Missing required fields 'artist' or 'styles' in request")
@@ -209,12 +279,18 @@ def analyze():
     
     logger.info(f"Analyzing trends and lookalike artists for artist: {artist}, styles: {styles}, optimizer_similar_artists: {optimizer_similar_artists}")
     
+    # Étape 1 : Récupérer les données de MusicBrainz
     musicbrainz_trending = get_trending_artists_musicbrainz(styles)
-    
     musicbrainz_similar, artist_image_url = get_similar_artists_musicbrainz(artist)
     
+    # Étape 2 : Récupérer les données d'OpenAI
     openai_trends, openai_similar = get_trends_and_artists_openai(artist, styles)
     
+    # Étape 3 : Récupérer les données via SerpAPI (mots-clés long tail)
+    primary_style = styles[0].lower()
+    serpapi_artists, serpapi_keywords = await search_long_tail_keywords(primary_style)
+    
+    # Étape 4 : Fusionner les tendances
     trends = []
     if musicbrainz_trending:
         trends.append(f"Rise of {styles[0]} artists like {musicbrainz_trending[0]}"[:50])
@@ -226,8 +302,10 @@ def analyze():
     if not trends:
         trends = ["Trend 1", "Trend 2"]
     trends = trends[:2]
+    # Ajouter les mots-clés long tail aux tendances
+    trends.extend(serpapi_keywords)
     
-    # Fusionner les artistes similaires
+    # Étape 5 : Fusionner les artistes similaires
     combined_artists = []
     # Priorité aux artistes de campaign_optimizer
     for artist_name in optimizer_similar_artists:
@@ -242,6 +320,11 @@ def analyze():
     for artist_name in musicbrainz_similar:
         if artist_name in openai_similar and artist_name not in combined_artists and artist_name != artist:
             combined_artists.append(artist_name)
+    # Ajouter les artistes de SerpAPI
+    for artist_name in serpapi_artists:
+        if artist_name not in combined_artists and artist_name != artist:
+            combined_artists.append(artist_name)
+    # Ajouter les autres artistes de MusicBrainz et OpenAI
     for artist_name in musicbrainz_trending + musicbrainz_similar + openai_similar:
         if artist_name not in combined_artists and len(combined_artists) < 15 and artist_name != artist:
             combined_artists.append(artist_name)
