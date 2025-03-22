@@ -8,3 +8,4 @@ aiohttp==3.8.3
 flask[async]==2.0.3
 asgiref==3.5.2
 werkzeug==2.0.3  # Ajout pour garantir la compatibilité avec Flask 2.0.3
+cachetools
