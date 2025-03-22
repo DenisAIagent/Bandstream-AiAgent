@@ -4,6 +4,7 @@ import aiohttp
 from flask import Flask, request, render_template
 from dotenv import load_dotenv
 import logging
+from asgiref.wsgi import WsgiToAsgi
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +38,7 @@ def sanitize_data(data):
         return data
 
 # Fonction asynchrone pour effectuer des appels HTTP
-async def fetch_data_async(session, url, data, retries=5, delay=1):
+async def fetch_data(session, url, data, retries=5, delay=1):
     for attempt in range(retries):
         try:
             async with session.post(url, json=data, timeout=60) as response:  # Timeout à 60 secondes
@@ -52,20 +53,6 @@ async def fetch_data_async(session, url, data, retries=5, delay=1):
                 raise Exception(f"Failed to call {url} after {retries} attempts: {str(e)}. Please try again later.")
             await asyncio.sleep(delay)
 
-# Fonction synchrone pour exécuter les appels asynchrones
-def fetch_data(url, data, retries=5, delay=1):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        async with aiohttp.ClientSession() as session:
-            result = loop.run_until_complete(fetch_data_async(session, url, data, retries, delay))
-        return result
-    except Exception as e:
-        logger.error(f"Error in fetch_data for {url}: {str(e)}", exc_info=True)
-        raise
-    finally:
-        loop.close()
-
 @app.route('/')
 def index():
     try:
@@ -76,10 +63,10 @@ def index():
         return render_template('error.html', error=str(e)), 500
 
 @app.route('/generate_campaign', methods=['POST'])
-def generate_campaign():
+async def generate_campaign():
     try:
-        # Log pour confirmer que Gunicorn est utilisé
-        logger.info("Starting generate_campaign endpoint in WSGI mode with Gunicorn")
+        # Log pour confirmer que l’application fonctionne en mode ASGI
+        logger.info("Starting generate_campaign endpoint in ASGI mode with Uvicorn")
 
         # Récupérer les données du formulaire
         artist = request.form.get('artist')
@@ -125,18 +112,22 @@ def generate_campaign():
         else:
             last_hashtag = song.replace(" ", "")
 
-        # Exécuter les appels HTTP de manière synchrone
-        # Étape 1 : Appeler campaign_analyst
-        logger.info(f"Sending request to campaign_analyst at {CAMPAIGN_ANALYST_URL}/analyze with data: {{'artist': {artist}, 'styles': {styles}}}")
-        analysis_data = fetch_data(f"{CAMPAIGN_ANALYST_URL}/analyze", {"artist": artist, "styles": styles})
+        # Créer une session asynchrone pour les appels HTTP
+        async with aiohttp.ClientSession() as session:
+            # Étape 1 : Appeler campaign_analyst
+            logger.info(f"Sending request to campaign_analyst at {CAMPAIGN_ANALYST_URL}/analyze with data: {{'artist': {artist}, 'styles': {styles}}}")
+            analysis_task = fetch_data(session, f"{CAMPAIGN_ANALYST_URL}/analyze", {"artist": artist, "styles": styles})
 
-        # Étape 2 : Appeler marketing_agents
-        logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genres': {styles}, 'language': {language}, 'tone': {tone}, 'lyrics': {lyrics}, 'bio': {bio}, 'promotion_type': {promotion_type}}}")
-        ad_data = fetch_data(f"{MARKETING_AGENTS_URL}/generate_ads", {"artist": artist, "genres": styles, "language": language, "tone": tone, "lyrics": lyrics, "bio": bio, "promotion_type": promotion_type})
+            # Étape 2 : Appeler marketing_agents
+            logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genres': {styles}, 'language': {language}, 'tone': {tone}, 'lyrics': {lyrics}, 'bio': {bio}, 'promotion_type': {promotion_type}}}")
+            marketing_task = fetch_data(session, f"{MARKETING_AGENTS_URL}/generate_ads", {"artist": artist, "genres": styles, "language": language, "tone": tone, "lyrics": lyrics, "bio": bio, "promotion_type": promotion_type})
 
-        # Étape 3 : Appeler campaign_optimizer
-        logger.info(f"Sending request to campaign_optimizer at {CAMPAIGN_OPTIMIZER_URL}/optimize with data: {{'artist': {artist}, 'song': {song}}}")
-        strategy_data = fetch_data(f"{CAMPAIGN_OPTIMIZER_URL}/optimize", {"artist": artist, "song": song})
+            # Étape 3 : Appeler campaign_optimizer
+            logger.info(f"Sending request to campaign_optimizer at {CAMPAIGN_OPTIMIZER_URL}/optimize with data: {{'artist': {artist}, 'song': {song}}}")
+            optimizer_task = fetch_data(session, f"{CAMPAIGN_OPTIMIZER_URL}/optimize", {"artist": artist, "song": song})
+
+            # Attendre que tous les appels soient terminés
+            analysis_data, ad_data, strategy_data = await asyncio.gather(analysis_task, marketing_task, optimizer_task)
 
         # Traiter les réponses
         logger.info(f"Processing responses: analysis_data={analysis_data}, ad_data={ad_data}, strategy_data={strategy_data}")
@@ -226,6 +217,10 @@ def handle_500(error):
     logger.error(f"Template error: {str(error)}", exc_info=True)
     return render_template('error.html', error=str(error), artist="Unknown Artist", style="Unknown Style"), 500
 
+# Convertir l’application Flask en ASGI
+asgi_app = WsgiToAsgi(app)
+
 if __name__ == '__main__':
+    import uvicorn
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    uvicorn.run(asgi_app, host='0.0.0.0', port=port)
