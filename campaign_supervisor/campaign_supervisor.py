@@ -75,6 +75,8 @@ async def generate_campaign():
         lyrics = request.form.get('lyrics')
         bio = request.form.get('bio')
         
+        logger.info(f"Received form data: artist={artist}, song={song}, style={style_input}, language={language}, tone={tone}")
+
         if not artist:
             logger.error("Missing required field 'artist' in form data")
             return render_template('index.html', error="Le nom de l'artiste est requis."), 400
@@ -112,12 +114,15 @@ async def generate_campaign():
         logger.info(f"Processing responses: analysis_data={analysis_data}, ad_data={ad_data}, strategy_data={strategy_data}")
 
         # Analyse
+        logger.info("Processing analysis_data")
         if not isinstance(analysis_data, dict):
             logger.error(f"campaign_analyst response is not a dictionary: {analysis_data}")
             analysis_data = {"trends": ["Trend 1", "Trend 2"], "lookalike_artists": ["Artist 1", "Artist 2"], "style": style_display, "artist_image_url": "https://via.placeholder.com/120?text=Artist"}
         analysis_data = sanitize_data(analysis_data)
+        logger.info(f"Sanitized analysis_data: {analysis_data}")
 
         # Annonces
+        logger.info("Processing ad_data")
         short_titles = ad_data.get("short_titles", [{"title": "Short Title 1", "character_count": 13}] * 5)
         long_titles = ad_data.get("long_titles", [{"title": "Long Title 1", "character_count": 12}] * 5)
         long_descriptions = ad_data.get("long_descriptions", [{"description": "Description 1", "character_count": 13}] * 5)
@@ -129,8 +134,10 @@ async def generate_campaign():
         long_descriptions = sanitize_data(long_descriptions)
         youtube_description_short = sanitize_data(youtube_description_short)
         youtube_description_full = sanitize_data(youtube_description_full)
+        logger.info(f"Sanitized ad_data: short_titles={short_titles}, long_titles={long_titles}, long_descriptions={long_descriptions}, youtube_short={youtube_description_short}, youtube_full={youtube_description_full}")
 
         # Stratégie
+        logger.info("Processing strategy_data")
         if not isinstance(strategy_data, dict):
             logger.error(f"campaign_optimizer response is not a dictionary: {strategy_data}")
             strategy = {"target_audience": "Fans of similar artists", "channels": ["Spotify", "YouTube"], "budget_allocation": {"Spotify": 0.5, "YouTube": 0.5}}
@@ -140,6 +147,7 @@ async def generate_campaign():
                 logger.error(f"strategy is not a dictionary: {strategy}")
                 strategy = {"target_audience": "Fans of similar artists", "channels": ["Spotify", "YouTube"], "budget_allocation": {"Spotify": 0.5, "YouTube": 0.5}}
         strategy = sanitize_data(strategy)
+        logger.info(f"Sanitized strategy: {strategy}")
         
         # Étape 4 : Rendre les résultats
         logger.info(f"Rendering results.html with artist={artist}, song={song}, style={style_display}, analysis_data={analysis_data}, short_titles={short_titles}, long_titles={long_titles}, long_descriptions={long_descriptions}, youtube_short={youtube_description_short}, youtube_full={youtube_description_full}, strategy={strategy}")
@@ -156,12 +164,12 @@ async def generate_campaign():
                               strategy=strategy)
 
     except Exception as e:
-        logger.error(f"Error in generate_campaign: {str(e)}")
+        logger.error(f"Error in generate_campaign: {str(e)}", exc_info=True)
         return render_template('error.html', error=str(e), artist=artist, style=style_input), 500
 
 @app.errorhandler(500)
 async def handle_500(error):
-    logger.error(f"Template error: {str(error)}")
+    logger.error(f"Template error: {str(error)}", exc_info=True)
     return render_template('error.html', error=str(error), artist="Unknown Artist", style="Unknown Style"), 500
 
 # Convertir l'application Flask (WSGI) en ASGI pour uvicorn
