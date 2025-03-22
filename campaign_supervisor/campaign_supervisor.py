@@ -93,6 +93,13 @@ async def generate_campaign():
         styles = [style.strip() for style in style_input.split(',')]
         style_display = ', '.join(styles)
 
+        # Extraire l'artiste principal et le collaborateur
+        if " X " in artist:
+            artist_name, collaborator = artist.split(" X ", 1)
+        else:
+            artist_name = artist
+            collaborator = ""
+
         # Créer une session asynchrone pour les appels HTTP
         async with aiohttp.ClientSession() as session:
             # Étape 1 : Appeler campaign_analyst
@@ -127,7 +134,51 @@ async def generate_campaign():
         long_titles = ad_data.get("long_titles", [{"title": "Long Title 1", "character_count": 12}] * 5)
         long_descriptions = ad_data.get("long_descriptions", [{"description": "Description 1", "character_count": 13}] * 5)
         youtube_description_short = ad_data.get("youtube_description_short", {"description": "No short YouTube description", "character_count": 28})
-        youtube_description_full = ad_data.get("youtube_description_full", {"description": "No full YouTube description provided", "character_count": 36})
+        youtube_description_full_raw = ad_data.get("youtube_description_full", {"description": "No full YouTube description provided", "character_count": 36})
+
+        # Reformater la description YouTube complète selon le template demandé
+        youtube_description_full = {
+            "description": (
+                f'{artist_name} X {collaborator} "{style_display}"\n'
+                f'Taken from "collez le nom de l\'album" album: collez votre smartlink\n\n'
+                f'🔔 Subscribe to my channel 👉 collez le lien de votre chaîne YouTube\n\n'
+                f'Crédits :\n'
+                f'Montage : collez le nom du monteur\n'
+                f'Vidéos : collez le nom du vidéaste\n\n'
+                f'LYRICS :\n'
+                f'{lyrics}\n\n'
+                f'🇬🇧 With his unique style, {artist_name} is experiencing growing success across the globe. With each release, {artist_name} continues to surprise his audience and build excitement, cementing his place as a key figure in the {style_display} scene.\n\n'
+                f'🇫🇷 Avec son style unique, {artist_name} rencontre un succès grandissant aux quatre coins du globe. À chacune de ses sorties, il continue de surprendre et de créer l’engouement, s’imposant comme une figure essentielle de la scène {style_display}.\n\n'
+                f'Label: collez l\'email du label\n'
+                f'Booking Europe, Africa & North America: collez l\'email de booking (Europe, Afrique, Amérique du Nord)\n'
+                f'Booking Latin America: collez l\'email de booking (Amérique Latine)\n\n'
+                f'Follow {artist_name} on :\n'
+                f'Instagram : collez votre handle Instagram\n'
+                f'TikTok : collez votre handle TikTok\n'
+                f'Website : collez l\'URL de votre site web\n\n'
+                f'#{artist_name.replace(" ", "")} #{style_display.replace(" ", "")} #collez le tag de l\'album'
+            ),
+            "character_count": len(
+                f'{artist_name} X {collaborator} "{style_display}"\n'
+                f'Taken from "collez le nom de l\'album" album: collez votre smartlink\n\n'
+                f'🔔 Subscribe to my channel 👉 collez le lien de votre chaîne YouTube\n\n'
+                f'Crédits :\n'
+                f'Montage : collez le nom du monteur\n'
+                f'Vidéos : collez le nom du vidéaste\n\n'
+                f'LYRICS :\n'
+                f'{lyrics}\n\n'
+                f'🇬🇧 With his unique style, {artist_name} is experiencing growing success across the globe. With each release, {artist_name} continues to surprise his audience and build excitement, cementing his place as a key figure in the {style_display} scene.\n\n'
+                f'🇫🇷 Avec son style unique, {artist_name} rencontre un succès grandissant aux quatre coins du globe. À chacune de ses sorties, il continue de surprendre et de créer l’engouement, s’imposant comme une figure essentielle de la scène {style_display}.\n\n'
+                f'Label: collez l\'email du label\n'
+                f'Booking Europe, Africa & North America: collez l\'email de booking (Europe, Afrique, Amérique du Nord)\n'
+                f'Booking Latin America: collez l\'email de booking (Amérique Latine)\n\n'
+                f'Follow {artist_name} on :\n'
+                f'Instagram : collez votre handle Instagram\n'
+                f'TikTok : collez votre handle TikTok\n'
+                f'Website : collez l\'URL de votre site web\n\n'
+                f'#{artist_name.replace(" ", "")} #{style_display.replace(" ", "")} #collez le tag de l\'album'
+            )
+        }
         
         short_titles = sanitize_data(short_titles)
         long_titles = sanitize_data(long_titles)
