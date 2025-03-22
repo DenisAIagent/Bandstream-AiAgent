@@ -155,6 +155,12 @@
         .button:hover {
             background-color: #0BBF7A;
         }
+        .conditional-step {
+            display: none;
+        }
+        .conditional-step.active {
+            display: block;
+        }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -171,6 +177,17 @@
                     if (requiredInput && !requiredInput.value) {
                         alert('Veuillez remplir ce champ avant de continuer.');
                         return;
+                    }
+
+                    // Si on est à l'étape "Type de Promotion", gérer l'affichage conditionnel
+                    if (steps[currentStep].querySelector('#promotion_type')) {
+                        const promotionType = document.querySelector('#promotion_type').value;
+                        const albumStep = document.querySelector('#album-name-step');
+                        if (promotionType === 'album') {
+                            albumStep.classList.add('active');
+                        } else {
+                            albumStep.classList.remove('active');
+                        }
                     }
 
                     steps[currentStep].classList.remove('active');
@@ -239,6 +256,14 @@
                             <option value="clip">Clip</option>
                             <option value="album">Album</option>
                         </select>
+                    </div>
+                    <button type="button" class="button prev-btn">Précédent</button>
+                    <button type="button" class="button next-btn">Suivant</button>
+                </div>
+                <div class="form-step" id="album-name-step">
+                    <div class="form-group">
+                        <label for="album_name">Nom de l'Album (si promotion d'album)</label>
+                        <input type="text" id="album_name" name="album_name" placeholder="Ex: Que la Lumière Soit">
                     </div>
                     <button type="button" class="button prev-btn">Précédent</button>
                     <button type="button" class="button next-btn">Suivant</button>
