@@ -37,7 +37,7 @@
     <div class="container">
         <div class="error-section">
             <h2>Une erreur est survenue</h2>
-            <p>Nous n'avons pas pu générer la campagne pour l'artiste "{{ artist | default("Nom d'Artiste") | e }}" dans le style "{{ style | default("Style non spécifié") | e }}".</p>
+            <p>Nous n'avons pas pu générer la campagne pour l'artiste "{{ artist | default('Nom d\'Artiste') | e }}" dans le style "{{ style | default('Style non spécifié') | e }}".</p>
             <p class="details"><strong>Détails de l'erreur :</strong> {{ error | e }}</p>
             <a href="/" class="button">Retour à l'accueil</a>
         </div>
