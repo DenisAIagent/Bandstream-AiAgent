@@ -77,7 +77,7 @@ def generate_campaign():
 
         # Étape 1 : Appeler campaign_analyst
         logger.info(f"Sending request to campaign_analyst at {CAMPAIGN_ANALYST_URL}/analyze with data: {{'artist': {artist}, 'styles': {styles}}}")
-        response = requests.post(f"{CAMPAIGN_ANALYST_URL}/analyze", json={"artist": artist, "styles": styles})
+        response = requests.post(f"{CAMPAIGN_ANALYST_URL}/analyze", json={"artist": artist, "styles": styles}, timeout=10)
         response.raise_for_status()
         analysis_data = response.json()
         logger.info(f"Received response from campaign_analyst: {analysis_data}")
@@ -89,7 +89,7 @@ def generate_campaign():
         
         # Étape 2 : Appeler marketing_agents
         logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genres': {styles}, 'language': {language}, 'tone': {tone}, 'lyrics': {lyrics}, 'bio': {bio}}}")
-        response = requests.post(f"{MARKETING_AGENTS_URL}/generate_ads", json={"artist": artist, "genres": styles, "language": language, "tone": tone, "lyrics": lyrics, "bio": bio})
+        response = requests.post(f"{MARKETING_AGENTS_URL}/generate_ads", json={"artist": artist, "genres": styles, "language": language, "tone": tone, "lyrics": lyrics, "bio": bio}, timeout=10)
         response.raise_for_status()
         ad_data = response.json()
         logger.info(f"Received response from marketing_agents: {ad_data}")
@@ -134,24 +134,18 @@ def generate_campaign():
         
         # Étape 4 : Rendre les résultats
         logger.info(f"Rendering results.html with artist={artist}, song={song}, style={style_display}, analysis_data={analysis_data}, short_titles={short_titles}, long_titles={long_titles}, long_descriptions={long_descriptions}, youtube_short={youtube_description_short}, youtube_full={youtube_description_full}, strategy={strategy}")
-        try:
-            return render_template('results.html', 
-                                  artist=artist,
-                                  song=song,
-                                  style=style_display,  
-                                  analysis=analysis_data,
-                                  short_titles=short_titles, 
-                                  long_titles=long_titles, 
-                                  long_descriptions=long_descriptions,
-                                  youtube_description_short=youtube_description_short,
-                                  youtube_description_full=youtube_description_full,
-                                  strategy=strategy)
-        except Exception as e:
-            logger.error(f"Error rendering template: {str(e)}")
-            return render_template('error.html', 
-                                  error=str(e), 
-                                  artist=artist, 
-                                  style=style_display), 500
+        return render_template('results.html', 
+                              artist=artist,
+                              song=song,
+                              style=style_display,  
+                              analysis=analysis_data,
+                              short_titles=short_titles, 
+                              long_titles=long_titles, 
+                              long_descriptions=long_descriptions,
+                              youtube_description_short=youtube_description_short,
+                              youtube_description_full=youtube_description_full,
+                              strategy=strategy)
+
     except Exception as e:
         logger.error(f"Error in generate_campaign: {str(e)}")
         return render_template('error.html', error=str(e), artist=artist, style=style_input), 500
