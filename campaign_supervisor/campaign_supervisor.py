@@ -54,7 +54,7 @@ async def fetch_data(session, url, data, retries=3, timeout=15):
             await asyncio.sleep(2)  # Attendre 2 secondes avant de réessayer
 
 @app.route('/')
-def index():
+async def index():
     try:
         logger.info("Rendering index.html")
         return render_template('index.html')
@@ -159,10 +159,11 @@ async def generate_campaign():
         return render_template('error.html', error=str(e), artist=artist, style=style_input), 500
 
 @app.errorhandler(500)
-def handle_500(error):
+async def handle_500(error):
     logger.error(f"Template error: {str(error)}")
     return render_template('error.html', error=str(error), artist="Unknown Artist", style="Unknown Style"), 500
 
 if __name__ == '__main__':
+    import uvicorn
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    uvicorn.run(app, host='0.0.0.0', port=port)
