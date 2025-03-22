@@ -4,6 +4,8 @@ import json
 from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
 import logging
+import time
+from requests.exceptions import RequestException
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO)
@@ -104,12 +106,21 @@ def generate_campaign():
         youtube_description_short = sanitize_data(youtube_description_short)
         youtube_description_full = sanitize_data(youtube_description_full)
         
-        # Étape 3 : Appeler campaign_optimizer avec artist et song
+        # Étape 3 : Appeler campaign_optimizer avec retry
         logger.info(f"Sending request to campaign_optimizer at {CAMPAIGN_OPTIMIZER_URL}/optimize with data: {{'artist': {artist}, 'song': {song}}}")
-        response = requests.post(f"{CAMPAIGN_OPTIMIZER_URL}/optimize", json={"artist": artist, "song": song})
-        response.raise_for_status()
-        strategy_data = response.json()
-        logger.info(f"Received response from campaign_optimizer: {strategy_data}")
+        retries = 3
+        for attempt in range(retries):
+            try:
+                response = requests.post(f"{CAMPAIGN_OPTIMIZER_URL}/optimize", json={"artist": artist, "song": song}, timeout=10)
+                response.raise_for_status()
+                strategy_data = response.json()
+                logger.info(f"Received response from campaign_optimizer: {strategy_data}")
+                break
+            except RequestException as e:
+                logger.warning(f"Attempt {attempt + 1}/{retries} failed for campaign_optimizer: {str(e)}")
+                if attempt == retries - 1:
+                    raise Exception(f"Failed to call campaign_optimizer after {retries} attempts: {str(e)}")
+                time.sleep(2)  # Attendre 2 secondes avant de réessayer
         
         if not isinstance(strategy_data, dict):
             logger.error(f"campaign_optimizer response is not a dictionary: {strategy_data}")
@@ -143,12 +154,12 @@ def generate_campaign():
                                   style=style_display), 500
     except Exception as e:
         logger.error(f"Error in generate_campaign: {str(e)}")
-        return jsonify({"error": "Failed to generate campaign", "details": str(e)}), 500
+        return render_template('error.html', error=str(e), artist=artist, style=style_input), 500
 
 @app.errorhandler(500)
 def handle_500(error):
     logger.error(f"Template error: {str(error)}")
-    return jsonify({"error": "Template rendering failed", "details": str(error)}), 500
+    return render_template('error.html', error=str(error), artist="Unknown Artist", style="Unknown Style"), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
