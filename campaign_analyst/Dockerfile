@@ -7,6 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 5001
+EXPOSE $PORT
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5001", "campaign_analyst:app"]
+CMD uvicorn campaign_analyst:asgi_app --host 0.0.0.0 --port $PORT
