@@ -139,7 +139,7 @@ async def generate_campaign():
         # Reformater la description YouTube complète selon le template demandé
         youtube_description_full = {
             "description": (
-                f'{artist_name} X {collaborator} "{style_display}"\n'
+                f'{artist_name} X {collaborator} "{song}"\n'
                 f'Taken from "collez le nom de l\'album" album: collez votre smartlink\n\n'
                 f'🔔 Subscribe to my channel 👉 collez le lien de votre chaîne YouTube\n\n'
                 f'Crédits :\n'
@@ -159,7 +159,7 @@ async def generate_campaign():
                 f'#{artist_name.replace(" ", "")} #{style_display.replace(" ", "")} #collez le tag de l\'album'
             ),
             "character_count": len(
-                f'{artist_name} X {collaborator} "{style_display}"\n'
+                f'{artist_name} X {collaborator} "{song}"\n'
                 f'Taken from "collez le nom de l\'album" album: collez votre smartlink\n\n'
                 f'🔔 Subscribe to my channel 👉 collez le lien de votre chaîne YouTube\n\n'
                 f'Crédits :\n'
