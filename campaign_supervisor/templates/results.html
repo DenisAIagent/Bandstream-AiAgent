@@ -81,7 +81,7 @@
             right: -30px;
         }
         .container {
-            max-width: 600px; /* Même largeur que dans index.html */
+            max-width: 1200px; /* Ajuster la largeur pour permettre un affichage côte à côte */
             margin: 40px auto;
             padding: 20px;
         }
@@ -96,11 +96,18 @@
             font-family: 'Quicksand', sans-serif;
             font-size: 1.8rem;
             font-weight: 600;
-            color: #0ED894;
-            margin-bottom: 20px;
+            color: #000000; /* Changer la couleur en noir pour plus d'élégance */
+            margin-bottom: 30px;
             text-align: center;
         }
+        .sections-grid {
+            display: flex; /* Utiliser Flexbox pour un affichage côte à côte */
+            flex-wrap: wrap; /* Permettre le retour à la ligne si l'espace est insuffisant */
+            gap: 20px; /* Espacement entre les sections */
+        }
         .section {
+            flex: 1; /* Chaque section prend une part égale de l'espace disponible */
+            min-width: 250px; /* Largeur minimale pour éviter que les sections soient trop étroites */
             margin-bottom: 20px;
         }
         .section-header {
@@ -108,8 +115,8 @@
             font-family: 'Quicksand', sans-serif;
             font-size: 1rem;
             font-weight: 600;
-            padding: 10px 15px; /* Ajuster le padding pour correspondre aux labels de index.html */
-            background-color: #0ED894; /* Utiliser la couleur verte comme les boutons de index.html */
+            padding: 10px 15px;
+            background-color: #0ED894;
             color: #000000;
             border-radius: 5px 5px 0 0;
             display: flex;
@@ -117,12 +124,12 @@
             transition: background-color 0.3s ease;
         }
         .section-header:hover {
-            background-color: #0BBF7A; /* Même hover que les boutons de index.html */
+            background-color: #0BBF7A;
         }
         .section-content {
             display: none;
-            padding: 15px;
-            background-color: white; /* Fond blanc pur, comme les champs de index.html */
+            padding: 10px 15px;
+            background-color: white;
         }
         .section-content.show {
             display: block;
@@ -139,6 +146,7 @@
             font-weight: 600;
             font-size: 0.9em;
             transition: background-color 0.3s ease;
+            vertical-align: middle;
         }
         .copy-button:hover {
             background-color: #0BBF7A;
@@ -172,7 +180,7 @@
             margin-top: 10px;
         }
         p {
-            margin: 5px 0;
+            margin: 8px 0;
         }
     </style>
 </head>
@@ -181,7 +189,7 @@
         <div class="header-content">
             <img src="https://i.postimg.cc/G2LmHsYT/Bandstream-logo-quadri-blanc.png" alt="Band Stream Logo">
             <h1>Résultats de la Campagne</h1>
-            <p>No fluff, just results.</p> <!-- Slogan fixe comme dans index.html -->
+            <p>No fluff, just results.</p>
         </div>
     </header>
 
@@ -201,44 +209,46 @@
                 </div>
             </div>
 
-            <div class="section">
-                <div class="section-header">▼ Titres Courts</div>
-                <div class="section-content">
-                    {% for title in short_titles %}
-                        <p>{{ title }} ({{ title | length }} / 30) <button class="copy-button" onclick="copyToClipboard('{{ title }}')">Copier</button></p>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-header">▼ Titres Longs</div>
-                <div class="section-content">
-                    {% for title in long_titles %}
-                        <p>{{ title }} ({{ title | length }} / 55) <button class="copy-button" onclick="copyToClipboard('{{ title }}')">Copier</button></p>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-header">▼ Descriptions Longues</div>
-                <div class="section-content">
-                    {% if long_descriptions %}
-                        {% for desc in long_descriptions %}
-                            <p>{{ desc.description }} ({{ desc.character_count }} / 80) <button class="copy-button" onclick="copyToClipboard('{{ desc.description }}')">Copier</button></p>
+            <div class="sections-grid">
+                <div class="section">
+                    <div class="section-header">▼ Titres Courts</div>
+                    <div class="section-content">
+                        {% for title in short_titles %}
+                            <p>{{ title }} ({{ title | length }} / 30) <button class="copy-button" onclick="copyToClipboard('{{ title }}')">Copier</button></p>
                         {% endfor %}
-                    {% else %}
-                        <p>Aucune description longue disponible.</p>
-                    {% endif %}
+                    </div>
                 </div>
-            </div>
 
-            <div class="section">
-                <div class="section-header">▼ Description YouTube</div>
-                <div class="section-content">
-                    <p><strong>Courte :</strong> {{ youtube_description_short.description }} ({{ youtube_description_short.character_count }} / 120) <button class="copy-button" onclick="copyToClipboard('{{ youtube_description_short.description }}')">Copier</button></p>
-                    <p><strong>Complète :</strong></p>
-                    <pre>{{ youtube_description_full.description }} ({{ youtube_description_full.character_count }} / 5000)</pre>
-                    <button class="copy-button" onclick="copyToClipboard('{{ youtube_description_full.description }}')">Copier</button>
+                <div class="section">
+                    <div class="section-header">▼ Titres Longs</div>
+                    <div class="section-content">
+                        {% for title in long_titles %}
+                            <p>{{ title }} ({{ title | length }} / 55) <button class="copy-button" onclick="copyToClipboard('{{ title }}')">Copier</button></p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">▼ Descriptions Longues</div>
+                    <div class="section-content">
+                        {% if long_descriptions %}
+                            {% for desc in long_descriptions %}
+                                <p>{{ desc.description }} ({{ desc.character_count }} / 80) <button class="copy-button" onclick="copyToClipboard('{{ desc.description }}')">Copier</button></p>
+                            {% endfor %}
+                        {% else %}
+                            <p>Aucune description longue disponible.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">▼ Description YouTube</div>
+                    <div class="section-content">
+                        <p><strong>Courte :</strong> {{ youtube_description_short.description }} ({{ youtube_description_short.character_count }} / 120) <button class="copy-button" onclick="copyToClipboard('{{ youtube_description_short.description }}')">Copier</button></p>
+                        <p><strong>Complète :</strong></p>
+                        <pre>{{ youtube_description_full.description }} ({{ youtube_description_full.character_count }} / 5000)</pre>
+                        <button class="copy-button" onclick="copyToClipboard('{{ youtube_description_full.description }}')">Copier</button>
+                    </div>
                 </div>
             </div>
 
