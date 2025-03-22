@@ -46,7 +46,7 @@
             position: relative;
         }
         .header-content img {
-            max-width: 180px; /* Ajuster la largeur maximale pour une taille raisonnable */
+            max-width: 250px; /* Ajuster la largeur pour correspondre à index.html */
             width: 100%; /* Permet de conserver les proportions naturelles */
             height: auto; /* Permet de conserver les proportions naturelles (ratio 2.32:1) */
             margin-bottom: 10px;
@@ -81,7 +81,7 @@
             right: -30px;
         }
         .container {
-            max-width: 600px;
+            max-width: 600px; /* Même largeur que dans index.html */
             margin: 40px auto;
             padding: 20px;
         }
@@ -106,22 +106,24 @@
         .section-header {
             cursor: pointer;
             font-family: 'Quicksand', sans-serif;
-            font-size: 1.2em;
+            font-size: 1rem;
             font-weight: 600;
-            padding: 15px;
-            background-color: #e0e0e0;
+            padding: 12px;
+            background-color: #0ED894; /* Utiliser la couleur verte comme les boutons de index.html */
+            color: #000000;
             border-radius: 5px 5px 0 0;
             display: flex;
             align-items: center;
             transition: background-color 0.3s ease;
         }
         .section-header:hover {
-            background-color: #d0d0d0;
+            background-color: #0BBF7A; /* Même hover que les boutons de index.html */
         }
         .section-content {
             display: none;
             padding: 15px;
             border-top: 1px solid #ccc;
+            background-color: #F9FAFB; /* Fond légèrement gris pour le contenu */
         }
         .section-content.show {
             display: block;
