@@ -142,4 +142,159 @@ def search_serpapi_for_trends_and_artists(styles):
                     # Supprimer les noms d'artistes connus pour ne garder que les mots-clés
                     known_artists = [
                         "foo fighters", "christophe maé", "various artists", "line renaud",
-                        "serge lama", "michel tor", "edith pia
+                        "serge lama", "michel tor", "edith piaf", "les compagnons de la chanson",
+                        "bruce springsteen", "the beatles", "amir", "vianney", "louane",
+                        "m pokora", "patrick bruel"
+                    ]
+                    for artist_name in known_artists:
+                        keyword = keyword.replace(artist_name.lower(), "").strip()
+                    # Nettoyer les mots-clés
+                    keyword = ' '.join(keyword.split()).replace('-', '').replace('  ', ' ')
+                    if keyword and len(keyword) > 5 and keyword not in long_tail_keywords:
+                        long_tail_keywords.append(keyword[:50])
+
+            # Extraire les artistes à partir du titre et du snippet
+            for artist_name in known_artists:
+                if artist_name.lower() in title or artist_name.lower() in snippet:
+                    if artist_name not in artists:
+                        artists.append(artist_name)
+
+        logger.info(f"SerpAPI trends: {long_tail_keywords}, Artists: {artists}")
+        return long_tail_keywords, artists
+
+    except Exception as e:
+        logger.error(f"Error searching SerpAPI: {str(e)}")
+        return [], []
+
+# Fonction asynchrone pour effectuer des appels HTTP
+async def fetch_data(session, url, data, retries=5, delay=1):
+    for attempt in range(retries):
+        try:
+            async with session.post(url, json=data, timeout=30) as response:
+                response.raise_for_status()
+                result = await response.json()
+                logger.info(f"Successfully fetched data from {url}: {result}")
+                return result
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            logger.warning(f"Attempt {attempt + 1}/{retries} failed for {url}: {str(e)}")
+            if attempt == retries - 1:
+                logger.error(f"Failed to call {url} after {retries} attempts: {str(e)}")
+                raise Exception(f"Failed to call {url} after {retries} attempts: {str(e)}. Please try again later.")
+            await asyncio.sleep(delay)
+
+@app.route('/optimize', methods=['POST'])
+async def optimize():
+    try:
+        data = request.get_json()
+        if not data or "artist" not in data or "song" not in data:
+            logger.error("Missing required fields 'artist' or 'song' in request")
+            return jsonify({"error": "Missing required fields 'artist' or 'song'"}), 400
+
+        artist = data.get("artist")
+        song = data.get("song")
+        logger.info(f"Optimizing campaign for artist: {artist}, song: {song}")
+
+        # Appeler campaign_analyst pour obtenir les données d'analyse
+        async with aiohttp.ClientSession() as session:
+            analysis_data = await fetch_data(session, f"{CAMPAIGN_ANALYST_URL}/analyze", {"artist": artist, "styles": ["chanson française", "pop"]})
+
+        # Traiter les données d'analyse
+        logger.info("Processing analysis_data")
+        if not isinstance(analysis_data, dict):
+            logger.error(f"campaign_analyst response is not a dictionary: {analysis_data}")
+            analysis_data = {
+                "trends": ["Trend 1", "Trend 2"],
+                "lookalike_artists": ["Artist 1", "Artist 2"],
+                "style": "chanson française, pop",
+                "artist_image_url": "https://via.placeholder.com/120?text=Artist"
+            }
+        analysis_data = sanitize_data(analysis_data)
+
+        # Effectuer une recherche YouTube pour obtenir des tendances et artistes similaires
+        youtube_trends, youtube_artists = search_youtube_for_trends_and_artists(["chanson française", "pop"])
+
+        # Effectuer une recherche SerpAPI pour croiser les sources
+        serpapi_trends, serpapi_artists = search_serpapi_for_trends_and_artists(["chanson française", "pop"])
+
+        # Fusionner les tendances
+        trends = []
+        # Prioriser les tendances YouTube
+        for trend in youtube_trends:
+            if len(trends) < 2 and trend not in trends:
+                trends.append(trend)
+        
+        # Ajouter les tendances SerpAPI si nécessaire
+        for trend in serpapi_trends:
+            if len(trends) < 2 and trend not in trends:
+                trends.append(trend)
+        
+        # Si YouTube et SerpAPI n'ont pas fourni assez de tendances, utiliser celles d'OpenAI (via campaign_analyst)
+        for trend in analysis_data.get("trends", []):
+            if len(trends) < 2 and trend not in trends:
+                trends.append(trend)
+        
+        # Si aucune tendance n'est disponible, utiliser des valeurs par défaut
+        if not trends:
+            trends = ["Trend 1", "Trend 2"]
+        trends = trends[:2]
+
+        # Fusionner les artistes similaires
+        lookalike_artists = []
+        seen_artists = set()
+
+        # Prioriser les artistes YouTube
+        for artist_name in youtube_artists:
+            artist_lower = artist_name.lower()
+            if artist_lower not in seen_artists and artist_name != artist:
+                lookalike_artists.append(artist_name)
+                seen_artists.add(artist_lower)
+
+        # Ajouter les artistes SerpAPI
+        for artist_name in serpapi_artists:
+            artist_lower = artist_name.lower()
+            if artist_lower not in seen_artists and artist_name != artist:
+                lookalike_artists.append(artist_name)
+                seen_artists.add(artist_lower)
+
+        # Ajouter les artistes de campaign_analyst
+        for artist_name in analysis_data.get("lookalike_artists", []):
+            artist_lower = artist_name.lower()
+            if artist_lower not in seen_artists and artist_name != artist:
+                lookalike_artists.append(artist_name)
+                seen_artists.add(artist_lower)
+
+        lookalike_artists = lookalike_artists[:15]
+
+        # Mettre à jour les données d'analyse
+        analysis_data["trends"] = trends
+        analysis_data["lookalike_artists"] = lookalike_artists
+
+        # Générer une stratégie d'optimisation (simulée pour l'instant)
+        strategy = {
+            "target_audience": f"Fans of {', '.join(lookalike_artists[:3])}",
+            "channels": ["Spotify", "YouTube", "Instagram"],
+            "budget_allocation": {"Spotify": 0.4, "YouTube": 0.4, "Instagram": 0.2}
+        }
+
+        response = {
+            "strategy": strategy,
+            "analysis": analysis_data
+        }
+        logger.info(f"Returning optimized campaign: {response}")
+        return jsonify(response), 200
+
+    except Exception as e:
+        logger.error(f"Error in optimize: {str(e)}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+# Endpoint de santé
+@app.route('/health', methods=['GET'])
+def health_check():
+    logger.info("Received request for /health endpoint")
+    response = {"status": "ok", "message": "Campaign Optimizer is running"}
+    logger.info(f"Returning health check response: {response}")
+    return jsonify(response), 200
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
