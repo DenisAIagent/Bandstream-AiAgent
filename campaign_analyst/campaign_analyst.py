@@ -331,27 +331,42 @@ async def analyze():
     
     # Étape 5 : Fusionner les artistes similaires
     combined_artists = []
+    seen_artists = set()  # Pour suivre les artistes déjà ajoutés (en ignorant la casse)
+
     # Priorité aux artistes de campaign_optimizer
     for artist_name in optimizer_similar_artists:
-        if artist_name not in combined_artists and artist_name != artist:
+        artist_lower = artist_name.lower()
+        if artist_lower not in seen_artists and artist_name != artist:
             combined_artists.append(artist_name)
-    
+            seen_artists.add(artist_lower)
+
     # Ajouter les artistes de MusicBrainz et OpenAI
     for artist_name in musicbrainz_trending:
-        if artist_name in musicbrainz_similar or artist_name in openai_similar:
-            if artist_name not in combined_artists and artist_name != artist:
-                combined_artists.append(artist_name)
-    for artist_name in musicbrainz_similar:
-        if artist_name in openai_similar and artist_name not in combined_artists and artist_name != artist:
+        artist_lower = artist_name.lower()
+        if (artist_name in musicbrainz_similar or artist_name in openai_similar) and artist_lower not in seen_artists and artist_name != artist:
             combined_artists.append(artist_name)
+            seen_artists.add(artist_lower)
+
+    for artist_name in musicbrainz_similar:
+        artist_lower = artist_name.lower()
+        if artist_name in openai_similar and artist_lower not in seen_artists and artist_name != artist:
+            combined_artists.append(artist_name)
+            seen_artists.add(artist_lower)
+
     # Ajouter les artistes de SerpAPI
     for artist_name in serpapi_artists:
-        if artist_name not in combined_artists and artist_name != artist:
+        artist_lower = artist_name.lower()
+        if artist_lower not in seen_artists and artist_name != artist:
             combined_artists.append(artist_name)
+            seen_artists.add(artist_lower)
+
     # Ajouter les autres artistes de MusicBrainz et OpenAI
     for artist_name in musicbrainz_trending + musicbrainz_similar + openai_similar:
-        if artist_name not in combined_artists and len(combined_artists) < 15 and artist_name != artist:
+        artist_lower = artist_name.lower()
+        if artist_lower not in seen_artists and len(combined_artists) < 15 and artist_name != artist:
             combined_artists.append(artist_name)
+            seen_artists.add(artist_lower)
+
     combined_artists = combined_artists[:15]
     logger.info(f"Combined artists: {combined_artists}")
     
@@ -379,6 +394,5 @@ if __name__ == '__main__':
     import uvicorn
     # Récupérer le port dynamiquement via os.environ
     port = int(os.environ.get('PORT', 8080))  # Utilise 8080 comme valeur par défaut si PORT n'est pas défini
-    logger.info(f"Environment variable PORT is set to: {os.environ.get('PORT')}")
     logger.info(f"Starting uvicorn on port {port}")
     uvicorn.run(app, host='0.0.0.0', port=port)
