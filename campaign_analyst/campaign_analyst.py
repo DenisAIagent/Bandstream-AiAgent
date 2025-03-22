@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import time
 import musicbrainzngs
 import signal
-from asgiref.wsgi import WsgiToAsgi
+from cachetools import TTLCache
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO)
@@ -49,9 +49,9 @@ logger.info("MusicBrainz configured successfully.")
 # Définir un timeout pour les appels à MusicBrainz (en secondes)
 MUSICBRAINZ_TIMEOUT = 5
 
-# Cache pour les données de MusicBrainz (valide pendant 24 heures)
-musicbrainz_cache = {}
-cache_duration = timedelta(hours=24)
+# Cache pour les données de MusicBrainz et SerpAPI (valide pendant 24 heures)
+musicbrainz_cache = TTLCache(maxsize=100, ttl=24*60*60)  # Cache pour 24 heures
+serpapi_cache = TTLCache(maxsize=100, ttl=24*60*60)  # Cache pour 24 heures
 
 # Gestionnaire de timeout avec signal
 def timeout_handler(signum, frame):
@@ -61,6 +61,11 @@ def timeout_handler(signum, frame):
 # Fonction pour effectuer une recherche via SerpAPI
 async def search_with_serpapi(query):
     logger.info(f"Searching SerpAPI with query: {query}")
+    # Vérifier si le résultat est déjà en cache
+    if query in serpapi_cache:
+        logger.info(f"Using cached SerpAPI data for query: {query}")
+        return serpapi_cache[query]
+
     url = "https://serpapi.com/search"
     params = {
         "q": query,
@@ -88,13 +93,15 @@ async def search_with_serpapi(query):
                             "nine inch nails", "hatebreed", "converge", "terror", "knocked loose", "turnstile",
                             "code orange", "every time i die", "the ghost inside", "don omar", "wisin & yandel",
                             "sean paul", "enrique iglesias", "jennifer lopez", "j balvin", "bad bunny", "maluma",
-                            "ozuna", "nicky jam", "farruko", "daddy yankee", "anuel aa", "arcángel", "sech"
+                            "ozuna", "nicky jam", "farruko", "daddy yankee", "anuel aa", "arcángel", "sech",
+                            "christophe maé", "vianney", "louane", "m pokora", "patrick bruel"
                         ]
                         for artist in known_artists:
                             if artist.lower() in title or artist.lower() in snippet:
                                 artists.append(artist)
                 
-                # Si aucun artiste n'est trouvé, retourner une liste vide
+                # Mettre en cache le résultat
+                serpapi_cache[query] = list(set(artists))
                 logger.info(f"Found artists from SerpAPI: {artists}")
                 return list(set(artists))  # Éliminer les doublons
         except Exception as e:
@@ -129,10 +136,8 @@ def get_trending_artists_musicbrainz(styles):
     logger.info(f"Fetching trending artists from MusicBrainz for styles: {styles}")
     cache_key = f"musicbrainz_trending_{'_'.join(sorted(styles))}"
     if cache_key in musicbrainz_cache:
-        cache_entry = musicbrainz_cache[cache_key]
-        if datetime.now() - cache_entry["timestamp"] < cache_duration:
-            logger.info(f"Using cached MusicBrainz trending data for styles: {styles}")
-            return cache_entry["trending_artists"]
+        logger.info(f"Using cached MusicBrainz trending data for styles: {styles}")
+        return musicbrainz_cache[cache_key]
     
     try:
         signal.signal(signal.SIGALRM, timeout_handler)
@@ -141,7 +146,7 @@ def get_trending_artists_musicbrainz(styles):
         trending_artists = set()
         for style in styles:
             normalized_style = style.lower()
-            result = musicbrainzngs.search_artists(query=f'tag:"{normalized_style}"', limit=5)
+            result = musicbrainzngs.search_artists(query=f'tag:"{normalized_style}"', limit=3)  # Réduire à 3 pour limiter les appels
             if "artist-list" in result:
                 for artist in result["artist-list"]:
                     if "name" in artist:
@@ -150,10 +155,7 @@ def get_trending_artists_musicbrainz(styles):
         signal.alarm(0)
         
         trending_artists = list(trending_artists)[:10]  # Limiter à 10 artistes uniques
-        musicbrainz_cache[cache_key] = {
-            "trending_artists": trending_artists,
-            "timestamp": datetime.now()
-        }
+        musicbrainz_cache[cache_key] = trending_artists
         logger.info(f"Trending artists from MusicBrainz: {trending_artists}")
         return trending_artists
     except TimeoutError:
@@ -170,10 +172,8 @@ def get_similar_artists_musicbrainz(artist):
     logger.info(f"Fetching similar artists from MusicBrainz for artist: {artist}")
     cache_key = f"musicbrainz_similar_{artist}"
     if cache_key in musicbrainz_cache:
-        cache_entry = musicbrainz_cache[cache_key]
-        if datetime.now() - cache_entry["timestamp"] < cache_duration:
-            logger.info(f"Using cached MusicBrainz similar artists and image for artist: {artist}")
-            return cache_entry["lookalike_artists"], cache_entry["artist_image_url"]
+        logger.info(f"Using cached MusicBrainz similar artists and image for artist: {artist}")
+        return musicbrainz_cache[cache_key]["lookalike_artists"], musicbrainz_cache[cache_key]["artist_image_url"]
     
     lookalike_artists = []
     artist_image_url = "https://via.placeholder.com/120?text=Artist"
@@ -229,8 +229,7 @@ def get_similar_artists_musicbrainz(artist):
         
         musicbrainz_cache[cache_key] = {
             "lookalike_artists": lookalike_artists,
-            "artist_image_url": artist_image_url,
-            "timestamp": datetime.now()
+            "artist_image_url": artist_image_url
         }
         logger.info(f"Similar artists from MusicBrainz: {lookalike_artists}, Image URL: {artist_image_url}")
         return lookalike_artists, artist_image_url
@@ -254,145 +253,4 @@ def get_trends_and_artists_openai(artist, styles):
         - Genres: {styles_str}
 
         Generate the following:
-        - A list of 2 current trends across the genres {styles_str} (short phrases, max 50 characters each).
-        - A list of 15 trending artists across the genres {styles_str} (just the artist names, no additional text).
-
-        Return the response in the following JSON format:
-        {{
-            "trends": ["<trend1>", "<trend2>"],
-            "lookalike_artists": ["<artist1>", "<artist2>", ..., "<artist15>"]
-        }}
-        """
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=500,
-            temperature=0.7
-        )
-        
-        raw_text = response.choices[0].message.content.strip()
-        logger.info(f"Raw response from OpenAI: {raw_text}")
-        
-        data = json.loads(raw_text)
-        
-        trends = data.get("trends", ["No trends found"])
-        lookalike_artists = data.get("lookalike_artists", ["No similar artists found"])
-        logger.info(f"OpenAI trends: {trends}, Lookalike artists: {lookalike_artists}")
-        return trends, lookalike_artists
-    except Exception as e:
-        logger.error(f"Error fetching trends and artists with OpenAI: {str(e)}")
-        return ["Trend 1", "Trend 2"], ["Artist 1", "Artist 2"]
-
-# Endpoint principal
-@app.route('/analyze', methods=['POST'])
-async def analyze():
-    logger.info("Received request for /analyze endpoint")
-    data = request.get_json()
-    if not data or "artist" not in data or "styles" not in data:
-        logger.error("Missing required fields 'artist' or 'styles' in request")
-        return jsonify({"error": "Missing required fields 'artist' or 'styles'"}), 400
-    
-    artist = data.get("artist")
-    styles = data.get("styles", [])
-    optimizer_similar_artists = data.get("optimizer_similar_artists", [])
-    if not styles:
-        logger.error("Styles list is empty")
-        return jsonify({"error": "At least one style is required"}), 400
-    
-    logger.info(f"Analyzing trends and lookalike artists for artist: {artist}, styles: {styles}, optimizer_similar_artists: {optimizer_similar_artists}")
-    
-    # Étape 1 : Récupérer les données de MusicBrainz
-    musicbrainz_trending = get_trending_artists_musicbrainz(styles)
-    musicbrainz_similar, artist_image_url = get_similar_artists_musicbrainz(artist)
-    
-    # Étape 2 : Récupérer les données d'OpenAI
-    openai_trends, openai_similar = get_trends_and_artists_openai(artist, styles)
-    
-    # Étape 3 : Récupérer les données via SerpAPI (mots-clés long tail)
-    primary_style = styles[0].lower()
-    serpapi_artists, serpapi_keywords = await search_long_tail_keywords(primary_style)
-    
-    # Étape 4 : Fusionner les tendances
-    trends = []
-    if musicbrainz_trending:
-        trends.append(f"Rise of {styles[0]} artists like {musicbrainz_trending[0]}"[:50])
-    if musicbrainz_trending and len(trends) < 2 and len(musicbrainz_trending) > 1:
-        trends.append(f"Popularity of {styles[0]} with {musicbrainz_trending[1]}"[:50])
-    for trend in openai_trends:
-        if len(trends) < 2 and trend not in trends:
-            trends.append(trend)
-    if not trends:
-        trends = ["Trend 1", "Trend 2"]
-    trends = trends[:2]
-    # Ajouter les mots-clés long tail aux tendances
-    trends.extend(serpapi_keywords)
-    logger.info(f"Combined trends: {trends}")
-    
-    # Étape 5 : Fusionner les artistes similaires
-    combined_artists = []
-    seen_artists = set()  # Pour suivre les artistes déjà ajoutés (en ignorant la casse)
-
-    # Priorité aux artistes de campaign_optimizer
-    for artist_name in optimizer_similar_artists:
-        artist_lower = artist_name.lower()
-        if artist_lower not in seen_artists and artist_name != artist:
-            combined_artists.append(artist_name)
-            seen_artists.add(artist_lower)
-
-    # Ajouter les artistes de MusicBrainz et OpenAI
-    for artist_name in musicbrainz_trending:
-        artist_lower = artist_name.lower()
-        if (artist_name in musicbrainz_similar or artist_name in openai_similar) and artist_lower not in seen_artists and artist_name != artist:
-            combined_artists.append(artist_name)
-            seen_artists.add(artist_lower)
-
-    for artist_name in musicbrainz_similar:
-        artist_lower = artist_name.lower()
-        if artist_name in openai_similar and artist_lower not in seen_artists and artist_name != artist:
-            combined_artists.append(artist_name)
-            seen_artists.add(artist_lower)
-
-    # Ajouter les artistes de SerpAPI
-    for artist_name in serpapi_artists:
-        artist_lower = artist_name.lower()
-        if artist_lower not in seen_artists and artist_name != artist:
-            combined_artists.append(artist_name)
-            seen_artists.add(artist_lower)
-
-    # Ajouter les autres artistes de MusicBrainz et OpenAI
-    for artist_name in musicbrainz_trending + musicbrainz_similar + openai_similar:
-        artist_lower = artist_name.lower()
-        if artist_lower not in seen_artists and len(combined_artists) < 15 and artist_name != artist:
-            combined_artists.append(artist_name)
-            seen_artists.add(artist_lower)
-
-    combined_artists = combined_artists[:15]
-    logger.info(f"Combined artists: {combined_artists}")
-    
-    response = {
-        "trends": trends,
-        "lookalike_artists": combined_artists,
-        "style": ", ".join(styles),
-        "artist_image_url": artist_image_url
-    }
-    logger.info(f"Returning response: {response}")
-    return jsonify(response), 200
-
-# Endpoint de santé
-@app.route('/health', methods=['GET'])
-def health_check():
-    logger.info("Received request for /health endpoint")
-    response = {"status": "ok", "message": "Campaign Analyst is running"}
-    logger.info(f"Returning health check response: {response}")
-    return jsonify(response), 200
-
-# Convertir l'application Flask (WSGI) en ASGI pour uvicorn
-app = WsgiToAsgi(app)
-
-if __name__ == '__main__':
-    import uvicorn
-    # Récupérer le port dynamiquement via os.environ
-    port = int(os.environ.get('PORT', 8080))  # Utilise 8080 comme valeur par défaut si PORT n'est pas défini
-    logger.info(f"Starting uvicorn on port {port}")
-    uvicorn.run(app, host='0.0.0.0', port=port)
+        - A list of 2 current trends across the genres {styles_str} (short phrases, max 50 characters each). Focus on modern trends relevant to 2025, such as chart performanc
