@@ -2,230 +2,82 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Résultats de la Campagne - Band Stream Crew AI Agent</title>
-    <link rel="icon" type="image/png" href="https://i.postimg.cc/9QBSxpfs/favicon-bandstream.png">
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&family=Poppins:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <title>Résultats de la Campagne</title>
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            font-weight: 300;
-            margin: 0;
-            padding: 0;
-            background-color: #EBF5DF;
-            color: #000000;
-            line-height: 1.6;
-        }
-        header {
-            background-color: #000000;
-            color: #FFFFFF;
-            text-align: center;
-            padding: 2rem 0;
-            position: relative;
-            overflow: hidden;
-        }
-        header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50"><path d="M25 5C15 5 5 15 5 25C5 35 15 45 25 45C35 45 45 35 45 25C45 15 35 5 25 5ZM25 15L35 25L25 35L15 25L25 15Z" fill="%230ED894" fill-opacity="0.1"/></svg>');
-            background-repeat: repeat;
-            opacity: 0.2;
-        }
-        .header-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            position: relative;
-        }
-        .header-content img {
-            height: 60px;
-            margin-bottom: 10px;
-        }
-        .header-content h1 {
-            font-family: 'Quicksand', sans-serif;
-            font-size: 2rem;
-            font-weight: 700;
-            margin: 0;
-            color: #FFFFFF;
-        }
-        .header-content p {
-            font-family: 'Poppins', sans-serif;
-            font-weight: 400;
-            font-size: 1.2rem;
-            margin: 10px 0 0;
-            color: #FFFFFF;
-            position: relative;
-        }
-        .header-content p::before, .header-content p::after {
-            content: '“';
-            font-size: 2rem;
-            color: #0ED894;
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-        .header-content p::before {
-            left: -30px;
-        }
-        .header-content p::after {
-            right: -30px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 20px;
-        }
-        .section {
-            background-color: white;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        .section h2 {
-            font-family: 'Quicksand', sans-serif;
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: #0ED894;
-            margin-bottom: 20px;
-            cursor: pointer;
-            position: relative;
-            padding-left: 30px;
-        }
-        .section h2 .arrow {
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 1.2rem;
-            color: #0ED894;
-            transition: transform 0.3s ease;
-        }
-        .section h2.collapsed .arrow {
-            transform: translateY(-50%) rotate(-90deg);
-        }
-        .section-content {
-            display: block;
-        }
-        .section-content.hidden {
-            display: none;
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-        .item {
-            background-color: #f9f9f9;
-            padding: 15px 15px 40px 15px; /* Ajout de padding en bas pour le bouton */
-            border-radius: 5px;
-            position: relative;
-            word-wrap: break-word;
-            min-height: 80px;
-        }
-        .item p {
-            margin: 0 0 5px 0;
-            font-size: 1rem;
-            color: #333;
-            word-break: break-word;
-        }
-        .item .char-count {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 5px;
-        }
-        .copy-btn {
-            position: absolute;
-            bottom: 10px; /* Repositionné en bas */
-            right: 10px;
-            background-color: #0ED894;
-            color: #000000;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-family: 'Quicksand', sans-serif;
-            font-weight: 600;
-            transition: background-color 0.3s ease;
-        }
-        .copy-btn:hover {
-            background-color: #0BBF7A;
-        }
-        .youtube-section {
-            background-color: white;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        .youtube-section h2 {
-            font-family: 'Quicksand', sans-serif;
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: #0ED894;
-            margin-bottom: 20px;
-        }
-        .youtube-section p {
-            font-family: 'Poppins', sans-serif;
-            font-weight: 300;
-            font-size: 1rem;
-            color: #000000;
-            margin-bottom: 10px;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .youtube-section .char-count {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 5px;
-        }
-        .youtube-section .copy-btn {
-            margin-top: 10px;
-            background-color: #0ED894;
-            color: #000000;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-family: 'Quicksand', sans-serif;
-            font-weight: 600;
-            transition: background-color 0.3s ease;
-        }
-        .youtube-section .copy-btn:hover {
-            background-color: #0BBF7A;
-        }
-        .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #0ED894;
-            color: #000000;
-            text-decoration: none;
-            border-radius: 5px;
-            font-family: 'Quicksand', sans-serif;
-            font-weight: 600;
-            transition: background-color 0.3s ease;
-            text-align: center;
-            margin-top: 20px;
-        }
-        .button:hover {
-            background-color: #0BBF7A;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin-bottom: 20px; }
+        .section-header { cursor: pointer; font-size: 1.2em; }
+        .section-content { display: none; margin-left: 20px; }
+        .section-content.show { display: block; }
+        .copy-button { margin-left: 10px; cursor: pointer; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
     </style>
+</head>
+<body>
+    <h1>Band Stream Logo</h1>
+    <h2>Résultats de la Campagne</h2>
+    <p>Campagne générée pour {{ artist }} - {{ song }} ({{ style }})</p>
+
+    <div class="section">
+        <div class="section-header">▼ Analyse</div>
+        <div class="section-content show">
+            <p><strong>Artiste :</strong> {{ artist }}</p>
+            <p><strong>Chanson :</strong> {{ song }}</p>
+            <p><strong>Style :</strong> {{ style }}</p>
+            <p><strong>Tendances :</strong> {{ analysis.trends | join(", ") }}</p>
+            <p><strong>Artistes similaires :</strong> {{ analysis.lookalike_artists | join(", ") }}</p>
+            <p><strong>Image de l'artiste :</strong></p>
+            <img src="{{ analysis.artist_image_url }}" alt="Image de l'artiste">
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">▼ Titres Courts</div>
+        <div class="section-content">
+            {% for title in short_titles %}
+                <p>{{ title }} ({{ title | length }} / 30) <button class="copy-button" onclick="copyToClipboard('{{ title }}')">Copier</button></p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">▼ Titres Longs</div>
+        <div class="section-content">
+            {% for title in long_titles %}
+                <p>{{ title }} ({{ title | length }} / 55) <button class="copy-button" onclick="copyToClipboard('{{ title }}')">Copier</button></p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">▼ Descriptions Longues</div>
+        <div class="section-content">
+            {% for desc in long_descriptions %}
+                <p>{{ desc.description }} ({{ desc.character_count }} / 80) <button class="copy-button" onclick="copyToClipboard('{{ desc.description }}')">Copier</button></p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-header">▼ Description YouTube</div>
+        <div class="section-content">
+            <p><strong>Courte :</strong> {{ youtube_description_short.description }} ({{ youtube_description_short.character_count }} / 120) <button class="copy-button" onclick="copyToClipboard('{{ youtube_description_short.description }}')">Copier</button></p>
+            <p><strong>Complète :</strong></p>
+            <pre>{{ youtube_description_full.description }} ({{ youtube_description_full.character_count }} / 5000)</pre>
+            <button class="copy-button" onclick="copyToClipboard('{{ youtube_description_full.description }}')">Copier</button>
+        </div>
+    </div>
+
+    <a href="/">Retour à l'accueil</a>
+
     <script>
-        function toggleSection(sectionId) {
-            const content = document.getElementById(sectionId);
-            const header = content.previousElementSibling;
-            content.classList.toggle('hidden');
-            header.classList.toggle('collapsed');
-        }
+        document.querySelectorAll('.section-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                content.classList.toggle('show');
+                header.textContent = content.classList.contains('show') ? '▼ ' + header.textContent.slice(2) : '▶ ' + header.textContent.slice(2);
+            });
+        });
 
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
@@ -233,94 +85,5 @@
             });
         }
     </script>
-</head>
-<body>
-    <header>
-        <div class="header-content">
-            <img src="https://i.postimg.cc/G2LmHsYT/Bandstream-logo-quadri-blanc.png" alt="Band Stream Logo">
-            <h1>Résultats de la Campagne</h1>
-            <p>Campagne générée pour {{ artist | e }} - {{ song | e }} ({{ style | e }})</p>
-        </div>
-    </header>
-
-    <div class="container">
-        <!-- Section Analyse -->
-        <div class="section">
-            <h2 onclick="toggleSection('analysis-content')"><span class="arrow">▼</span> Analyse</h2>
-            <div id="analysis-content" class="section-content">
-                <p><strong>Artiste :</strong> {{ artist | e }}</p>
-                <p><strong>Chanson :</strong> {{ song | e }}</p>
-                <p><strong>Style :</strong> {{ style | e }}</p>
-                <p><strong>Tendances :</strong> {{ analysis.trends | join(', ') | e }}</p>
-                <p><strong>Artistes similaires :</strong> {{ analysis.lookalike_artists | join(', ') | e }}</p>
-                {% if analysis.artist_image_url %}
-                <img src="{{ analysis.artist_image_url | e }}" alt="Image de l'artiste" style="max-width: 300px; border-radius: 5px;">
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Section Titres Courts -->
-        <div class="section">
-            <h2 onclick="toggleSection('short-titles-content')"><span class="arrow">▼</span> Titres Courts</h2>
-            <div id="short-titles-content" class="section-content">
-                <div class="grid">
-                    {% for title in short_titles %}
-                    <div class="item">
-                        <p>{{ title.title | e }}</p>
-                        <p class="char-count">({{ title.character_count }} / 30)</p>
-                        <button class="copy-btn" onclick="copyToClipboard('{{ title.title | e }}')">Copier</button>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Section Titres Longs -->
-        <div class="section">
-            <h2 onclick="toggleSection('long-titles-content')"><span class="arrow">▼</span> Titres Longs</h2>
-            <div id="long-titles-content" class="section-content">
-                <div class="grid">
-                    {% for title in long_titles %}
-                    <div class="item">
-                        <p>{{ title.title | e }}</p>
-                        <p class="char-count">({{ title.character_count }} / 55)</p>
-                        <button class="copy-btn" onclick="copyToClipboard('{{ title.title | e }}')">Copier</button>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Section Descriptions Longues -->
-        <div class="section">
-            <h2 onclick="toggleSection('long-descriptions-content')"><span class="arrow">▼</span> Descriptions Longues</h2>
-            <div id="long-descriptions-content" class="section-content">
-                <div class="grid">
-                    {% for desc in long_descriptions %}
-                    <div class="item">
-                        <p>{{ desc.description | e }}</p>
-                        <p class="char-count">({{ desc.character_count }} / 80)</p>
-                        <button class="copy-btn" onclick="copyToClipboard('{{ desc.description | e }}')">Copier</button>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Section Description YouTube -->
-        <div class="youtube-section">
-            <h2>Description YouTube</h2>
-            <p><strong>Courte :</strong> {{ youtube_description_short.description | e }}</p>
-            <p class="char-count">({{ youtube_description_short.character_count }} / 120)</p>
-            <button class="copy-btn" onclick="copyToClipboard('{{ youtube_description_short.description | e }}')">Copier</button>
-            <p><strong>Complète :</strong></p>
-            <p>{{ youtube_description_full.description | e }}</p>
-            <p class="char-count">({{ youtube_description_full.character_count }} / 5000)</p>
-            <button class="copy-btn" onclick="copyToClipboard('{{ youtube_description_full.description | e }}')">Copier</button>
-        </div>
-
-        <!-- Bouton de retour -->
-        <a href="/" class="button">Retour à l'accueil</a>
-    </div>
 </body>
 </html>
