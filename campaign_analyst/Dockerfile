@@ -9,4 +9,6 @@ COPY . .
 
 EXPOSE $PORT
 
+CMD uvicorn campaign_analyst:asgi_app --host 0.0.0.0 --port $PORT
+
 CMD ./start.sh
