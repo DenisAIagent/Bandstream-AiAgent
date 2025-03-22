@@ -100,19 +100,17 @@
             position: relative;
             padding-left: 30px;
         }
-        .section h2::before {
-            content: '▼';
+        .section h2 .arrow {
             position: absolute;
             left: 0;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 1rem;
+            font-size: 1.2rem;
             color: #0ED894;
             transition: transform 0.3s ease;
         }
-        .section h2.collapsed::before {
-            content: '▶';
-            transform: translateY(-50%) rotate(0deg);
+        .section h2.collapsed .arrow {
+            transform: translateY(-50%) rotate(-90deg);
         }
         .section-content {
             display: block;
@@ -127,14 +125,17 @@
         }
         .item {
             background-color: #f9f9f9;
-            padding: 15px;
+            padding: 15px 15px 40px 15px; /* Ajout de padding en bas pour le bouton */
             border-radius: 5px;
             position: relative;
+            word-wrap: break-word;
+            min-height: 80px;
         }
         .item p {
-            margin: 0;
+            margin: 0 0 5px 0;
             font-size: 1rem;
             color: #333;
+            word-break: break-word;
         }
         .item .char-count {
             font-size: 0.8rem;
@@ -143,7 +144,7 @@
         }
         .copy-btn {
             position: absolute;
-            top: 10px;
+            bottom: 10px; /* Repositionné en bas */
             right: 10px;
             background-color: #0ED894;
             color: #000000;
@@ -179,11 +180,27 @@
             color: #000000;
             margin-bottom: 10px;
             white-space: pre-wrap;
+            word-break: break-word;
         }
         .youtube-section .char-count {
             font-size: 0.8rem;
             color: #666;
             margin-top: 5px;
+        }
+        .youtube-section .copy-btn {
+            margin-top: 10px;
+            background-color: #0ED894;
+            color: #000000;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+        .youtube-section .copy-btn:hover {
+            background-color: #0BBF7A;
         }
         .button {
             display: inline-block;
@@ -229,7 +246,7 @@
     <div class="container">
         <!-- Section Analyse -->
         <div class="section">
-            <h2 onclick="toggleSection('analysis-content')">Analyse</h2>
+            <h2 onclick="toggleSection('analysis-content')"><span class="arrow">▼</span> Analyse</h2>
             <div id="analysis-content" class="section-content">
                 <p><strong>Artiste :</strong> {{ artist | e }}</p>
                 <p><strong>Chanson :</strong> {{ song | e }}</p>
@@ -237,14 +254,14 @@
                 <p><strong>Tendances :</strong> {{ analysis.trends | join(', ') | e }}</p>
                 <p><strong>Artistes similaires :</strong> {{ analysis.lookalike_artists | join(', ') | e }}</p>
                 {% if analysis.artist_image_url %}
-                <img src="{{ analysis.artist_image_url | e }}" alt="Image de l'artiste" style="max-width: 200px; border-radius: 5px;">
+                <img src="{{ analysis.artist_image_url | e }}" alt="Image de l'artiste" style="max-width: 300px; border-radius: 5px;">
                 {% endif %}
             </div>
         </div>
 
         <!-- Section Titres Courts -->
         <div class="section">
-            <h2 onclick="toggleSection('short-titles-content')">Titres Courts</h2>
+            <h2 onclick="toggleSection('short-titles-content')"><span class="arrow">▼</span> Titres Courts</h2>
             <div id="short-titles-content" class="section-content">
                 <div class="grid">
                     {% for title in short_titles %}
@@ -260,7 +277,7 @@
 
         <!-- Section Titres Longs -->
         <div class="section">
-            <h2 onclick="toggleSection('long-titles-content')">Titres Longs</h2>
+            <h2 onclick="toggleSection('long-titles-content')"><span class="arrow">▼</span> Titres Longs</h2>
             <div id="long-titles-content" class="section-content">
                 <div class="grid">
                     {% for title in long_titles %}
@@ -276,7 +293,7 @@
 
         <!-- Section Descriptions Longues -->
         <div class="section">
-            <h2 onclick="toggleSection('long-descriptions-content')">Descriptions Longues</h2>
+            <h2 onclick="toggleSection('long-descriptions-content')"><span class="arrow">▼</span> Descriptions Longues</h2>
             <div id="long-descriptions-content" class="section-content">
                 <div class="grid">
                     {% for desc in long_descriptions %}
