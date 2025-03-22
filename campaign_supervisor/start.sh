@@ -1,4 +1,3 @@
-```bash
 #!/bin/bash
 
 # Installer asgiref sans utiliser le cache
