@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import logging
 import time
 from requests.exceptions import RequestException
+from asgiref.wsgi import WsgiToAsgi
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO)
@@ -162,6 +163,9 @@ async def generate_campaign():
 async def handle_500(error):
     logger.error(f"Template error: {str(error)}")
     return render_template('error.html', error=str(error), artist="Unknown Artist", style="Unknown Style"), 500
+
+# Convertir l'application Flask (WSGI) en ASGI pour uvicorn
+app = WsgiToAsgi(app)
 
 if __name__ == '__main__':
     import uvicorn
