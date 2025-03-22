@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import logging
 import openai
+from cachetools import TTLCache
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO)
@@ -20,6 +21,9 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 if not openai.api_key:
     logger.error("OPENAI_API_KEY is not set in environment variables")
     raise ValueError("OPENAI_API_KEY is required")
+
+# Cache pour les réponses d'OpenAI (valide pendant 24 heures)
+openai_cache = TTLCache(maxsize=100, ttl=24*60*60)  # Cache pour 24 heures
 
 # Liste des appels à l’action valides (en minuscules pour la comparaison)
 VALID_CALLS_TO_ACTION = [
@@ -92,80 +96,90 @@ def generate_ads():
 
     logger.info(f"Generating ad content for artist: {artist}, genres: {genres}, language: {language}, tone: {tone}")
 
-    try:
-        genres_str = ", ".join(genres)
-        prompt = f"""
-        You are a marketing expert specializing in music promotion. Generate ad content for the following artist and genres:
-        - Artist: {artist}
-        - Genres: {genres_str}
-        - Language: {language}
-        - Tone: {tone}
+    # Créer une clé de cache unique basée sur les paramètres
+    cache_key = f"{artist}_{'_'.join(genres)}_{language}_{tone}_{promotion_type}"
+    if cache_key in openai_cache:
+        logger.info(f"Using cached OpenAI response for key: {cache_key}")
+        data = openai_cache[cache_key]
+    else:
+        try:
+            genres_str = ", ".join(genres)
+            prompt = f"""
+            You are a marketing expert specializing in music promotion. Generate ad content for:
+            - Artist: {artist}
+            - Genres: {genres_str}
+            - Language: {language}
+            - Tone: {tone}
 
-        Generate the following:
-        - A list of exactly 5 short titles (max 30 characters each).
-        - A list of exactly 5 long titles (max 60 characters each).
-        - A list of exactly 5 long descriptions (max 80 characters each, including the call to action). Each long description must end with one of the following calls to action: "Écoutez maintenant", "Abonnez-vous maintenant", "Regardez maintenant", "Like et abonnez-vous". Ensure all 5 descriptions are provided.
-        - A short YouTube description (max 120 characters).
-        - A full YouTube description (max 1000 characters).
+            Generate:
+            - 5 short titles (max 30 characters each).
+            - 5 long titles (max 60 characters each).
+            - 5 long descriptions (max 80 characters each, must end with one of: "Écoutez maintenant", "Abonnez-vous maintenant", "Regardez maintenant", "Like et abonnez-vous").
+            - 1 short YouTube description (max 120 characters).
+            - 1 full YouTube description (max 1000 characters).
 
-        Return the response in the following JSON format:
-        {{
-            "short_titles": ["<title1>", "<title2>", "<title3>", "<title4>", "<title5>"],
-            "long_titles": ["<title1>", "<title2>", "<title3>", "<title4>", "<title5>"],
-            "long_descriptions": [
-                {{"description": "<desc1>", "character_count": <count1>}},
-                {{"description": "<desc2>", "character_count": <count2>}},
-                {{"description": "<desc3>", "character_count": <count3>}},
-                {{"description": "<desc4>", "character_count": <count4>}},
-                {{"description": "<desc5>", "character_count": <count5>}}
-            ],
-            "youtube_description_short": {{"description": "<desc>", "character_count": <count>}},
-            "youtube_description_full": {{"description": "<desc>", "character_count": <count>}}
-        }}
-        """
+            Return the response in JSON format:
+            {{
+                "short_titles": ["<title1>", "<title2>", "<title3>", "<title4>", "<title5>"],
+                "long_titles": ["<title1>", "<title2>", "<title3>", "<title4>", "<title5>"],
+                "long_descriptions": [
+                    {{"description": "<desc1>", "character_count": <count1>}},
+                    {{"description": "<desc2>", "character_count": <count2>}},
+                    {{"description": "<desc3>", "character_count": <count3>}},
+                    {{"description": "<desc4>", "character_count": <count4>}},
+                    {{"description": "<desc5>", "character_count": <count5>}}
+                ],
+                "youtube_description_short": {{"description": "<desc>", "character_count": <count>}},
+                "youtube_description_full": {{"description": "<desc>", "character_count": <count>}}
+            }}
+            """
 
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=1000,
-            temperature=0.7
-        )
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=1000,
+                temperature=0.7
+            )
 
-        raw_text = response.choices[0].message.content.strip()
-        logger.info(f"Raw response from OpenAI: {raw_text}")
+            raw_text = response.choices[0].message.content.strip()
+            logger.info(f"Raw response from OpenAI: {raw_text}")
 
-        data = json.loads(raw_text)
+            data = json.loads(raw_text)
 
-        # Vérifier que 5 descriptions longues sont bien présentes
-        long_descriptions = data.get("long_descriptions", [])
-        if len(long_descriptions) < 5:
-            logger.warning(f"OpenAI returned only {len(long_descriptions)} long descriptions, expected 5. Adding default descriptions.")
-            while len(long_descriptions) < 5:
-                long_descriptions.append(generate_default_description(artist, len(long_descriptions)))
+            # Vérifier que 5 descriptions longues sont bien présentes
+            long_descriptions = data.get("long_descriptions", [])
+            if len(long_descriptions) < 5:
+                logger.warning(f"OpenAI returned only {len(long_descriptions)} long descriptions, expected 5. Adding default descriptions.")
+                while len(long_descriptions) < 5:
+                    long_descriptions.append(generate_default_description(artist, len(long_descriptions)))
 
-        # Tronquer les descriptions longues si nécessaire
-        for desc in long_descriptions:
-            desc["description"] = truncate_description(desc["description"], max_length=80)
-            desc["character_count"] = len(desc["description"])
+            # Tronquer les descriptions longues si nécessaire
+            for desc in long_descriptions:
+                desc["description"] = truncate_description(desc["description"], max_length=80)
+                desc["character_count"] = len(desc["description"])
 
-        # Ajouter le nombre de caractères pour les autres champs
-        for desc in long_descriptions:
-            desc["character_count"] = len(desc["description"])
-        data["youtube_description_short"]["character_count"] = len(data["youtube_description_short"]["description"])
-        data["youtube_description_full"]["character_count"] = len(data["youtube_description_full"]["description"])
+            # Ajouter le nombre de caractères pour les autres champs
+            for desc in long_descriptions:
+                desc["character_count"] = len(desc["description"])
+            data["youtube_description_short"]["character_count"] = len(data["youtube_description_short"]["description"])
+            data["youtube_description_full"]["character_count"] = len(data["youtube_description_full"]["description"])
 
-        # Valider les descriptions longues
-        validation_errors = validate_long_descriptions(long_descriptions)
-        if validation_errors:
-            logger.warning(f"Validation failed: {validation_errors}")
-            # On continue malgré l'avertissement, mais cela pourrait être une erreur fatale selon les besoins
+            # Valider les descriptions longues
+            validation_errors = validate_long_descriptions(long_descriptions)
+            if validation_errors:
+                logger.warning(f"Validation failed: {validation_errors}")
+                # On continue malgré l'avertissement, mais cela pourrait être une erreur fatale selon les besoins
 
-        data["long_descriptions"] = long_descriptions
-        return jsonify(data), 200
+            data["long_descriptions"] = long_descriptions
 
-    except Exception as e:
-        logger.error(f"Error generating ad content: {str(e)}")
-        return jsonify({"error": "Failed to generate ad content"}), 500
+            # Mettre en cache la réponse
+            openai_cache[cache_key] = data
+
+        except Exception as e:
+            logger.error(f"Error generating ad content: {str(e)}")
+            return jsonify({"error": "Failed to generate ad content"}), 500
+
+    return jsonify(data), 200
 
 # Endpoint de santé
 @app.route('/health', methods=['GET'])
