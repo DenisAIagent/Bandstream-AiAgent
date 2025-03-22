@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 # Charger les variables d'environnement
 load_dotenv()
 
+# Initialiser Flask
 app = Flask(__name__)
 
 # Configurer OpenAI
@@ -20,204 +21,103 @@ if not openai.api_key:
     logger.error("OPENAI_API_KEY is not set in environment variables")
     raise ValueError("OPENAI_API_KEY is required")
 
-def smart_truncate(text, max_length, preserve_words=True, preserve_cta=True):
-    """Tronque intelligemment un texte en préservant les mots complets et les calls to action."""
-    if len(text) <= max_length:
-        return text
-        
-    ctas = ["abonnez-vous maintenant", "écoutez maintenant", "like et abonnez-vous", "regardez maintenant"]
-    for cta in ctas:
-        if preserve_cta and text.endswith(cta):
-            available_space = max_length - len(cta) - 1  # -1 pour l'espace
-            if available_space <= 0:
-                return cta
-            prefix = text[:-len(cta)].strip()
-            if preserve_words and len(prefix) > available_space:
-                prefix = prefix[:available_space].rsplit(' ', 1)[0]
-            else:
-                prefix = prefix[:available_space]
-            return f"{prefix} {cta}"
-    
-    if preserve_words:
-        truncated = text[:max_length].rsplit(' ', 1)[0]
-        if len(truncated) > max_length:
-            return truncated[:max_length]
-        return truncated
-    return text[:max_length]
+# Liste des appels à l’action valides (en minuscules pour la comparaison)
+VALID_CALLS_TO_ACTION = [
+    "écoutez maintenant",
+    "abonnez-vous maintenant",
+    "regardez maintenant",
+    "like et abonnez-vous"
+]
 
-def validate_ad_content(content):
-    """Valide que le contenu publicitaire respecte les contraintes."""
-    valid = True
+# Fonction pour valider les descriptions longues
+def validate_long_descriptions(descriptions):
     errors = []
-    
-    for i, title in enumerate(content.get("short_titles", [])):
-        if len(title) > 30:
-            valid = False
-            errors.append(f"Short title {i+1} exceeds 30 characters: {len(title)}")
-    
-    for i, title in enumerate(content.get("long_titles", [])):
-        if len(title) > 55:
-            valid = False
-            errors.append(f"Long title {i+1} exceeds 55 characters: {len(title)}")
-    
-    ctas = ["abonnez-vous maintenant", "écoutez maintenant", "like et abonnez-vous", "regardez maintenant"]
-    for i, desc in enumerate(content.get("long_descriptions", [])):
-        if len(desc) > 80:
-            valid = False
-            errors.append(f"Long description {i+1} exceeds 80 characters: {len(desc)}")
-        if not any(desc.endswith(cta) for cta in ctas):
-            valid = False
-            errors.append(f"Long description {i+1} does not end with a valid call to action")
-    
-    if "youtube_description_short" in content and len(content["youtube_description_short"]) > 120:
-        valid = False
-        errors.append(f"YouTube short description exceeds 120 characters: {len(content['youtube_description_short'])}")
-    
-    return valid, errors
+    for i, desc in enumerate(descriptions, 1):
+        desc_text = desc.get("description", "").lower().strip()
+        # Vérifier si la description se termine par un appel à l’action valide
+        if not any(desc_text.endswith(cta) for cta in VALID_CALLS_TO_ACTION):
+            errors.append(f"Long description {i} does not end with a valid call to action")
+    return errors
 
+# Endpoint pour générer des annonces
 @app.route('/generate_ads', methods=['POST'])
 def generate_ads():
+    data = request.get_json()
+    if not data or "artist" not in data or "genres" not in data or "language" not in data or "tone" not in data:
+        logger.error("Missing required fields in request")
+        return jsonify({"error": "Missing required fields: artist, genres, language, tone"}), 400
+
+    artist = data.get("artist")
+    genres = data.get("genres", [])
+    language = data.get("language")
+    tone = data.get("tone")
+
+    logger.info(f"Generating ad content for artist: {artist}, genres: {genres}, language: {language}, tone: {tone}")
+
     try:
-        data = request.get_json()
-        if not data or "artist" not in data or "genres" not in data:
-            logger.error("Missing required fields 'artist' or 'genres' in request")
-            return jsonify({"error": "Missing required fields 'artist' or 'genres'"}), 400
-
-        artist = data.get("artist")
-        genres = data.get("genres", [])
-        language = data.get("language", "fr")
-        tone = data.get("tone", "engageant")
-        if not genres:
-            logger.error("Genres list is empty")
-            return jsonify({"error": "At least one genre is required"}), 400
         genres_str = ", ".join(genres)
-        lyrics = data.get("lyrics", "")
-        bio = data.get("bio", "")
-
-        logger.info(f"Generating ad content for artist: {artist}, genres: {genres}, language: {language}, tone: {tone}")
-
-        # Définir le nom de la langue pour le prompt
-        language_names = {
-            "fr": "French",
-            "en": "English",
-            "de": "German",
-            "es": "Spanish",
-            "pt": "Portuguese"
-        }
-        language_name = language_names.get(language, "French")
-
-        # Prompt mis à jour avec description YouTube complète
         prompt = f"""
-You are a creative marketing expert specializing in music promotion. Your task is to generate compelling ad content for the following artist and genres:
-- Artist: {artist}
-- Genres: {genres_str}
-- Bio: {bio if bio else "Not provided"}
-- Lyrics sample: {lyrics if lyrics else "Not provided"}
+        You are a marketing expert specializing in music promotion. Generate ad content for the following artist and genres:
+        - Artist: {artist}
+        - Genres: {genres_str}
+        - Language: {language}
+        - Tone: {tone}
 
-CRITICAL REQUIREMENTS:
-1. Generate EXACTLY 5 short titles, 5 long titles, 5 long descriptions, 1 short YouTube description, and 1 full YouTube description in {language_name}.
-2. STRICT CHARACTER LIMITS:
-   - Short titles: MAXIMUM 30 characters (MUST be complete phrases)
-   - Long titles: MAXIMUM 55 characters (MUST be complete phrases)
-   - Long descriptions: MAXIMUM 80 characters (MUST be complete sentences)
-   - Short YouTube description: MAXIMUM 120 characters (MUST be a complete sentence)
-   - Full YouTube description: No strict limit, but keep it concise and professional (around 500-1000 characters)
-3. DO NOT exceed the character limits for short titles, long titles, long descriptions, or short YouTube description.
-4. NEVER truncate words or phrases abruptly - all content must be meaningful and complete.
-5. Each long description and the short YouTube description MUST end with one of these calls to action (included in their respective limits):
-   - "abonnez-vous maintenant"
-   - "écoutez maintenant"
-   - "like et abonnez-vous"
-   - "regardez maintenant"
-6. The full YouTube description should follow this template:
-   - Intro: "<Artist> '<Song>' from '<Album>', lien: <placeholder URL>"
-   - Subscription: "🔔 Abonnez-vous à ma chaîne 👉 <placeholder URL>"
-   - Crédits: "Montage: <placeholder>, Vidéos: <placeholder>"
-   - Lyrics: Short excerpt from the lyrics provided
-   - Bio: Brief bio in {language_name} and English with stats
-   - Contact: "Label: <placeholder email>, Booking: <placeholder email>"
-   - Social: "Suivez <Artist> sur Instagram, TikTok, etc."
-   - Hashtags: "#<Artist> #<Song> #<Genre>"
+        Generate the following:
+        - A list of 5 short titles (max 30 characters each).
+        - A list of 5 long titles (max 60 characters each).
+        - A list of 5 long descriptions (max 80 characters each). Ensure that each long description ends with one of the following calls to action: "Écoutez maintenant", "Abonnez-vous maintenant", "Regardez maintenant", "Like et abonnez-vous".
+        - A short YouTube description (max 120 characters).
+        - A full YouTube description (max 1000 characters).
 
-Style guidelines:
-- Tone: {tone} (be creative, evocative, and tailored to {genres_str})
-- Capitalization: Use lowercase except for proper nouns (e.g., "{artist}", song titles)
-- Punctuation: Only use commas and periods (no !, ?, ;, /, or ...)
-- Short titles: Include a call to action (e.g., "découvrez", "écoutez")
-- Long titles: Highlight the artist's unique qualities
-- Long descriptions: Evoke emotion and end with a call to action
-- YouTube descriptions: Craft compelling summaries, with the full version styled like a professional YouTube post
+        Return the response in the following JSON format:
+        {{
+            "short_titles": ["<title1>", "<title2>", ..., "<title5>"],
+            "long_titles": ["<title1>", "<title2>", ..., "<title5>"],
+            "long_descriptions": [
+                {{"description": "<desc1>", "character_count": <count1>}},
+                {{"description": "<desc2>", "character_count": <count2>}},
+                ...
+            ],
+            "youtube_description_short": {{"description": "<desc>", "character_count": <count>}},
+            "youtube_description_full": {{"description": "<desc>", "character_count": <count>}}
+        }}
+        """
 
-Return ONLY the following JSON format:
-{{
-    "short_titles": ["<title1>", "<title2>", "<title3>", "<title4>", "<title5>"],
-    "long_titles": ["<title1>", "<title2>", "<title3>", "<title4>", "<title5>"],
-    "long_descriptions": ["<desc1>", "<desc2>", "<desc3>", "<desc4>", "<desc5>"],
-    "youtube_description_short": "<youtube_short_desc>",
-    "youtube_description_full": "<youtube_full_desc>"
-}}
-"""
-
-        # Appel à OpenAI
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=1000,  # Augmenté pour inclure la description complète
+            max_tokens=1000,
             temperature=0.7
         )
 
         raw_text = response.choices[0].message.content.strip()
         logger.info(f"Raw response from OpenAI: {raw_text}")
 
-        # Parsing sécurisé de la réponse JSON
-        try:
-            data = json.loads(raw_text)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse OpenAI response as JSON: {str(e)}")
-            return jsonify({"error": "Invalid response format from OpenAI", "details": str(e)}), 500
+        data = json.loads(raw_text)
 
-        # Vérification et formatage des données
-        short_titles = data.get("short_titles", ["no short title"] * 5)
-        long_titles = data.get("long_titles", ["no long title"] * 5)
-        long_descriptions = data.get("long_descriptions", ["no description"] * 5)
-        youtube_description_short = data.get("youtube_description_short", "No short YouTube description provided")
-        youtube_description_full = data.get("youtube_description_full", "No full YouTube description provided")
+        # Ajouter le nombre de caractères pour chaque description
+        for desc in data["long_descriptions"]:
+            desc["character_count"] = len(desc["description"])
+        data["youtube_description_short"]["character_count"] = len(data["youtube_description_short"]["description"])
+        data["youtube_description_full"]["character_count"] = len(data["youtube_description_full"]["description"])
 
-        # Assurer que chaque liste a exactement 5 éléments
-        short_titles = (short_titles + ["no short title"] * 5)[:5]
-        long_titles = (long_titles + ["no long title"] * 5)[:5]
-        long_descriptions = (long_descriptions + ["no description"] * 5)[:5]
-
-        # Tronquer intelligemment
-        formatted_short_titles = [{"title": smart_truncate(title, 30), "character_count": len(smart_truncate(title, 30))} for title in short_titles]
-        formatted_long_titles = [{"title": smart_truncate(title, 55), "character_count": len(smart_truncate(title, 55))} for title in long_titles]
-        formatted_long_descriptions = [{"description": smart_truncate(desc, 80, preserve_cta=True), "character_count": len(smart_truncate(desc, 80, preserve_cta=True))} for desc in long_descriptions]
-        formatted_youtube_short = {"description": smart_truncate(youtube_description_short, 120, preserve_cta=True), "character_count": len(smart_truncate(youtube_description_short, 120, preserve_cta=True))}
-        formatted_youtube_full = {"description": youtube_description_full, "character_count": len(youtube_description_full)}  # Pas de troncature stricte pour la version complète
-
-        # Valider le contenu
-        content = {
-            "short_titles": [item["title"] for item in formatted_short_titles],
-            "long_titles": [item["title"] for item in formatted_long_titles],
-            "long_descriptions": [item["description"] for item in formatted_long_descriptions],
-            "youtube_description_short": formatted_youtube_short["description"]
-        }
-        valid, validation_errors = validate_ad_content(content)
-        if not valid:
+        # Valider les descriptions longues
+        validation_errors = validate_long_descriptions(data["long_descriptions"])
+        if validation_errors:
             logger.warning(f"Validation failed: {validation_errors}")
+            # On continue malgré l'avertissement, mais cela pourrait être une erreur fatale selon les besoins
 
-        return jsonify({
-            "short_titles": formatted_short_titles,
-            "long_titles": formatted_long_titles,
-            "long_descriptions": formatted_long_descriptions,
-            "youtube_description_short": formatted_youtube_short,
-            "youtube_description_full": formatted_youtube_full
-        }), 200
+        return jsonify(data), 200
 
     except Exception as e:
-        logger.error(f"Error generating ads: {str(e)}")
-        return jsonify({"error": "Failed to generate ads", "details": str(e)}), 500
+        logger.error(f"Error generating ad content: {str(e)}")
+        return jsonify({"error": "Failed to generate ad content"}), 500
+
+# Endpoint de santé
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "ok", "message": "Marketing Agent is running"}), 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
