@@ -1,1 +1,1 @@
-web: uvicorn campaign_analyst:app --host 0.0.0.0
+web: sh -c "uvicorn campaign_analyst:app --host 0.0.0.0 --port $PORT"
