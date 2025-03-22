@@ -1,13 +1,9 @@
 import os
-import requests
-import json
 import asyncio
 import aiohttp
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, render_template
 from dotenv import load_dotenv
 import logging
-import time
-from requests.exceptions import RequestException
 from asgiref.wsgi import WsgiToAsgi
 
 # Configurer les logs
@@ -42,10 +38,10 @@ def sanitize_data(data):
         return data
 
 # Fonction asynchrone pour effectuer des appels HTTP
-async def fetch_data(session, url, data, retries=5, timeout=30):
+async def fetch_data(session, url, data, retries=5, delay=1):
     for attempt in range(retries):
         try:
-            async with session.post(url, json=data, timeout=timeout) as response:
+            async with session.post(url, json=data, timeout=30) as response:
                 response.raise_for_status()
                 result = await response.json()
                 logger.info(f"Successfully fetched data from {url}: {result}")
@@ -55,7 +51,7 @@ async def fetch_data(session, url, data, retries=5, timeout=30):
             if attempt == retries - 1:
                 logger.error(f"Failed to call {url} after {retries} attempts: {str(e)}")
                 raise Exception(f"Failed to call {url} after {retries} attempts: {str(e)}. Please try again later.")
-            await asyncio.sleep(2)  # Attendre 2 secondes avant de réessayer
+            await asyncio.sleep(delay)
 
 @app.route('/')
 async def index():
@@ -64,7 +60,7 @@ async def index():
         return render_template('index.html')
     except Exception as e:
         logger.error(f"Error rendering index.html: {str(e)}")
-        return jsonify({"error": "Failed to render index page", "details": str(e)}), 500
+        return render_template('error.html', error=str(e)), 500
 
 @app.route('/generate_campaign', methods=['POST'])
 async def generate_campaign():
@@ -79,8 +75,8 @@ async def generate_campaign():
         bio = request.form.get('bio')
         song_url = request.form.get('song_url')
         promotion_type = request.form.get('promotion_type', 'single')
-        album_name = request.form.get('album_name', 'collez le nom de l\'album')  # Nouveau champ
-        
+        album_name = request.form.get('album_name', 'collez le nom de l\'album')
+
         logger.info(f"Received form data: artist={artist}, song={song}, style={style_input}, language={language}, tone={tone}, song_url={song_url}, promotion_type={promotion_type}, album_name={album_name}")
 
         if not artist:
@@ -98,7 +94,7 @@ async def generate_campaign():
         # Splitter les styles musicaux en une liste
         styles = [style.strip() for style in style_input.split(',')]
         style_display = ', '.join(styles)
-        first_style = styles[0] if styles else "unknown"  # Prendre le premier style pour le hashtag
+        first_style = styles[0] if styles else "unknown"
 
         # Extraire l'artiste principal et le collaborateur
         if " X " in artist:
@@ -110,7 +106,7 @@ async def generate_campaign():
         # Déterminer le dernier hashtag en fonction du type de promotion
         if promotion_type == "album":
             last_hashtag = album_name.replace(" ", "") if album_name != "collez le nom de l'album" else "collez le nom de l'album"
-        else:  # single ou clip
+        else:
             last_hashtag = song.replace(" ", "")
 
         # Créer une session asynchrone pour les appels HTTP
@@ -143,8 +139,8 @@ async def generate_campaign():
 
         # Annonces
         logger.info("Processing ad_data")
-        short_titles = ad_data.get("short_titles", [{"title": "Short Title 1", "character_count": 13}] * 5)
-        long_titles = ad_data.get("long_titles", [{"title": "Long Title 1", "character_count": 12}] * 5)
+        short_titles = ad_data.get("short_titles", ["Short Title 1"] * 5)
+        long_titles = ad_data.get("long_titles", ["Long Title 1"] * 5)
         long_descriptions = ad_data.get("long_descriptions", [{"description": "Description 1", "character_count": 13}] * 5)
         youtube_description_short = ad_data.get("youtube_description_short", {"description": "No short YouTube description", "character_count": 28})
         youtube_description_full_raw = ad_data.get("youtube_description_full", {"description": "No full YouTube description provided", "character_count": 36})
@@ -153,7 +149,7 @@ async def generate_campaign():
         youtube_description_full = {
             "description": (
                 f'{artist_name} X {collaborator} "{song}"\n'
-                f'Taken from "collez le nom de l\'album" album: collez votre smartlink\n\n'
+                f'Taken from "{album_name}" album: collez votre smartlink\n\n'
                 f'🔔 Subscribe to my channel 👉 collez le lien de votre chaîne YouTube\n\n'
                 f'Crédits :\n'
                 f'Montage : collez le nom du monteur\n'
@@ -171,28 +167,10 @@ async def generate_campaign():
                 f'Website : collez l\'URL de votre site web\n\n'
                 f'#{artist_name.replace(" ", "")} #{first_style.replace(" ", "")} #{last_hashtag}'
             ),
-            "character_count": len(
-                f'{artist_name} X {collaborator} "{song}"\n'
-                f'Taken from "collez le nom de l\'album" album: collez votre smartlink\n\n'
-                f'🔔 Subscribe to my channel 👉 collez le lien de votre chaîne YouTube\n\n'
-                f'Crédits :\n'
-                f'Montage : collez le nom du monteur\n'
-                f'Vidéos : collez le nom du vidéaste\n\n'
-                f'LYRICS :\n'
-                f'{lyrics}\n\n'
-                f'🇬🇧 With his unique style, {artist_name} is experiencing growing success across the globe. With each release, {artist_name} continues to surprise his audience and build excitement, cementing his place as a key figure in the {style_display} scene.\n\n'
-                f'🇫🇷 Avec son style unique, {artist_name} rencontre un succès grandissant aux quatre coins du globe. À chacune de ses sorties, il continue de surprendre et de créer l’engouement, s’imposant comme une figure essentielle de la scène {style_display}.\n\n'
-                f'Label: collez l\'email du label\n'
-                f'Booking Europe, Africa & North America: collez l\'email de booking (Europe, Afrique, Amérique du Nord)\n'
-                f'Booking Latin America: collez l\'email de booking (Amérique Latine)\n\n'
-                f'Follow {artist_name} on :\n'
-                f'Instagram : collez votre handle Instagram\n'
-                f'TikTok : collez votre handle TikTok\n'
-                f'Website : collez l\'URL de votre site web\n\n'
-                f'#{artist_name.replace(" ", "")} #{first_style.replace(" ", "")} #{last_hashtag}'
-            )
+            "character_count": 0  # Sera calculé ci-dessous
         }
-        
+        youtube_description_full["character_count"] = len(youtube_description_full["description"])
+
         short_titles = sanitize_data(short_titles)
         long_titles = sanitize_data(long_titles)
         long_descriptions = sanitize_data(long_descriptions)
@@ -212,16 +190,16 @@ async def generate_campaign():
                 strategy = {"target_audience": "Fans of similar artists", "channels": ["Spotify", "YouTube"], "budget_allocation": {"Spotify": 0.5, "YouTube": 0.5}}
         strategy = sanitize_data(strategy)
         logger.info(f"Sanitized strategy: {strategy}")
-        
+
         # Étape 4 : Rendre les résultats
         logger.info(f"Rendering results.html with artist={artist}, song={song}, style={style_display}, analysis_data={analysis_data}, short_titles={short_titles}, long_titles={long_titles}, long_descriptions={long_descriptions}, youtube_short={youtube_description_short}, youtube_full={youtube_description_full}, strategy={strategy}")
         return render_template('results.html', 
                               artist=artist,
                               song=song,
-                              style=style_display,  
+                              style=style_display,
                               analysis=analysis_data,
-                              short_titles=short_titles, 
-                              long_titles=long_titles, 
+                              short_titles=short_titles,
+                              long_titles=long_titles,
                               long_descriptions=long_descriptions,
                               youtube_description_short=youtube_description_short,
                               youtube_description_full=youtube_description_full,
