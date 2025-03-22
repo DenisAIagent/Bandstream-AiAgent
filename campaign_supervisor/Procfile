@@ -1,1 +1,1 @@
-web: pip install asgiref==3.8.1 && uvicorn campaign_supervisor.campaign_supervisor:app --host 0.0.0.0 --port $PORT
+web: cd campaign_supervisor && gunicorn campaign_supervisor:app --bind 0.0.0.0:$PORT --timeout 60 --workers 2
