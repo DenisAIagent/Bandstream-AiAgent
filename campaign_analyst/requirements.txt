@@ -1,11 +1,12 @@
-# Forcer une nouvelle installation des dépendances
-flask==2.0.3
-uvicorn==0.20.0
-python-dotenv==0.21.1
-openai==0.27.0
+flask==2.2.3
+werkzeug==2.2.3
+requests==2.28.2
+python-dotenv==1.0.0
+spotipy==2.22.1
+serpapi==0.1.0
+uvicorn==0.30.6
+aiohttp==3.10.5
+asgiref==3.8.1
+openai==0.28.0
 musicbrainzngs==0.7.1
-aiohttp==3.8.3
-flask[async]==2.0.3
-asgiref==3.5.2
-werkzeug==2.0.3  # Ajout pour garantir la compatibilité avec Flask 2.0.3
-cachetools
+cachetools==5.3.2
