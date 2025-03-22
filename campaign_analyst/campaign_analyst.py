@@ -50,7 +50,7 @@ cache_duration = timedelta(hours=24)
 def timeout_handler(signum, frame):
     raise TimeoutError("MusicBrainz API call timed out")
 
-# Fonction asynchrone pour effectuer une recherche via SerpAPI
+# Fonction pour effectuer une recherche via SerpAPI
 async def search_with_serpapi(query):
     url = "https://serpapi.com/search"
     params = {
@@ -91,7 +91,7 @@ async def search_with_serpapi(query):
             logger.error(f"Error during SerpAPI search for query '{query}': {str(e)}")
             return []
 
-# Fonction asynchrone pour rechercher les mots-clés long tail et extraire les artistes et tendances
+# Fonction pour rechercher les mots-clés long tail et extraire les artistes et tendances
 async def search_long_tail_keywords(style):
     # Exemple de mots-clés long tail basés sur le style musical
     keywords = [
@@ -266,7 +266,7 @@ def get_trends_and_artists_openai(artist, styles):
 
 # Endpoint principal
 @app.route('/analyze', methods=['POST'])
-def analyze():
+async def analyze():
     data = request.get_json()
     if not data or "artist" not in data or "styles" not in data:
         logger.error("Missing required fields 'artist' or 'styles' in request")
@@ -290,9 +290,7 @@ def analyze():
     
     # Étape 3 : Récupérer les données via SerpAPI (mots-clés long tail)
     primary_style = styles[0].lower()
-    # Exécuter la coroutine dans une boucle d'événements
-    loop = asyncio.get_event_loop()
-    serpapi_artists, serpapi_keywords = loop.run_until_complete(search_long_tail_keywords(primary_style))
+    serpapi_artists, serpapi_keywords = await search_long_tail_keywords(primary_style)
     
     # Étape 4 : Fusionner les tendances
     trends = []
@@ -351,5 +349,6 @@ app = WsgiToAsgi(app)
 
 if __name__ == '__main__':
     import uvicorn
-    port = int(os.environ.get('PORT', 5000))
+    # Récupérer le port dynamiquement via os.environ
+    port = int(os.environ.get('PORT', 5000))  # Utilise 5000 comme valeur par défaut si PORT n'est pas défini
     uvicorn.run(app, host='0.0.0.0', port=port)
