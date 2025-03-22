@@ -40,7 +40,7 @@ def sanitize_data(data):
 async def fetch_data(session, url, data, retries=5, delay=1):
     for attempt in range(retries):
         try:
-            async with session.post(url, json=data, timeout=60) as response:  # Augmenter le timeout à 60 secondes
+            async with session.post(url, json=data, timeout=60) as response:  # Timeout à 60 secondes
                 response.raise_for_status()
                 result = await response.json()
                 logger.info(f"Successfully fetched data from {url}: {result}")
