@@ -17,27 +17,34 @@ from asgiref.wsgi import WsgiToAsgi
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Log au démarrage de l'application
+logger.info("Starting campaign_analyst application...")
+
 # Charger les variables d'environnement
 load_dotenv()
 
 # Initialiser Flask
 app = Flask(__name__)
+logger.info("Flask application initialized.")
 
 # Configurer OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
 if not openai.api_key:
     logger.error("OPENAI_API_KEY is not set in environment variables")
     raise ValueError("OPENAI_API_KEY is required")
+logger.info("OpenAI API key loaded successfully.")
 
 # Configurer SerpAPI
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 if not SERPAPI_KEY:
     logger.error("SERPAPI_KEY is not set in environment variables")
     raise ValueError("SERPAPI_KEY is required for search functionality")
+logger.info("SerpAPI key loaded successfully.")
 
 # Configurer MusicBrainz
 musicbrainzngs.set_useragent("BandStreamIAgent", "1.0", "https://github.com/DenisAIagent/Bandstream-AiAgent")
 musicbrainzngs.set_rate_limit(limit_or_interval=1.0)  # Limite de 1 requête par seconde
+logger.info("MusicBrainz configured successfully.")
 
 # Définir un timeout pour les appels à MusicBrainz (en secondes)
 MUSICBRAINZ_TIMEOUT = 5
@@ -48,10 +55,12 @@ cache_duration = timedelta(hours=24)
 
 # Gestionnaire de timeout avec signal
 def timeout_handler(signum, frame):
+    logger.error("Timeout occurred in MusicBrainz API call")
     raise TimeoutError("MusicBrainz API call timed out")
 
 # Fonction pour effectuer une recherche via SerpAPI
 async def search_with_serpapi(query):
+    logger.info(f"Searching SerpAPI with query: {query}")
     url = "https://serpapi.com/search"
     params = {
         "q": query,
@@ -86,6 +95,7 @@ async def search_with_serpapi(query):
                                 artists.append(artist)
                 
                 # Si aucun artiste n'est trouvé, retourner une liste vide
+                logger.info(f"Found artists from SerpAPI: {artists}")
                 return list(set(artists))  # Éliminer les doublons
         except Exception as e:
             logger.error(f"Error during SerpAPI search for query '{query}': {str(e)}")
@@ -93,6 +103,7 @@ async def search_with_serpapi(query):
 
 # Fonction pour rechercher les mots-clés long tail et extraire les artistes et tendances
 async def search_long_tail_keywords(style):
+    logger.info(f"Searching long tail keywords for style: {style}")
     # Exemple de mots-clés long tail basés sur le style musical
     keywords = [
         f"best {style} song 2025",
@@ -110,10 +121,12 @@ async def search_long_tail_keywords(style):
             relevant_artists.update(artists)
             relevant_keywords.append(keyword)
 
+    logger.info(f"Long tail search results - Artists: {relevant_artists}, Keywords: {relevant_keywords}")
     return list(relevant_artists), relevant_keywords
 
 # Fonction pour obtenir les artistes tendance via MusicBrainz
 def get_trending_artists_musicbrainz(styles):
+    logger.info(f"Fetching trending artists from MusicBrainz for styles: {styles}")
     cache_key = f"musicbrainz_trending_{'_'.join(sorted(styles))}"
     if cache_key in musicbrainz_cache:
         cache_entry = musicbrainz_cache[cache_key]
@@ -141,6 +154,7 @@ def get_trending_artists_musicbrainz(styles):
             "trending_artists": trending_artists,
             "timestamp": datetime.now()
         }
+        logger.info(f"Trending artists from MusicBrainz: {trending_artists}")
         return trending_artists
     except TimeoutError:
         logger.error(f"Timeout fetching trending artists from MusicBrainz: {styles}")
@@ -153,6 +167,7 @@ def get_trending_artists_musicbrainz(styles):
 
 # Fonction pour obtenir les artistes similaires et l’image via MusicBrainz
 def get_similar_artists_musicbrainz(artist):
+    logger.info(f"Fetching similar artists from MusicBrainz for artist: {artist}")
     cache_key = f"musicbrainz_similar_{artist}"
     if cache_key in musicbrainz_cache:
         cache_entry = musicbrainz_cache[cache_key]
@@ -170,6 +185,7 @@ def get_similar_artists_musicbrainz(artist):
         result = musicbrainzngs.search_artists(artist=artist, limit=1)
         if "artist-list" not in result or not result["artist-list"]:
             signal.alarm(0)
+            logger.warning(f"No artist found in MusicBrainz for: {artist}")
             return lookalike_artists, artist_image_url
         
         artist_data = result["artist-list"][0]
@@ -216,7 +232,7 @@ def get_similar_artists_musicbrainz(artist):
             "artist_image_url": artist_image_url,
             "timestamp": datetime.now()
         }
-        
+        logger.info(f"Similar artists from MusicBrainz: {lookalike_artists}, Image URL: {artist_image_url}")
         return lookalike_artists, artist_image_url
     except TimeoutError:
         logger.error(f"Timeout fetching similar artists or image from MusicBrainz for artist: {artist}")
@@ -229,6 +245,7 @@ def get_similar_artists_musicbrainz(artist):
 
 # Fonction pour obtenir les tendances et artistes similaires via OpenAI
 def get_trends_and_artists_openai(artist, styles):
+    logger.info(f"Fetching trends and artists from OpenAI for artist: {artist}, styles: {styles}")
     try:
         styles_str = ", ".join(styles)
         prompt = f"""
@@ -259,7 +276,10 @@ def get_trends_and_artists_openai(artist, styles):
         
         data = json.loads(raw_text)
         
-        return data.get("trends", ["No trends found"]), data.get("lookalike_artists", ["No similar artists found"])
+        trends = data.get("trends", ["No trends found"])
+        lookalike_artists = data.get("lookalike_artists", ["No similar artists found"])
+        logger.info(f"OpenAI trends: {trends}, Lookalike artists: {lookalike_artists}")
+        return trends, lookalike_artists
     except Exception as e:
         logger.error(f"Error fetching trends and artists with OpenAI: {str(e)}")
         return ["Trend 1", "Trend 2"], ["Artist 1", "Artist 2"]
@@ -267,6 +287,7 @@ def get_trends_and_artists_openai(artist, styles):
 # Endpoint principal
 @app.route('/analyze', methods=['POST'])
 async def analyze():
+    logger.info("Received request for /analyze endpoint")
     data = request.get_json()
     if not data or "artist" not in data or "styles" not in data:
         logger.error("Missing required fields 'artist' or 'styles' in request")
@@ -306,6 +327,7 @@ async def analyze():
     trends = trends[:2]
     # Ajouter les mots-clés long tail aux tendances
     trends.extend(serpapi_keywords)
+    logger.info(f"Combined trends: {trends}")
     
     # Étape 5 : Fusionner les artistes similaires
     combined_artists = []
@@ -331,18 +353,24 @@ async def analyze():
         if artist_name not in combined_artists and len(combined_artists) < 15 and artist_name != artist:
             combined_artists.append(artist_name)
     combined_artists = combined_artists[:15]
+    logger.info(f"Combined artists: {combined_artists}")
     
-    return jsonify({
+    response = {
         "trends": trends,
         "lookalike_artists": combined_artists,
         "style": ", ".join(styles),
         "artist_image_url": artist_image_url
-    }), 200
+    }
+    logger.info(f"Returning response: {response}")
+    return jsonify(response), 200
 
 # Endpoint de santé
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({"status": "ok", "message": "Campaign Analyst is running"}), 200
+    logger.info("Received request for /health endpoint")
+    response = {"status": "ok", "message": "Campaign Analyst is running"}
+    logger.info(f"Returning health check response: {response}")
+    return jsonify(response), 200
 
 # Convertir l'application Flask (WSGI) en ASGI pour uvicorn
 app = WsgiToAsgi(app)
@@ -350,5 +378,7 @@ app = WsgiToAsgi(app)
 if __name__ == '__main__':
     import uvicorn
     # Récupérer le port dynamiquement via os.environ
-    port = int(os.environ.get('PORT', 5000))  # Utilise 5000 comme valeur par défaut si PORT n'est pas défini
+    port = int(os.environ.get('PORT', 8080))  # Utilise 8080 comme valeur par défaut si PORT n'est pas défini
+    logger.info(f"Environment variable PORT is set to: {os.environ.get('PORT')}")
+    logger.info(f"Starting uvicorn on port {port}")
     uvicorn.run(app, host='0.0.0.0', port=port)
