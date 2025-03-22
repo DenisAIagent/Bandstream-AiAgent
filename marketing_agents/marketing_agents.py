@@ -39,6 +39,41 @@ def validate_long_descriptions(descriptions):
             errors.append(f"Long description {i} does not end with a valid call to action")
     return errors
 
+# Fonction pour générer une description par défaut si nécessaire
+def generate_default_description(artist, index):
+    default_ctas = ["Écoutez maintenant", "Abonnez-vous maintenant", "Regardez maintenant", "Like et abonnez-vous"]
+    cta = default_ctas[index % len(default_ctas)]
+    desc = f"Découvrez {artist} et son univers musical unique. {cta}"
+    return {
+        "description": desc,
+        "character_count": len(desc)
+    }
+
+# Fonction pour tronquer une description longue tout en préservant l’appel à l’action
+def truncate_description(description, max_length=80):
+    if len(description) <= max_length:
+        return description
+
+    # Trouver l’appel à l’action à la fin
+    desc_lower = description.lower()
+    cta = None
+    for valid_cta in VALID_CALLS_TO_ACTION:
+        if desc_lower.endswith(valid_cta):
+            cta = description[-len(valid_cta):]
+            break
+    
+    if not cta:
+        return description[:max_length]  # Si aucun appel à l’action, tronquer simplement
+
+    # Tronquer le texte avant l’appel à l’action
+    text_before_cta = description[:-len(cta)]
+    max_text_length = max_length - len(cta) - 1  # -1 pour l’espace
+    if max_text_length <= 0:
+        return description[:max_length]  # Si l’appel à l’action est trop long, tronquer simplement
+    
+    truncated_text = text_before_cta[:max_text_length].rstrip() + " " + cta
+    return truncated_text
+
 # Endpoint pour générer des annonces
 @app.route('/generate_ads', methods=['POST'])
 def generate_ads():
@@ -51,6 +86,9 @@ def generate_ads():
     genres = data.get("genres", [])
     language = data.get("language")
     tone = data.get("tone")
+    lyrics = data.get("lyrics", "")
+    bio = data.get("bio", "")
+    promotion_type = data.get("promotion_type", "single")
 
     logger.info(f"Generating ad content for artist: {artist}, genres: {genres}, language: {language}, tone: {tone}")
 
@@ -64,20 +102,22 @@ def generate_ads():
         - Tone: {tone}
 
         Generate the following:
-        - A list of 5 short titles (max 30 characters each).
-        - A list of 5 long titles (max 60 characters each).
-        - A list of 5 long descriptions (max 80 characters each). Ensure that each long description ends with one of the following calls to action: "Écoutez maintenant", "Abonnez-vous maintenant", "Regardez maintenant", "Like et abonnez-vous".
+        - A list of exactly 5 short titles (max 30 characters each).
+        - A list of exactly 5 long titles (max 60 characters each).
+        - A list of exactly 5 long descriptions (max 80 characters each, including the call to action). Each long description must end with one of the following calls to action: "Écoutez maintenant", "Abonnez-vous maintenant", "Regardez maintenant", "Like et abonnez-vous". Ensure all 5 descriptions are provided.
         - A short YouTube description (max 120 characters).
         - A full YouTube description (max 1000 characters).
 
         Return the response in the following JSON format:
         {{
-            "short_titles": ["<title1>", "<title2>", ..., "<title5>"],
-            "long_titles": ["<title1>", "<title2>", ..., "<title5>"],
+            "short_titles": ["<title1>", "<title2>", "<title3>", "<title4>", "<title5>"],
+            "long_titles": ["<title1>", "<title2>", "<title3>", "<title4>", "<title5>"],
             "long_descriptions": [
                 {{"description": "<desc1>", "character_count": <count1>}},
                 {{"description": "<desc2>", "character_count": <count2>}},
-                ...
+                {{"description": "<desc3>", "character_count": <count3>}},
+                {{"description": "<desc4>", "character_count": <count4>}},
+                {{"description": "<desc5>", "character_count": <count5>}}
             ],
             "youtube_description_short": {{"description": "<desc>", "character_count": <count>}},
             "youtube_description_full": {{"description": "<desc>", "character_count": <count>}}
@@ -96,18 +136,31 @@ def generate_ads():
 
         data = json.loads(raw_text)
 
-        # Ajouter le nombre de caractères pour chaque description
-        for desc in data["long_descriptions"]:
+        # Vérifier que 5 descriptions longues sont bien présentes
+        long_descriptions = data.get("long_descriptions", [])
+        if len(long_descriptions) < 5:
+            logger.warning(f"OpenAI returned only {len(long_descriptions)} long descriptions, expected 5. Adding default descriptions.")
+            while len(long_descriptions) < 5:
+                long_descriptions.append(generate_default_description(artist, len(long_descriptions)))
+
+        # Tronquer les descriptions longues si nécessaire
+        for desc in long_descriptions:
+            desc["description"] = truncate_description(desc["description"], max_length=80)
+            desc["character_count"] = len(desc["description"])
+
+        # Ajouter le nombre de caractères pour les autres champs
+        for desc in long_descriptions:
             desc["character_count"] = len(desc["description"])
         data["youtube_description_short"]["character_count"] = len(data["youtube_description_short"]["description"])
         data["youtube_description_full"]["character_count"] = len(data["youtube_description_full"]["description"])
 
         # Valider les descriptions longues
-        validation_errors = validate_long_descriptions(data["long_descriptions"])
+        validation_errors = validate_long_descriptions(long_descriptions)
         if validation_errors:
             logger.warning(f"Validation failed: {validation_errors}")
             # On continue malgré l'avertissement, mais cela pourrait être une erreur fatale selon les besoins
 
+        data["long_descriptions"] = long_descriptions
         return jsonify(data), 200
 
     except Exception as e:
