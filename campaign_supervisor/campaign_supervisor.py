@@ -42,15 +42,18 @@ def sanitize_data(data):
         return data
 
 # Fonction asynchrone pour effectuer des appels HTTP
-async def fetch_data(session, url, data, retries=3, timeout=15):
+async def fetch_data(session, url, data, retries=5, timeout=30):
     for attempt in range(retries):
         try:
             async with session.post(url, json=data, timeout=timeout) as response:
                 response.raise_for_status()
-                return await response.json()
+                result = await response.json()
+                logger.info(f"Successfully fetched data from {url}: {result}")
+                return result
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logger.warning(f"Attempt {attempt + 1}/{retries} failed for {url}: {str(e)}")
             if attempt == retries - 1:
+                logger.error(f"Failed to call {url} after {retries} attempts: {str(e)}")
                 raise Exception(f"Failed to call {url} after {retries} attempts: {str(e)}. Please try again later.")
             await asyncio.sleep(2)  # Attendre 2 secondes avant de réessayer
 
@@ -74,8 +77,10 @@ async def generate_campaign():
         tone = request.form.get('tone', 'engageant')
         lyrics = request.form.get('lyrics')
         bio = request.form.get('bio')
+        song_url = request.form.get('song_url')
+        promotion_type = request.form.get('promotion_type', 'single')  # Nouvelle donnée
         
-        logger.info(f"Received form data: artist={artist}, song={song}, style={style_input}, language={language}, tone={tone}")
+        logger.info(f"Received form data: artist={artist}, song={song}, style={style_input}, language={language}, tone={tone}, song_url={song_url}, promotion_type={promotion_type}")
 
         if not artist:
             logger.error("Missing required field 'artist' in form data")
@@ -92,6 +97,7 @@ async def generate_campaign():
         # Splitter les styles musicaux en une liste
         styles = [style.strip() for style in style_input.split(',')]
         style_display = ', '.join(styles)
+        first_style = styles[0] if styles else "unknown"  # Prendre le premier style pour le hashtag
 
         # Extraire l'artiste principal et le collaborateur
         if " X " in artist:
@@ -107,8 +113,8 @@ async def generate_campaign():
             analysis_task = asyncio.create_task(fetch_data(session, f"{CAMPAIGN_ANALYST_URL}/analyze", {"artist": artist, "styles": styles}))
 
             # Étape 2 : Appeler marketing_agents
-            logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genres': {styles}, 'language': {language}, 'tone': {tone}, 'lyrics': {lyrics}, 'bio': {bio}}}")
-            marketing_task = asyncio.create_task(fetch_data(session, f"{MARKETING_AGENTS_URL}/generate_ads", {"artist": artist, "genres": styles, "language": language, "tone": tone, "lyrics": lyrics, "bio": bio}))
+            logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genres': {styles}, 'language': {language}, 'tone': {tone}, 'lyrics': {lyrics}, 'bio': {bio}, 'promotion_type': {promotion_type}}}")
+            marketing_task = asyncio.create_task(fetch_data(session, f"{MARKETING_AGENTS_URL}/generate_ads", {"artist": artist, "genres": styles, "language": language, "tone": tone, "lyrics": lyrics, "bio": bio, "promotion_type": promotion_type}))
 
             # Étape 3 : Appeler campaign_optimizer
             logger.info(f"Sending request to campaign_optimizer at {CAMPAIGN_OPTIMIZER_URL}/optimize with data: {{'artist': {artist}, 'song': {song}}}")
@@ -156,7 +162,7 @@ async def generate_campaign():
                 f'Instagram : collez votre handle Instagram\n'
                 f'TikTok : collez votre handle TikTok\n'
                 f'Website : collez l\'URL de votre site web\n\n'
-                f'#{artist_name.replace(" ", "")} #{style_display.replace(" ", "")} #collez le tag de l\'album'
+                f'#{artist_name.replace(" ", "")} #{first_style.replace(" ", "")} #collez le tag de l\'album'
             ),
             "character_count": len(
                 f'{artist_name} X {collaborator} "{song}"\n'
@@ -176,7 +182,7 @@ async def generate_campaign():
                 f'Instagram : collez votre handle Instagram\n'
                 f'TikTok : collez votre handle TikTok\n'
                 f'Website : collez l\'URL de votre site web\n\n'
-                f'#{artist_name.replace(" ", "")} #{style_display.replace(" ", "")} #collez le tag de l\'album'
+                f'#{artist_name.replace(" ", "")} #{first_style.replace(" ", "")} #collez le tag de l\'album'
             )
         }
         
