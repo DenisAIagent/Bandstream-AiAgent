@@ -78,9 +78,10 @@ async def generate_campaign():
         lyrics = request.form.get('lyrics')
         bio = request.form.get('bio')
         song_url = request.form.get('song_url')
-        promotion_type = request.form.get('promotion_type', 'single')  # Nouvelle donnée
+        promotion_type = request.form.get('promotion_type', 'single')
+        album_name = request.form.get('album_name', 'collez le nom de l\'album')  # Nouveau champ
         
-        logger.info(f"Received form data: artist={artist}, song={song}, style={style_input}, language={language}, tone={tone}, song_url={song_url}, promotion_type={promotion_type}")
+        logger.info(f"Received form data: artist={artist}, song={song}, style={style_input}, language={language}, tone={tone}, song_url={song_url}, promotion_type={promotion_type}, album_name={album_name}")
 
         if not artist:
             logger.error("Missing required field 'artist' in form data")
@@ -105,6 +106,12 @@ async def generate_campaign():
         else:
             artist_name = artist
             collaborator = ""
+
+        # Déterminer le dernier hashtag en fonction du type de promotion
+        if promotion_type == "album":
+            last_hashtag = album_name.replace(" ", "") if album_name != "collez le nom de l'album" else "collez le nom de l'album"
+        else:  # single ou clip
+            last_hashtag = song.replace(" ", "")
 
         # Créer une session asynchrone pour les appels HTTP
         async with aiohttp.ClientSession() as session:
@@ -162,7 +169,7 @@ async def generate_campaign():
                 f'Instagram : collez votre handle Instagram\n'
                 f'TikTok : collez votre handle TikTok\n'
                 f'Website : collez l\'URL de votre site web\n\n'
-                f'#{artist_name.replace(" ", "")} #{first_style.replace(" ", "")} #collez le tag de l\'album'
+                f'#{artist_name.replace(" ", "")} #{first_style.replace(" ", "")} #{last_hashtag}'
             ),
             "character_count": len(
                 f'{artist_name} X {collaborator} "{song}"\n'
@@ -182,7 +189,7 @@ async def generate_campaign():
                 f'Instagram : collez votre handle Instagram\n'
                 f'TikTok : collez votre handle TikTok\n'
                 f'Website : collez l\'URL de votre site web\n\n'
-                f'#{artist_name.replace(" ", "")} #{first_style.replace(" ", "")} #collez le tag de l\'album'
+                f'#{artist_name.replace(" ", "")} #{first_style.replace(" ", "")} #{last_hashtag}'
             )
         }
         
