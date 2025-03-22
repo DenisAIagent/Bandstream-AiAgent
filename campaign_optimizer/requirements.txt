@@ -6,3 +6,4 @@ gunicorn==20.1.0
 openai==0.28.1
 pytrends
 google-api-python-client
+serpapi
