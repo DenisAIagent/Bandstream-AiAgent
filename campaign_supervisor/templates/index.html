@@ -103,6 +103,12 @@
             margin-bottom: 20px;
             text-align: center;
         }
+        .form-step {
+            display: none;
+        }
+        .form-step.active {
+            display: block;
+        }
         .form-group {
             margin-bottom: 20px;
         }
@@ -144,11 +150,47 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
             text-align: center;
+            margin-top: 20px;
         }
         .button:hover {
             background-color: #0BBF7A;
         }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const steps = document.querySelectorAll('.form-step');
+            let currentStep = 0;
+
+            // Afficher la première étape
+            steps[currentStep].classList.add('active');
+
+            // Gérer le bouton "Suivant"
+            document.querySelectorAll('.next-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const requiredInput = steps[currentStep].querySelector('input[required], select[required]');
+                    if (requiredInput && !requiredInput.value) {
+                        alert('Veuillez remplir ce champ avant de continuer.');
+                        return;
+                    }
+
+                    steps[currentStep].classList.remove('active');
+                    currentStep++;
+                    if (currentStep < steps.length) {
+                        steps[currentStep].classList.add('active');
+                    }
+                });
+            });
+
+            // Gérer le bouton "Précédent"
+            document.querySelectorAll('.prev-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    steps[currentStep].classList.remove('active');
+                    currentStep--;
+                    steps[currentStep].classList.add('active');
+                });
+            });
+        });
+    </script>
 </head>
 <body>
     <header>
@@ -166,44 +208,70 @@
             <p class="error">{{ error }}</p>
             {% endif %}
             <form action="/generate_campaign" method="POST">
-                <div class="form-group">
-                    <label for="artist">Nom de l'Artiste</label>
-                    <input type="text" id="artist" name="artist" placeholder="Ex: Blaiz Fayah" required>
+                <div class="form-step">
+                    <div class="form-group">
+                        <label for="artist">Nom de l'Artiste</label>
+                        <input type="text" id="artist" name="artist" placeholder="Ex: Blaiz Fayah" required>
+                    </div>
+                    <button type="button" class="button next-btn">Suivant</button>
                 </div>
-                <div class="form-group">
-                    <label for="song">Nom de la Chanson</label>
-                    <input type="text" id="song" name="song" placeholder="Ex: Lifestyle" required>
+                <div class="form-step">
+                    <div class="form-group">
+                        <label for="song">Nom de la Chanson</label>
+                        <input type="text" id="song" name="song" placeholder="Ex: Lifestyle" required>
+                    </div>
+                    <button type="button" class="button prev-btn">Précédent</button>
+                    <button type="button" class="button next-btn">Suivant</button>
                 </div>
-                <div class="form-group">
-                    <label for="style">Style Musical</label>
-                    <input type="text" id="style" name="style" placeholder="Ex: reggaeton, pop" required>
+                <div class="form-step">
+                    <div class="form-group">
+                        <label for="style">Style Musical</label>
+                        <input type="text" id="style" name="style" placeholder="Ex: reggaeton, pop" required>
+                    </div>
+                    <button type="button" class="button prev-btn">Précédent</button>
+                    <button type="button" class="button next-btn">Suivant</button>
                 </div>
-                <div class="form-group">
-                    <label for="language">Langue des Annonces</label>
-                    <select id="language" name="language">
-                        <option value="fr">Français</option>
-                        <option value="en">Anglais</option>
-                        <option value="es">Espagnol</option>
-                    </select>
+                <div class="form-step">
+                    <div class="form-group">
+                        <label for="language">Langue des Annonces</label>
+                        <select id="language" name="language">
+                            <option value="fr">Français</option>
+                            <option value="en">Anglais</option>
+                            <option value="es">Espagnol</option>
+                        </select>
+                    </div>
+                    <button type="button" class="button prev-btn">Précédent</button>
+                    <button type="button" class="button next-btn">Suivant</button>
                 </div>
-                <div class="form-group">
-                    <label for="tone">Style des Annonces</label>
-                    <select id="tone" name="tone">
-                        <option value="engageant">Engageant</option>
-                        <option value="poétique">Poétique</option>
-                        <option value="humoristique">Humoristique</option>
-                        <option value="sérieux">Sérieux</option>
-                    </select>
+                <div class="form-step">
+                    <div class="form-group">
+                        <label for="tone">Style des Annonces</label>
+                        <select id="tone" name="tone">
+                            <option value="engageant">Engageant</option>
+                            <option value="poétique">Poétique</option>
+                            <option value="humoristique">Humoristique</option>
+                            <option value="sérieux">Sérieux</option>
+                        </select>
+                    </div>
+                    <button type="button" class="button prev-btn">Précédent</button>
+                    <button type="button" class="button next-btn">Suivant</button>
                 </div>
-                <div class="form-group">
-                    <label for="lyrics">Paroles (optionnel)</label>
-                    <textarea id="lyrics" name="lyrics" placeholder="Entrez les paroles de la chanson (optionnel)"></textarea>
+                <div class="form-step">
+                    <div class="form-group">
+                        <label for="lyrics">Paroles (optionnel)</label>
+                        <textarea id="lyrics" name="lyrics" placeholder="Entrez les paroles de la chanson (optionnel)"></textarea>
+                    </div>
+                    <button type="button" class="button prev-btn">Précédent</button>
+                    <button type="button" class="button next-btn">Suivant</button>
                 </div>
-                <div class="form-group">
-                    <label for="bio">Biographie (optionnel)</label>
-                    <textarea id="bio" name="bio" placeholder="Entrez une courte biographie de l'artiste (optionnel)"></textarea>
+                <div class="form-step">
+                    <div class="form-group">
+                        <label for="bio">Biographie (optionnel)</label>
+                        <textarea id="bio" name="bio" placeholder="Entrez une courte biographie de l'artiste (optionnel)"></textarea>
+                    </div>
+                    <button type="button" class="button prev-btn">Précédent</button>
+                    <button type="submit" class="button">Générer la Campagne</button>
                 </div>
-                <button type="submit" class="button">Générer la Campagne</button>
             </form>
         </div>
     </div>
