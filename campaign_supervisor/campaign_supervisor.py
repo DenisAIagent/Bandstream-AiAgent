@@ -75,12 +75,21 @@ def generate_campaign():
         styles = [style.strip() for style in style_input.split(',')]
         style_display = ', '.join(styles)
 
-        # Étape 1 : Appeler campaign_analyst
+        # Étape 1 : Appeler campaign_analyst avec retry
         logger.info(f"Sending request to campaign_analyst at {CAMPAIGN_ANALYST_URL}/analyze with data: {{'artist': {artist}, 'styles': {styles}}}")
-        response = requests.post(f"{CAMPAIGN_ANALYST_URL}/analyze", json={"artist": artist, "styles": styles}, timeout=10)
-        response.raise_for_status()
-        analysis_data = response.json()
-        logger.info(f"Received response from campaign_analyst: {analysis_data}")
+        retries = 3
+        for attempt in range(retries):
+            try:
+                response = requests.post(f"{CAMPAIGN_ANALYST_URL}/analyze", json={"artist": artist, "styles": styles}, timeout=20)
+                response.raise_for_status()
+                analysis_data = response.json()
+                logger.info(f"Received response from campaign_analyst: {analysis_data}")
+                break
+            except RequestException as e:
+                logger.warning(f"Attempt {attempt + 1}/{retries} failed for campaign_analyst: {str(e)}")
+                if attempt == retries - 1:
+                    raise Exception(f"Failed to call campaign_analyst after {retries} attempts: {str(e)}. Please try again later.")
+                time.sleep(2)  # Attendre 2 secondes avant de réessayer
         
         if not isinstance(analysis_data, dict):
             logger.error(f"campaign_analyst response is not a dictionary: {analysis_data}")
@@ -89,7 +98,7 @@ def generate_campaign():
         
         # Étape 2 : Appeler marketing_agents
         logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genres': {styles}, 'language': {language}, 'tone': {tone}, 'lyrics': {lyrics}, 'bio': {bio}}}")
-        response = requests.post(f"{MARKETING_AGENTS_URL}/generate_ads", json={"artist": artist, "genres": styles, "language": language, "tone": tone, "lyrics": lyrics, "bio": bio}, timeout=10)
+        response = requests.post(f"{MARKETING_AGENTS_URL}/generate_ads", json={"artist": artist, "genres": styles, "language": language, "tone": tone, "lyrics": lyrics, "bio": bio}, timeout=20)
         response.raise_for_status()
         ad_data = response.json()
         logger.info(f"Received response from marketing_agents: {ad_data}")
@@ -111,7 +120,7 @@ def generate_campaign():
         retries = 3
         for attempt in range(retries):
             try:
-                response = requests.post(f"{CAMPAIGN_OPTIMIZER_URL}/optimize", json={"artist": artist, "song": song}, timeout=10)
+                response = requests.post(f"{CAMPAIGN_OPTIMIZER_URL}/optimize", json={"artist": artist, "song": song}, timeout=20)
                 response.raise_for_status()
                 strategy_data = response.json()
                 logger.info(f"Received response from campaign_optimizer: {strategy_data}")
@@ -119,7 +128,7 @@ def generate_campaign():
             except RequestException as e:
                 logger.warning(f"Attempt {attempt + 1}/{retries} failed for campaign_optimizer: {str(e)}")
                 if attempt == retries - 1:
-                    raise Exception(f"Failed to call campaign_optimizer after {retries} attempts: {str(e)}")
+                    raise Exception(f"Failed to call campaign_optimizer after {retries} attempts: {str(e)}. Please try again later.")
                 time.sleep(2)  # Attendre 2 secondes avant de réessayer
         
         if not isinstance(strategy_data, dict):
