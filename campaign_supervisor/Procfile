@@ -1,1 +1,1 @@
-web: cd campaign_supervisor && gunicorn campaign_supervisor:app --bind 0.0.0.0:$PORT --timeout 60 --workers 2
+web: cd campaign_supervisor && uvicorn campaign_supervisor:asgi_app --host 0.0.0.0 --port $PORT
