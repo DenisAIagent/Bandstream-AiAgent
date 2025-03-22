@@ -253,4 +253,147 @@ def get_trends_and_artists_openai(artist, styles):
         - Genres: {styles_str}
 
         Generate the following:
-        - A list of 2 current trends across the genres {styles_str} (short phrases, max 50 characters each). Focus on modern trends relevant to 2025, such as chart performanc
+        - A list of 2 current trends across the genres {styles_str} (short phrases, max 50 characters each). Focus on modern trends relevant to 2025, such as chart performance, streaming popularity, or emerging styles.
+        - A list of 15 trending artists across the genres {styles_str} (just the artist names, no additional text).
+
+        Return the response in the following JSON format:
+        {{
+            "trends": ["<trend1>", "<trend2>"],
+            "lookalike_artists": ["<artist1>", "<artist2>", ..., "<artist15>"]
+        }}
+        """
+        
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            temperature=0.7
+        )
+        
+        raw_text = response.choices[0].message.content.strip()
+        logger.info(f"Raw response from OpenAI: {raw_text}")
+        
+        data = json.loads(raw_text)
+        
+        trends = data.get("trends", ["No trends found"])
+        lookalike_artists = data.get("lookalike_artists", ["No similar artists found"])
+        logger.info(f"OpenAI trends: {trends}, Lookalike artists: {lookalike_artists}")
+        return trends, lookalike_artists
+    except Exception as e:
+        logger.error(f"Error fetching trends and artists with OpenAI: {str(e)}")
+        return ["Trend 1", "Trend 2"], ["Artist 1", "Artist 2"]
+
+# Endpoint principal
+@app.route('/analyze', methods=['POST'])
+async def analyze():
+    logger.info("Received request for /analyze endpoint")
+    data = request.get_json()
+    if not data or "artist" not in data or "styles" not in data:
+        logger.error("Missing required fields 'artist' or 'styles' in request")
+        return jsonify({"error": "Missing required fields 'artist' or 'styles'"}), 400
+    
+    artist = data.get("artist")
+    styles = data.get("styles", [])
+    optimizer_similar_artists = data.get("optimizer_similar_artists", [])
+    if not styles:
+        logger.error("Styles list is empty")
+        return jsonify({"error": "At least one style is required"}), 400
+    
+    logger.info(f"Analyzing trends and lookalike artists for artist: {artist}, styles: {styles}, optimizer_similar_artists: {optimizer_similar_artists}")
+    
+    # Étape 1 : Récupérer les données de MusicBrainz
+    musicbrainz_trending = get_trending_artists_musicbrainz(styles)
+    musicbrainz_similar, artist_image_url = get_similar_artists_musicbrainz(artist)
+    
+    # Étape 2 : Récupérer les données d'OpenAI
+    openai_trends, openai_similar = get_trends_and_artists_openai(artist, styles)
+    
+    # Étape 3 : Récupérer les données via SerpAPI (mots-clés long tail)
+    primary_style = styles[0].lower()
+    serpapi_artists, serpapi_keywords = await search_long_tail_keywords(primary_style)
+    
+    # Étape 4 : Fusionner les tendances
+    trends = []
+    # Prioriser les tendances d'OpenAI (plus pertinentes)
+    for trend in openai_trends:
+        if len(trends) < 2 and trend not in trends:
+            trends.append(trend)
+    
+    # Si OpenAI n'a pas fourni assez de tendances, utiliser MusicBrainz comme fallback
+    if len(trends) < 2 and musicbrainz_trending:
+        trends.append(f"Retour de {styles[0]} dans les charts"[:50])
+    if len(trends) < 2 and musicbrainz_trending and len(musicbrainz_trending) > 1:
+        trends.append(f"Popularité croissante de {styles[0]}"[:50])
+    
+    # Si aucune tendance n'est disponible, utiliser des valeurs par défaut
+    if not trends:
+        trends = ["Trend 1", "Trend 2"]
+    trends = trends[:2]
+    
+    # Ajouter les mots-clés long tail aux tendances
+    trends.extend(serpapi_keywords)
+    logger.info(f"Combined trends: {trends}")
+    
+    # Étape 5 : Fusionner les artistes similaires
+    combined_artists = []
+    seen_artists = set()  # Pour suivre les artistes déjà ajoutés (en ignorant la casse)
+
+    # Priorité aux artistes de campaign_optimizer
+    for artist_name in optimizer_similar_artists:
+        artist_lower = artist_name.lower()
+        if artist_lower not in seen_artists and artist_name != artist:
+            combined_artists.append(artist_name)
+            seen_artists.add(artist_lower)
+
+    # Ajouter les artistes de MusicBrainz et OpenAI
+    for artist_name in musicbrainz_trending:
+        artist_lower = artist_name.lower()
+        if (artist_name in musicbrainz_similar or artist_name in openai_similar) and artist_lower not in seen_artists and artist_name != artist:
+            combined_artists.append(artist_name)
+            seen_artists.add(artist_lower)
+
+    for artist_name in musicbrainz_similar:
+        artist_lower = artist_name.lower()
+        if artist_name in openai_similar and artist_lower not in seen_artists and artist_name != artist:
+            combined_artists.append(artist_name)
+            seen_artists.add(artist_lower)
+
+    # Ajouter les artistes de SerpAPI
+    for artist_name in serpapi_artists:
+        artist_lower = artist_name.lower()
+        if artist_lower not in seen_artists and artist_name != artist:
+            combined_artists.append(artist_name)
+            seen_artists.add(artist_lower)
+
+    # Ajouter les autres artistes de MusicBrainz et OpenAI
+    for artist_name in musicbrainz_trending + musicbrainz_similar + openai_similar:
+        artist_lower = artist_name.lower()
+        if artist_lower not in seen_artists and len(combined_artists) < 15 and artist_name != artist:
+            combined_artists.append(artist_name)
+            seen_artists.add(artist_lower)
+
+    combined_artists = combined_artists[:15]
+    logger.info(f"Combined artists: {combined_artists}")
+    
+    response = {
+        "trends": trends,
+        "lookalike_artists": combined_artists,
+        "style": ", ".join(styles),
+        "artist_image_url": artist_image_url
+    }
+    logger.info(f"Returning response: {response}")
+    return jsonify(response), 200
+
+# Endpoint de santé
+@app.route('/health', methods=['GET'])
+def health_check():
+    logger.info("Received request for /health endpoint")
+    response = {"status": "ok", "message": "Campaign Analyst is running"}
+    logger.info(f"Returning health check response: {response}")
+    return jsonify(response), 200
+
+if __name__ == '__main__':
+    import uvicorn
+    port = int(os.environ.get('PORT', 8080))
+    logger.info(f"Starting uvicorn on port {port}")
+    uvicorn.run(app, host='0.0.0.0', port=port)
