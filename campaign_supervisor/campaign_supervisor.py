@@ -1,6 +1,8 @@
 import os
 import requests
 import json
+import asyncio
+import aiohttp
 from flask import Flask, request, jsonify, render_template
 from dotenv import load_dotenv
 import logging
@@ -38,6 +40,19 @@ def sanitize_data(data):
     else:
         return data
 
+# Fonction asynchrone pour effectuer des appels HTTP
+async def fetch_data(session, url, data, retries=3, timeout=15):
+    for attempt in range(retries):
+        try:
+            async with session.post(url, json=data, timeout=timeout) as response:
+                response.raise_for_status()
+                return await response.json()
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            logger.warning(f"Attempt {attempt + 1}/{retries} failed for {url}: {str(e)}")
+            if attempt == retries - 1:
+                raise Exception(f"Failed to call {url} after {retries} attempts: {str(e)}. Please try again later.")
+            await asyncio.sleep(2)  # Attendre 2 secondes avant de réessayer
+
 @app.route('/')
 def index():
     try:
@@ -48,7 +63,7 @@ def index():
         return jsonify({"error": "Failed to render index page", "details": str(e)}), 500
 
 @app.route('/generate_campaign', methods=['POST'])
-def generate_campaign():
+async def generate_campaign():
     try:
         # Récupérer les données du formulaire
         artist = request.form.get('artist')
@@ -75,34 +90,33 @@ def generate_campaign():
         styles = [style.strip() for style in style_input.split(',')]
         style_display = ', '.join(styles)
 
-        # Étape 1 : Appeler campaign_analyst avec retry
-        logger.info(f"Sending request to campaign_analyst at {CAMPAIGN_ANALYST_URL}/analyze with data: {{'artist': {artist}, 'styles': {styles}}}")
-        retries = 3
-        for attempt in range(retries):
-            try:
-                response = requests.post(f"{CAMPAIGN_ANALYST_URL}/analyze", json={"artist": artist, "styles": styles}, timeout=20)
-                response.raise_for_status()
-                analysis_data = response.json()
-                logger.info(f"Received response from campaign_analyst: {analysis_data}")
-                break
-            except RequestException as e:
-                logger.warning(f"Attempt {attempt + 1}/{retries} failed for campaign_analyst: {str(e)}")
-                if attempt == retries - 1:
-                    raise Exception(f"Failed to call campaign_analyst after {retries} attempts: {str(e)}. Please try again later.")
-                time.sleep(2)  # Attendre 2 secondes avant de réessayer
-        
+        # Créer une session asynchrone pour les appels HTTP
+        async with aiohttp.ClientSession() as session:
+            # Étape 1 : Appeler campaign_analyst
+            logger.info(f"Sending request to campaign_analyst at {CAMPAIGN_ANALYST_URL}/analyze with data: {{'artist': {artist}, 'styles': {styles}}}")
+            analysis_task = asyncio.create_task(fetch_data(session, f"{CAMPAIGN_ANALYST_URL}/analyze", {"artist": artist, "styles": styles}))
+
+            # Étape 2 : Appeler marketing_agents
+            logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genres': {styles}, 'language': {language}, 'tone': {tone}, 'lyrics': {lyrics}, 'bio': {bio}}}")
+            marketing_task = asyncio.create_task(fetch_data(session, f"{MARKETING_AGENTS_URL}/generate_ads", {"artist": artist, "genres": styles, "language": language, "tone": tone, "lyrics": lyrics, "bio": bio}))
+
+            # Étape 3 : Appeler campaign_optimizer
+            logger.info(f"Sending request to campaign_optimizer at {CAMPAIGN_OPTIMIZER_URL}/optimize with data: {{'artist': {artist}, 'song': {song}}}")
+            optimizer_task = asyncio.create_task(fetch_data(session, f"{CAMPAIGN_OPTIMIZER_URL}/optimize", {"artist": artist, "song": song}))
+
+            # Attendre que tous les appels soient terminés
+            analysis_data, ad_data, strategy_data = await asyncio.gather(analysis_task, marketing_task, optimizer_task)
+
+        # Traiter les réponses
+        logger.info(f"Processing responses: analysis_data={analysis_data}, ad_data={ad_data}, strategy_data={strategy_data}")
+
+        # Analyse
         if not isinstance(analysis_data, dict):
             logger.error(f"campaign_analyst response is not a dictionary: {analysis_data}")
             analysis_data = {"trends": ["Trend 1", "Trend 2"], "lookalike_artists": ["Artist 1", "Artist 2"], "style": style_display, "artist_image_url": "https://via.placeholder.com/120?text=Artist"}
         analysis_data = sanitize_data(analysis_data)
-        
-        # Étape 2 : Appeler marketing_agents
-        logger.info(f"Sending request to marketing_agents at {MARKETING_AGENTS_URL}/generate_ads with data: {{'artist': {artist}, 'genres': {styles}, 'language': {language}, 'tone': {tone}, 'lyrics': {lyrics}, 'bio': {bio}}}")
-        response = requests.post(f"{MARKETING_AGENTS_URL}/generate_ads", json={"artist": artist, "genres": styles, "language": language, "tone": tone, "lyrics": lyrics, "bio": bio}, timeout=20)
-        response.raise_for_status()
-        ad_data = response.json()
-        logger.info(f"Received response from marketing_agents: {ad_data}")
 
+        # Annonces
         short_titles = ad_data.get("short_titles", [{"title": "Short Title 1", "character_count": 13}] * 5)
         long_titles = ad_data.get("long_titles", [{"title": "Long Title 1", "character_count": 12}] * 5)
         long_descriptions = ad_data.get("long_descriptions", [{"description": "Description 1", "character_count": 13}] * 5)
@@ -114,23 +128,8 @@ def generate_campaign():
         long_descriptions = sanitize_data(long_descriptions)
         youtube_description_short = sanitize_data(youtube_description_short)
         youtube_description_full = sanitize_data(youtube_description_full)
-        
-        # Étape 3 : Appeler campaign_optimizer avec retry
-        logger.info(f"Sending request to campaign_optimizer at {CAMPAIGN_OPTIMIZER_URL}/optimize with data: {{'artist': {artist}, 'song': {song}}}")
-        retries = 3
-        for attempt in range(retries):
-            try:
-                response = requests.post(f"{CAMPAIGN_OPTIMIZER_URL}/optimize", json={"artist": artist, "song": song}, timeout=20)
-                response.raise_for_status()
-                strategy_data = response.json()
-                logger.info(f"Received response from campaign_optimizer: {strategy_data}")
-                break
-            except RequestException as e:
-                logger.warning(f"Attempt {attempt + 1}/{retries} failed for campaign_optimizer: {str(e)}")
-                if attempt == retries - 1:
-                    raise Exception(f"Failed to call campaign_optimizer after {retries} attempts: {str(e)}. Please try again later.")
-                time.sleep(2)  # Attendre 2 secondes avant de réessayer
-        
+
+        # Stratégie
         if not isinstance(strategy_data, dict):
             logger.error(f"campaign_optimizer response is not a dictionary: {strategy_data}")
             strategy = {"target_audience": "Fans of similar artists", "channels": ["Spotify", "YouTube"], "budget_allocation": {"Spotify": 0.5, "YouTube": 0.5}}
