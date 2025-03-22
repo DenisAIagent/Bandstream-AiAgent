@@ -7,3 +7,4 @@ serpapi==0.1.0
 uvicorn==0.30.6
 aiohttp==3.10.5
 asgiref==3.8.1
+# Forcé rebuild pour inclure asgiref
