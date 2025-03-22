@@ -12,6 +12,7 @@ import time
 import musicbrainzngs
 import signal
 from cachetools import TTLCache
+from asgiref.wsgi import WsgiToAsgi  # Ajout de l’importation pour WsgiToAsgi
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO)
@@ -392,8 +393,12 @@ def health_check():
     logger.info(f"Returning health check response: {response}")
     return jsonify(response), 200
 
+# Convertir l’application Flask (WSGI) en ASGI
+asgi_app = WsgiToAsgi(app)
+
 if __name__ == '__main__':
     import uvicorn
     port = int(os.environ.get('PORT', 8080))
     logger.info(f"Starting uvicorn on port {port}")
-    uvicorn.run(app, host='0.0.0.0', port=port)
+    # Utiliser asgi_app au lieu de app
+    uvicorn.run(asgi_app, host='0.0.0.0', port=port)
