@@ -1,19 +1,12 @@
-FROM python:3.9
+# Utilisation d'une image Nginx légère
+FROM nginx:alpine
 
-WORKDIR /app
+# Copie des fichiers statiques dans le répertoire par défaut de Nginx
+COPY ./index.html /usr/share/nginx/html/
+COPY ./results.html /usr/share/nginx/html/
 
-# Copier le requirements.txt à la racine du dépôt
-COPY analyst-requirements.txt .
+# Exposition du port 80
+EXPOSE 80
 
-# Installer les dépendances sans utiliser le cache
-RUN pip install --no-cache-dir -r analyst-requirements.txt
-
-# Copier le reste des fichiers de l'application
-COPY . .
-
-RUN touch campaign_analyst/__init__.py
-
-EXPOSE $PORT
-
-# Utiliser une commande simple pour tester
-CMD ["echo", "Hello, Railway!"]
+# Commande par défaut de Nginx
+CMD ["nginx", "-g", "daemon off;"]
