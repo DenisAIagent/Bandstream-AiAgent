@@ -1,6 +1,9 @@
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-CMD ["hypercorn", "campaign_analyst:app", "--bind", "0.0.0.0:$PORT"]
+quart==0.19.4         # Framework ASGI
+hypercorn==0.16.0     # Serveur ASGI (remplace Uvicorn)
+aiohttp==3.10.5       # Appels API asynchrones
+python-dotenv==1.0.0  # Gestion des variables d’environnement
+spotipy==2.22.1       # Intégration Spotify (non mentionnée avant, mais présente)
+serpapi==0.1.0        # Recherche SerpAPI
+openai==0.28.0        # API OpenAI (ancienne version, voir note ci-dessous)
+musicbrainzngs==0.7.1 # MusicBrainz
+cachetools==5.3.2     # Mise en cache
