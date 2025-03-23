@@ -8,6 +8,9 @@ COPY campaign_analyst/requirements.txt .
 # Installer les dépendances sans utiliser le cache
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Vérifier que hypercorn est bien installé
+RUN hypercorn --version
+
 # Copier le reste des fichiers de l'application
 COPY . .
 
