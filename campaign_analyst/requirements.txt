@@ -1,9 +1,9 @@
-quart==0.19.4         # Framework ASGI
-hypercorn==0.16.0     # Serveur ASGI pour Quart
-aiohttp==3.10.5       # Appels API asynchrones
-python-dotenv==1.0.0  # Gestion des variables d'environnement
-spotipy==2.22.1       # Intégration Spotify
-serpapi==0.1.0        # Recherche SerpAPI
-openai==1.10.0        # Mise à jour vers une version plus récente (compatible 2025)
-musicbrainzngs==0.7.1 # MusicBrainz
-cachetools==5.3.2     # Mise en cache (pour TTLCache)
+quart==0.19.4
+uvicorn==0.30.6  # Remplacer hypercorn par uvicorn
+aiohttp==3.10.5
+python-dotenv==1.0.0
+spotipy==2.22.1
+serpapi==0.1.0
+openai==1.10.0
+musicbrainzngs==0.7.1
+cachetools==5.3.2
