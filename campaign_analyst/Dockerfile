@@ -1,12 +1,6 @@
-# Utilisation d'une image Nginx légère
-FROM nginx:alpine
-
-# Copie des fichiers statiques dans le répertoire par défaut de Nginx
-COPY ./index.html /usr/share/nginx/html/
-COPY ./results.html /usr/share/nginx/html/
-
-# Exposition du port 80
-EXPOSE 80
-
-# Commande par défaut de Nginx
-CMD ["nginx", "-g", "daemon off;"]
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+CMD ["hypercorn", "campaign_analyst:app", "--bind", "0.0.0.0:$PORT"]
