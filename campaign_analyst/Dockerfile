@@ -11,11 +11,8 @@ COPY analyst-requirements.txt .
 # Installer les dépendances sans utiliser le cache
 RUN pip install --no-cache-dir -r analyst-requirements.txt
 
-# Vérifier que hypercorn est bien installé
-RUN hypercorn --version
-
-# Vérifier le chemin de l’exécutable hypercorn
-RUN which hypercorn
+# Vérifier que hypercorn est bien installé en utilisant python -m
+RUN python -m hypercorn --version
 
 # Copier le reste des fichiers de l'application
 COPY . .
@@ -24,4 +21,5 @@ RUN touch campaign_analyst/__init__.py
 
 EXPOSE $PORT
 
-CMD ["hypercorn", "campaign_analyst.campaign_analyst:app", "--bind", "0.0.0.0:$PORT"]
+# Utiliser python -m hypercorn au lieu de hypercorn directement
+CMD ["python", "-m", "hypercorn", "campaign_analyst.campaign_analyst:app", "--bind", "0.0.0.0:$PORT"]
