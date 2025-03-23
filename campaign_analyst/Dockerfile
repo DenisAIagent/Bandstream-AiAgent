@@ -2,20 +2,17 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-# Copier le requirements.txt spécifique à campaign_analyst
-COPY campaign_analyst/requirements.txt .
+# Copier le requirements.txt spécifique à campaign_supervisor
+COPY campaign_supervisor/requirements.txt .
 
 # Installer les dépendances sans utiliser le cache
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Vérifier que hypercorn est bien installé
-RUN hypercorn --version
-
 # Copier le reste des fichiers de l'application
 COPY . .
 
-RUN touch campaign_analyst/__init__.py
-
+# Exposer le port dynamiquement via la variable $PORT
 EXPOSE $PORT
 
-CMD ["hypercorn", "campaign_analyst.campaign_analyst:app", "--bind", "0.0.0.0:$PORT"]
+# Commande de démarrage avec Uvicorn (serveur ASGI)
+CMD ["uvicorn", "campaign_supervisor.campaign_supervisor:asgi_app", "--host", "0.0.0.0", "--port", "$PORT"]
