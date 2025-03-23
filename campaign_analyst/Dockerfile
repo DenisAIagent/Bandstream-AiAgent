@@ -12,7 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copier le reste des fichiers de l'application
 COPY . .
 
-RUN touch campaign_analyst/__init__.py
+RUN touch /__init__.py
 
 EXPOSE $PORT
 
