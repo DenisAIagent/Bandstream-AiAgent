@@ -7,8 +7,3 @@ serpapi==0.1.0
 uvicorn==0.30.6
 aiohttp==3.10.5
 asgiref==3.8.1
-quart==0.19.4
-hypercorn==0.15.0
-openai==0.28.0
-musicbrainzngs==0.7.1
-cachetools==5.3.2
