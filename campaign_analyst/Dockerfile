@@ -2,9 +2,6 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-# Copier le requirements.txt spécifique à campaign_supervisor
-COPY campaign_supervisor/requirements.txt .
-
 # Installer les dépendances sans utiliser le cache
 RUN pip install --no-cache-dir -r requirements.txt
 
