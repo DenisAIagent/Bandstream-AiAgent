@@ -17,9 +17,12 @@ RUN python -m hypercorn --version
 # Copier le reste des fichiers de l'application
 COPY . .
 
+# Rendre le script start.sh exécutable
+RUN chmod +x start.sh
+
 RUN touch campaign_analyst/__init__.py
 
 EXPOSE $PORT
 
-# Utiliser python -m hypercorn au lieu de hypercorn directement
-CMD ["python", "-m", "hypercorn", "campaign_analyst.campaign_analyst:app", "--bind", "0.0.0.0:$PORT"]
+# Utiliser le script start.sh comme point d'entrée
+CMD ["./start.sh"]
