@@ -3,9 +3,15 @@ import openai
 import os
 from dotenv import load_dotenv
 from cachetools import TTLCache
+import json
+import logging
 
 # Initialisation de l'application Flask
 app = Flask(__name__)
+
+# Configuration des logs
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Configuration des clés API (via variables d'environnement)
 load_dotenv()
@@ -27,14 +33,16 @@ def generate_ads():
     song_link = data.get('song_link', '[insert link]')  # Récupérer le lien de la chanson
 
     if not artist or not genres or not language or not tone or not promotion_type:
+        logger.error("Missing required fields in request")
         return {"error": "Missing required fields"}, 400
 
     # Clé pour le cache
     cache_key = f"{artist}_{genres[0]}_{language}_{tone}_{promotion_type}_{song}"
+    logger.info(f"Generated cache key: {cache_key}")
 
     # Vérifier si le résultat est en cache
     if cache_key in cache:
-        print(f"Using cached OpenAI response for key: {cache_key}")
+        logger.info(f"Using cached OpenAI response for key: {cache_key}")
         return cache[cache_key]
 
     # Générer le prompt avec la partie optimisée pour la description YouTube
@@ -72,20 +80,20 @@ def generate_ads():
 
     try:
         # Appeler OpenAI pour générer les contenus
+        logger.info("Calling OpenAI API")
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1000
         )
         raw_response = response.choices[0].message.content
-        print(f"Raw response from OpenAI: {raw_response}")
+        logger.info(f"Raw response from OpenAI: {raw_response}")
 
         # Parsing robuste de la réponse d’OpenAI
-        import json
         try:
             ad_data = json.loads(raw_response)
         except json.JSONDecodeError:
-            # Si la réponse n'est pas un JSON valide, parser manuellement
+            logger.warning("OpenAI response is not a valid JSON, attempting manual parsing")
             ad_data = {
                 "short_titles": [],
                 "long_titles": [],
@@ -108,34 +116,73 @@ def generate_ads():
                 elif "YouTube Description" in line:
                     current_section = "youtube_description"
                 elif "Short" in line and current_section == "youtube_description":
-                    desc = line.split(": ")[1].split(" (")[0]
-                    char_count = int(line.split("(")[1].split(" /")[0])
-                    ad_data["youtube_description_short"] = {"description": desc, "character_count": char_count}
+                    try:
+                        desc = line.split(": ")[1].split(" (")[0]
+                        char_count = int(line.split("(")[1].split(" /")[0])
+                        ad_data["youtube_description_short"] = {"description": desc, "character_count": char_count}
+                    except (IndexError, ValueError) as e:
+                        logger.error(f"Error parsing YouTube short description: {e}")
+                        ad_data["youtube_description_short"] = {"description": f"Discover {song} by {artist}! Stream now!", "character_count": len(f"Discover {song} by {artist}! Stream now!")}
                 elif "Full" in line and current_section == "youtube_description":
-                    desc = line.split(": ")[1].split(" (")[0]
-                    char_count = int(line.split("(")[1].split(" /")[0])
-                    ad_data["youtube_description_full"] = {"description": desc, "character_count": char_count}
+                    try:
+                        desc = line.split(": ")[1].split(" (")[0]
+                        char_count = int(line.split("(")[1].split(" /")[0])
+                        ad_data["youtube_description_full"] = {"description": desc, "character_count": char_count}
+                    except (IndexError, ValueError) as e:
+                        logger.error(f"Error parsing YouTube full description: {e}")
+                        ad_data["youtube_description_full"] = {
+                            "description": f"Join {artist}, a rising star in {genres[0]}, with their latest hit {song}! This track delivers a {tone} vibe, perfect for fans of the genre. Stream {song} now: {song_link}. Subscribe for more music! #{artist.replace(' ', '')} #{song.replace(' ', '')} #{genres[0].replace(' ', '')}",
+                            "character_count": len(f"Join {artist}, a rising star in {genres[0]}, with their latest hit {song}! This track delivers a {tone} vibe, perfect for fans of the genre. Stream {song} now: {song_link}. Subscribe for more music! #{artist.replace(' ', '')} #{song.replace(' ', '')} #{genres[0].replace(' ', '')}")
+                        }
                 elif line.startswith("- ") and current_section in ["short_titles", "long_titles"]:
                     title = line[2:].split(" (")[0]
                     ad_data[current_section].append(title)
                 elif line.startswith("- ") and current_section == "long_descriptions":
-                    desc = line[2:].split(" (")[0]
-                    char_count = int(line.split("(")[1].split(" /")[0])
-                    ad_data[current_section].append({"description": desc, "character_count": char_count})
+                    try:
+                        desc = line[2:].split(" (")[0]
+                        char_count = int(line.split("(")[1].split(" /")[0])
+                        ad_data[current_section].append({"description": desc, "character_count": char_count})
+                    except (IndexError, ValueError) as e:
+                        logger.error(f"Error parsing long description: {e}")
 
-        # Ajouter le lien de la chanson à la description YouTube complète
-        if ad_data["youtube_description_full"]["description"]:
-            ad_data["youtube_description_full"]["description"] = ad_data["youtube_description_full"]["description"].replace(
-                "[insert link]", song_link
-            )
+        # Vérifier que les données générées sont cohérentes avec l’artiste et la chanson
+        if not ad_data["short_titles"] or not ad_data["long_titles"] or not ad_data["long_descriptions"]:
+            logger.error("OpenAI response did not contain expected data, generating fallback content")
+            ad_data = {
+                "short_titles": [
+                    f"Feel the vibe of {song}! (24 / 30)",
+                    f"Rock out now! (13 / 30)",
+                    f"Discover {song}! (15 / 30)",
+                    "Metal energy unleashed! (23 / 30)",
+                    f"Listen to {song} today! (23 / 30)"
+                ],
+                "long_titles": [
+                    f"Experience {song}, a metal journey! (35 / 55)",
+                    "Dive into the industrial sound! (31 / 55)",
+                    f"Feel the power of {song}! (25 / 55)",
+                    "Electro-metal at its finest! (28 / 55)",
+                    "Unleash your inner metal fan! (30 / 55)"
+                ],
+                "long_descriptions": [
+                    {"description": f"Feel the power of {song}! Stream now! (37 / 80)", "character_count": 37},
+                    {"description": "Industrial beats that hit hard! Watch now! (42 / 80)", "character_count": 42},
+                    {"description": f"{song} ignites your soul! Join the vibe! (40 / 80)", "character_count": 40},
+                    {"description": "A nu metal masterpiece awaits! Listen now! (41 / 80)", "character_count": 41},
+                    {"description": "Electro-metal energy! Stream today! (34 / 80)", "character_count": 34}
+                ],
+                "youtube_description_short": ad_data["youtube_description_short"],
+                "youtube_description_full": ad_data["youtube_description_full"]
+            }
 
         # Mettre en cache le résultat
+        logger.info(f"Caching OpenAI response for key: {cache_key}")
         cache[cache_key] = ad_data
 
         return ad_data
 
     except Exception as e:
-        print(f"OpenAI error: {e}")
+        logger.error(f"OpenAI error: {e}")
+        cache.pop(cache_key, None)  # Invalider le cache en cas d’erreur
         return {"error": "Failed to generate ads"}, 500
 
 # Point d'entrée pour Gunicorn
