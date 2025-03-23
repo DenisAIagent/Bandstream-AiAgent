@@ -5,11 +5,11 @@ WORKDIR /app
 # Mettre à jour pip pour éviter les problèmes d’installation
 RUN pip install --upgrade pip
 
-# Copier le requirements.txt spécifique à campaign_analyst
-COPY campaign_analyst/requirements.txt .
+# Copier le requirements.txt à la racine du dépôt
+COPY analyst-requirements.txt .
 
 # Installer les dépendances sans utiliser le cache
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r analyst-requirements.txt
 
 # Vérifier que hypercorn est bien installé
 RUN hypercorn --version
