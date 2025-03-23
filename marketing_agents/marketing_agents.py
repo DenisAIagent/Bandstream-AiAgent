@@ -51,7 +51,7 @@ def generate_ads():
        - Create descriptive titles that evoke emotion or curiosity.
        - Include at least 2 calls to action (e.g., "Dive in", "Experience").
        - Mention the song {song} in at least 2 titles.
-       - Avoid repeating the artist's name in every title.
+       - Avoid repetition of the artist's name in every title.
 
     3. **5 Long Descriptions (max 80 characters each)**:
        - Create engaging descriptions that evoke the song's mood or genre.
@@ -80,29 +80,54 @@ def generate_ads():
         raw_response = response.choices[0].message.content
         print(f"Raw response from OpenAI: {raw_response}")
 
-        # Simuler le parsing de la réponse (à adapter selon le format réel retourné par OpenAI)
-        # Pour cet exemple, je vais supposer que la réponse est un JSON bien formaté
+        # Parsing robuste de la réponse d’OpenAI
         import json
         try:
             ad_data = json.loads(raw_response)
         except json.JSONDecodeError:
-            # Si la réponse n'est pas un JSON valide, simuler un parsing manuel
+            # Si la réponse n'est pas un JSON valide, parser manuellement
             ad_data = {
-                "short_titles": ["Vibrez avec On S'Attache !", "Plongez dans la chanson française", "Émotion pure à découvrir", "On S'Attache : Écoutez maintenant", "Un son qui touche le cœur"],
-                "long_titles": ["Découvrez On S'Attache, un voyage musical", "La chanson française en force avec Maé", "On S'Attache : Une émotion à vivre", "Plongez dans l’univers de la musique française", "Écoutez l’âme de Maé dans ce hit"],
-                "long_descriptions": [
-                    {"description": "Vibrez avec On S'Attache, un hit français. Écoutez maintenant", "character_count": 60},
-                    {"description": "La chanson française prend vie. Stream now !", "character_count": 42},
-                    {"description": "Une mélodie qui touche l’âme. Regardez maintenant", "character_count": 48},
-                    {"description": "On S'Attache vous transporte. Join the vibe !", "character_count": 44},
-                    {"description": "Émotion et rythme dans ce single. Écoutez today", "character_count": 46}
-                ],
-                "youtube_description_short": {"description": "Uncover the magic of On S'Attache by Christophe Maé! Stream now!", "character_count": 62},
-                "youtube_description_full": {
-                    "description": f"Join Christophe Maé, a beloved icon of chanson française, as he unveils his latest masterpiece, On S'Attache! This heartfelt single blends tender lyrics with engaging melodies, capturing the warmth of love and connection in every note. Let it transport you to a place of pure emotion and nostalgia. Stream On S'Attache now: {song_link}. Subscribe to catch every new release, live performance, and exclusive moment! #ChristopheMaé #OnSAttache #ChansonFrançaise",
-                    "character_count": 450
-                }
+                "short_titles": [],
+                "long_titles": [],
+                "long_descriptions": [],
+                "youtube_description_short": {"description": "", "character_count": 0},
+                "youtube_description_full": {"description": "", "character_count": 0}
             }
+            lines = raw_response.split("\n")
+            current_section = None
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                if "Short Titles" in line:
+                    current_section = "short_titles"
+                elif "Long Titles" in line:
+                    current_section = "long_titles"
+                elif "Long Descriptions" in line:
+                    current_section = "long_descriptions"
+                elif "YouTube Description" in line:
+                    current_section = "youtube_description"
+                elif "Short" in line and current_section == "youtube_description":
+                    desc = line.split(": ")[1].split(" (")[0]
+                    char_count = int(line.split("(")[1].split(" /")[0])
+                    ad_data["youtube_description_short"] = {"description": desc, "character_count": char_count}
+                elif "Full" in line and current_section == "youtube_description":
+                    desc = line.split(": ")[1].split(" (")[0]
+                    char_count = int(line.split("(")[1].split(" /")[0])
+                    ad_data["youtube_description_full"] = {"description": desc, "character_count": char_count}
+                elif line.startswith("- ") and current_section in ["short_titles", "long_titles"]:
+                    title = line[2:].split(" (")[0]
+                    ad_data[current_section].append(title)
+                elif line.startswith("- ") and current_section == "long_descriptions":
+                    desc = line[2:].split(" (")[0]
+                    char_count = int(line.split("(")[1].split(" /")[0])
+                    ad_data[current_section].append({"description": desc, "character_count": char_count})
+
+        # Ajouter le lien de la chanson à la description YouTube complète
+        if ad_data["youtube_description_full"]["description"]:
+            ad_data["youtube_description_full"]["description"] = ad_data["youtube_description_full"]["description"].replace(
+                "[insert link]", song_link
+            )
 
         # Mettre en cache le résultat
         cache[cache_key] = ad_data
