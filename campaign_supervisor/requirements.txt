@@ -1,4 +1,4 @@
-flask==2.2.3
+echo "flask==2.2.3
 werkzeug==2.2.3
 requests==2.28.2
 python-dotenv==1.0.0
@@ -6,4 +6,4 @@ spotipy==2.22.1
 serpapi==0.1.0
 uvicorn==0.30.6
 aiohttp==3.10.5
-asgiref==3.8.1
+asgiref==3.8.1" > campaign_supervisor/requirements.txt
