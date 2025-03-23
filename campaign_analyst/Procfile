@@ -1,1 +1,1 @@
-echo "web: hypercorn campaign_analyst.campaign_analyst:app --bind 0.0.0.0:\$PORT" > campaign_analyst/Procfile
+web: hypercorn campaign_analyst:app --bind 0.0.0.0:$PORT
