@@ -15,4 +15,4 @@ RUN touch campaign_analyst/__init__.py
 
 EXPOSE $PORT
 
-CMD ["hypercorn", "campaign_analyst.campaign_analyst:app", "--bind", "0.0.0.0:$PORT"]
+CMD ["hypercorn", "campaign_analyst:app", "--bind", "0.0.0.0:$PORT"]
