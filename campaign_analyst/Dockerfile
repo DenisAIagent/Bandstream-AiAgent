@@ -1,7 +1,8 @@
 FROM python:3.9-slim
 
 WORKDIR /app
-
+RUN pwd
+RUN ls -la /
 # Copier le requirements.txt spécifique à campaign_analyst
 COPY campaign_analyst/requirements.txt .
 
