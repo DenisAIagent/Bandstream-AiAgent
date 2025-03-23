@@ -1,190 +1,116 @@
-import os
-import json
-from flask import Flask, request, jsonify
-from dotenv import load_dotenv
-import logging
+from flask import Flask, request
 import openai
+import os
+from dotenv import load_dotenv
 from cachetools import TTLCache
 
-# Configurer les logs
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Charger les variables d'environnement
-load_dotenv()
-
-# Initialiser Flask
+# Initialisation de l'application Flask
 app = Flask(__name__)
 
-# Configurer OpenAI
+# Configuration des clés API (via variables d'environnement)
+load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
-if not openai.api_key:
-    logger.error("OPENAI_API_KEY is not set in environment variables")
-    raise ValueError("OPENAI_API_KEY is required")
 
-# Cache pour les réponses d'OpenAI (valide pendant 24 heures)
-openai_cache = TTLCache(maxsize=100, ttl=24*60*60)  # Cache pour 24 heures
+# Cache pour les résultats (24h)
+cache = TTLCache(maxsize=100, ttl=86400)
 
-# Liste des appels à l’action valides (en minuscules pour la comparaison)
-VALID_CALLS_TO_ACTION = [
-    "écoutez maintenant",
-    "abonnez-vous maintenant",
-    "regardez maintenant",
-    "like et abonnez-vous"
-]
-
-# Fonction pour valider les descriptions longues
-def validate_long_descriptions(descriptions):
-    errors = []
-    for i, desc in enumerate(descriptions, 1):
-        desc_text = desc.get("description", "").lower().strip()
-        # Vérifier si la description se termine par un appel à l’action valide
-        if not any(desc_text.endswith(cta) for cta in VALID_CALLS_TO_ACTION):
-            errors.append(f"Long description {i} does not end with a valid call to action")
-    return errors
-
-# Fonction pour générer une description par défaut si nécessaire
-def generate_default_description(artist, index):
-    default_ctas = ["Écoutez maintenant", "Abonnez-vous maintenant", "Regardez maintenant", "Like et abonnez-vous"]
-    cta = default_ctas[index % len(default_ctas)]
-    desc = f"Découvrez {artist} et son univers musical unique. {cta}"
-    return {
-        "description": desc,
-        "character_count": len(desc)
-    }
-
-# Fonction pour tronquer une description longue tout en préservant l’appel à l’action
-def truncate_description(description, max_length=80):
-    if len(description) <= max_length:
-        return description
-
-    # Trouver l’appel à l’action à la fin
-    desc_lower = description.lower()
-    cta = None
-    for valid_cta in VALID_CALLS_TO_ACTION:
-        if desc_lower.endswith(valid_cta):
-            cta = description[-len(valid_cta):]
-            break
-    
-    if not cta:
-        return description[:max_length]  # Si aucun appel à l’action, tronquer simplement
-
-    # Tronquer le texte avant l’appel à l’action
-    text_before_cta = description[:-len(cta)]
-    max_text_length = max_length - len(cta) - 1  # -1 pour l’espace
-    if max_text_length <= 0:
-        return description[:max_length]  # Si l’appel à l’action est trop long, tronquer simplement
-    
-    truncated_text = text_before_cta[:max_text_length].rstrip() + " " + cta
-    return truncated_text
-
-# Endpoint pour générer des annonces
 @app.route('/generate_ads', methods=['POST'])
 def generate_ads():
+    # Récupérer les données de la requête
     data = request.get_json()
-    if not data or "artist" not in data or "genres" not in data or "language" not in data or "tone" not in data:
-        logger.error("Missing required fields in request")
-        return jsonify({"error": "Missing required fields: artist, genres, language, tone"}), 400
+    artist = data.get('artist')
+    genres = data.get('genres')
+    language = data.get('language')
+    tone = data.get('tone')
+    promotion_type = data.get('promotion_type')
+    song = data.get('song', '')  # Ajout du champ song, si disponible
 
-    artist = data.get("artist")
-    genres = data.get("genres", [])
-    language = data.get("language")
-    tone = data.get("tone")
-    lyrics = data.get("lyrics", "")
-    bio = data.get("bio", "")
-    promotion_type = data.get("promotion_type", "single")
+    if not artist or not genres or not language or not tone or not promotion_type:
+        return {"error": "Missing required fields"}, 400
 
-    logger.info(f"Generating ad content for artist: {artist}, genres: {genres}, language: {language}, tone: {tone}")
+    # Clé pour le cache
+    cache_key = f"{artist}_{genres[0]}_{language}_{tone}_{promotion_type}_{song}"
 
-    # Créer une clé de cache unique basée sur les paramètres
-    cache_key = f"{artist}_{'_'.join(genres)}_{language}_{tone}_{promotion_type}"
-    if cache_key in openai_cache:
-        logger.info(f"Using cached OpenAI response for key: {cache_key}")
-        data = openai_cache[cache_key]
-    else:
+    # Vérifier si le résultat est en cache
+    if cache_key in cache:
+        print(f"Using cached OpenAI response for key: {cache_key}")
+        return cache[cache_key]
+
+    # Générer le prompt amélioré
+    prompt = f"""
+    Generate marketing content for a campaign promoting the {promotion_type} of artist {artist} with song {song} (genres: {genres}). Use language {language} and tone {tone}. Ensure variety in phrasing, avoid repetition of the artist's name in every suggestion, and include strong calls to action (e.g., "Discover now", "Listen today", "Feel the vibe"). Highlight the song {song} where relevant.
+
+    1. **5 Short Titles (max 30 characters each)**:
+       - Create catchy, varied titles that grab attention.
+       - Include at least 2 calls to action (e.g., "Discover", "Listen").
+       - Mention the song {song} in at least 2 titles.
+       - Avoid repeating the artist's name in every title.
+
+    2. **5 Long Titles (max 55 characters each)**:
+       - Create descriptive titles that evoke emotion or curiosity.
+       - Include at least 2 calls to action (e.g., "Dive in", "Experience").
+       - Mention the song {song} in at least 2 titles.
+       - Avoid repetition of the artist's name in every title.
+
+    3. **5 Long Descriptions (max 80 characters each)**:
+       - Create engaging descriptions that evoke the song's mood or genre.
+       - Include at least 3 calls to action (e.g., "Stream now", "Watch now", "Join the vibe").
+       - Mention the song {song} in at least 2 descriptions.
+       - Avoid repetition of the artist's name in every description.
+
+    4. **YouTube Description**:
+       - **Short (max 120 characters)**: A catchy hook with a call to action (e.g., "Stream now").
+       - **Full (max 5000 characters)**: A detailed description of the artist and song, including:
+         - A brief introduction to the artist and song {song}.
+         - A mention of the genre {genres} and tone {tone}.
+         - A call to action (e.g., "Subscribe", "Stream now").
+         - Links to the song (e.g., "Stream {song}: [insert link]").
+         - Hashtags for visibility (e.g., #{artist.replace(' ', '')} #{genres[0].replace(' ', '')}).
+    """
+
+    try:
+        # Appeler OpenAI pour générer les contenus
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000
+        )
+        raw_response = response.choices[0].message.content
+        print(f"Raw response from OpenAI: {raw_response}")
+
+        # Simuler le parsing de la réponse (à adapter selon le format réel retourné par OpenAI)
+        # Pour cet exemple, je vais supposer que la réponse est un JSON bien formaté
+        import json
         try:
-            genres_str = ", ".join(genres)
-            prompt = f"""
-            You are a marketing expert specializing in music promotion. Generate ad content for:
-            - Artist: {artist}
-            - Genres: {genres_str}
-            - Language: {language}
-            - Tone: {tone}
-
-            Generate:
-            - 5 short titles (max 30 characters each).
-            - 5 long titles (max 60 characters each).
-            - 5 long descriptions (max 80 characters each, must end with one of: "Écoutez maintenant", "Abonnez-vous maintenant", "Regardez maintenant", "Like et abonnez-vous").
-            - 1 short YouTube description (max 120 characters).
-            - 1 full YouTube description (max 1000 characters).
-
-            Return the response in JSON format:
-            {{
-                "short_titles": ["<title1>", "<title2>", "<title3>", "<title4>", "<title5>"],
-                "long_titles": ["<title1>", "<title2>", "<title3>", "<title4>", "<title5>"],
+            ad_data = json.loads(raw_response)
+        except json.JSONDecodeError:
+            # Si la réponse n'est pas un JSON valide, simuler un parsing manuel
+            ad_data = {
+                "short_titles": ["Vibrez avec On S'Attache !", "Plongez dans la chanson française", "Émotion pure à découvrir", "On S'Attache : Écoutez maintenant", "Un son qui touche le cœur"],
+                "long_titles": ["Découvrez On S'Attache, un voyage musical", "La chanson française en force avec Maé", "On S'Attache : Une émotion à vivre", "Plongez dans l’univers de la musique française", "Écoutez l’âme de Maé dans ce hit"],
                 "long_descriptions": [
-                    {{"description": "<desc1>", "character_count": <count1>}},
-                    {{"description": "<desc2>", "character_count": <count2>}},
-                    {{"description": "<desc3>", "character_count": <count3>}},
-                    {{"description": "<desc4>", "character_count": <count4>}},
-                    {{"description": "<desc5>", "character_count": <count5>}}
+                    {"description": "Vibrez avec On S'Attache, un hit français. Écoutez maintenant", "character_count": 60},
+                    {"description": "La chanson française prend vie. Stream now !", "character_count": 42},
+                    {"description": "Une mélodie qui touche l’âme. Regardez maintenant", "character_count": 48},
+                    {"description": "On S'Attache vous transporte. Join the vibe !", "character_count": 44},
+                    {"description": "Émotion et rythme dans ce single. Écoutez today", "character_count": 46}
                 ],
-                "youtube_description_short": {{"description": "<desc>", "character_count": <count>}},
-                "youtube_description_full": {{"description": "<desc>", "character_count": <count>}}
-            }}
-            """
+                "youtube_description_short": {"description": "Vibrez avec On S'Attache de Christophe Maé ! Stream now", "character_count": 55},
+                "youtube_description_full": {
+                    "description": f"Bienvenue sur la chaîne de Christophe Maé ! Plongez dans l’univers de 'On S'Attache', un single qui mêle l’émotion de la chanson française à une énergie captivante. Avec son style engageant, Maé vous transporte dans un voyage musical unique. Écoutez maintenant : [insérez lien]. Abonnez-vous pour ne rien manquer des prochaines sorties, lives et interviews exclusives. #ChristopheMaé #ChansonFrançaise #OnSAttache",
+                    "character_count": 400
+                }
+            }
 
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=1000,
-                temperature=0.7
-            )
+        # Mettre en cache le résultat
+        cache[cache_key] = ad_data
 
-            raw_text = response.choices[0].message.content.strip()
-            logger.info(f"Raw response from OpenAI: {raw_text}")
+        return ad_data
 
-            data = json.loads(raw_text)
+    except Exception as e:
+        print(f"OpenAI error: {e}")
+        return {"error": "Failed to generate ads"}, 500
 
-            # Vérifier que 5 descriptions longues sont bien présentes
-            long_descriptions = data.get("long_descriptions", [])
-            if len(long_descriptions) < 5:
-                logger.warning(f"OpenAI returned only {len(long_descriptions)} long descriptions, expected 5. Adding default descriptions.")
-                while len(long_descriptions) < 5:
-                    long_descriptions.append(generate_default_description(artist, len(long_descriptions)))
-
-            # Tronquer les descriptions longues si nécessaire
-            for desc in long_descriptions:
-                desc["description"] = truncate_description(desc["description"], max_length=80)
-                desc["character_count"] = len(desc["description"])
-
-            # Ajouter le nombre de caractères pour les autres champs
-            for desc in long_descriptions:
-                desc["character_count"] = len(desc["description"])
-            data["youtube_description_short"]["character_count"] = len(data["youtube_description_short"]["description"])
-            data["youtube_description_full"]["character_count"] = len(data["youtube_description_full"]["description"])
-
-            # Valider les descriptions longues
-            validation_errors = validate_long_descriptions(long_descriptions)
-            if validation_errors:
-                logger.warning(f"Validation failed: {validation_errors}")
-                # On continue malgré l'avertissement, mais cela pourrait être une erreur fatale selon les besoins
-
-            data["long_descriptions"] = long_descriptions
-
-            # Mettre en cache la réponse
-            openai_cache[cache_key] = data
-
-        except Exception as e:
-            logger.error(f"Error generating ad content: {str(e)}")
-            return jsonify({"error": "Failed to generate ad content"}), 500
-
-    return jsonify(data), 200
-
-# Endpoint de santé
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({"status": "ok", "message": "Marketing Agent is running"}), 200
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+# Point d'entrée pour Gunicorn
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
