@@ -1,15 +1,6 @@
-FROM python:3.9-slim
-
-# Installer les dépendances système nécessaires pour compiler certains packages
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+FROM python:3.9
 
 WORKDIR /app
-
-# Créer et activer un environnement virtuel
-RUN python -m venv /app/venv
-ENV PATH="/app/venv/bin:$PATH"
 
 # Mettre à jour pip pour éviter les problèmes d’installation
 RUN pip install --upgrade pip
