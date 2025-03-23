@@ -46,9 +46,9 @@
             position: relative;
         }
         .header-content img {
-            max-width: 250px; /* Ajuster la largeur pour correspondre à index.html */
-            width: 100%; /* Permet de conserver les proportions naturelles */
-            height: auto; /* Permet de conserver les proportions naturelles (ratio 2.32:1) */
+            max-width: 250px;
+            width: 100%;
+            height: auto;
             margin-bottom: 10px;
         }
         .header-content h1 {
@@ -81,7 +81,7 @@
             right: -30px;
         }
         .container {
-            max-width: 600px; /* Même largeur que dans index.html */
+            max-width: 1200px; /* Augmenter la largeur pour accueillir les éléments côte à côte */
             margin: 40px auto;
             padding: 20px;
         }
@@ -94,16 +94,16 @@
         }
         .result-section h2 {
             font-family: 'Quicksand', sans-serif;
-            font-size: 2rem; /* Augmenter la taille pour plus de proéminence */
-            font-weight: 700; /* Poids plus lourd pour une meilleure hiérarchie */
+            font-size: 2rem;
+            font-weight: 700;
             color: #000000;
             margin-bottom: 30px;
             text-align: center;
         }
         .section {
-            margin-bottom: 30px; /* Espacement entre les sections */
+            margin-bottom: 30px;
             border-radius: 5px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* Ombre subtile pour un effet "card-like" */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             background-color: white;
         }
         .section-header {
@@ -124,12 +124,28 @@
         }
         .section-content {
             display: none;
-            padding: 15px; /* Ajuster le padding pour une meilleure lisibilité */
+            padding: 15px;
             background-color: white;
             border-radius: 0 0 5px 5px;
         }
         .section-content.show {
             display: block;
+        }
+        .suggestions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 10px 0;
+        }
+        .suggestion-item {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .suggestion-item p {
+            margin: 0;
         }
         .copy-button {
             margin-left: 10px;
@@ -147,6 +163,10 @@
         }
         .copy-button:hover {
             background-color: #0BBF7A;
+        }
+        .copy-button.copied {
+            background-color: #28a745;
+            color: #fff;
         }
         pre {
             white-space: pre-wrap;
@@ -172,14 +192,56 @@
             text-decoration: underline;
         }
         img {
-            max-width: 120px;
+            max-width: 150px;
+            height: auto;
             border-radius: 5px;
             margin-top: 10px;
         }
         p {
             margin: 8px 0;
         }
+        .floating-back-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #0ED894;
+            color: #000000;
+            padding: 10px 20px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease;
+        }
+        .floating-back-btn:hover {
+            background-color: #0BBF7A;
+        }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.section-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    content.classList.toggle('show');
+                    header.textContent = content.classList.contains('show') ? '▼ ' + header.textContent.slice(2) : '▶ ' + header.textContent.slice(2);
+                });
+            });
+        });
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const button = event.target;
+                button.classList.add('copied');
+                button.textContent = '✔ Copié !';
+                setTimeout(() => {
+                    button.classList.remove('copied');
+                    button.textContent = 'Copier';
+                }, 2000);
+            });
+        }
+    </script>
 </head>
 <body>
     <header>
@@ -201,70 +263,73 @@
                     <p><strong>Style :</strong> {{ style }}</p>
                     <p><strong>Tendances :</strong> {{ analysis.trends | join(", ") }}</p>
                     <p><strong>Artistes similaires :</strong> {{ analysis.lookalike_artists | join(", ") }}</p>
-                    <p><strong>Image de l'artiste :</strong></p>
-                    <img src="{{ analysis.artist_image_url }}" alt="Image de l'artiste">
+                    <p><strong>Image de l’artiste :</strong></p>
+                    <img src="{{ analysis.artist_image_url }}" alt="Image de {{ artist }}" class="artist-image" onerror="this.src='https://via.placeholder.com/150?text=Image+Indisponible';">
                 </div>
             </div>
 
             <div class="section">
-                <div class="section-header">▼ Titres Courts</div>
+                <div class="section-header">▶ Titres Courts</div>
                 <div class="section-content">
-                    {% for title in short_titles %}
-                        <p>{{ title }} ({{ title | length }} / 30) <button class="copy-button" onclick="copyToClipboard('{{ title }}')">Copier</button></p>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-header">▼ Titres Longs</div>
-                <div class="section-content">
-                    {% for title in long_titles %}
-                        <p>{{ title }} ({{ title | length }} / 55) <button class="copy-button" onclick="copyToClipboard('{{ title }}')">Copier</button></p>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="section-header">▼ Descriptions Longues</div>
-                <div class="section-content">
-                    {% if long_descriptions %}
-                        {% for desc in long_descriptions %}
-                            <p>{{ desc.description }} ({{ desc.character_count }} / 80) <button class="copy-button" onclick="copyToClipboard('{{ desc.description }}')">Copier</button></p>
+                    <div class="suggestions-grid">
+                        {% for title in short_titles %}
+                            <div class="suggestion-item">
+                                <p>{{ title }} ({{ title | length }} / 30) <button class="copy-button" onclick="copyToClipboard('{{ title }}')">Copier</button></p>
+                            </div>
                         {% endfor %}
-                    {% else %}
-                        <p>Aucune description longue disponible.</p>
-                    {% endif %}
+                    </div>
                 </div>
             </div>
 
             <div class="section">
-                <div class="section-header">▼ Description YouTube</div>
+                <div class="section-header">▶ Titres Longs</div>
                 <div class="section-content">
-                    <p><strong>Courte :</strong> {{ youtube_description_short.description }} ({{ youtube_description_short.character_count }} / 120) <button class="copy-button" onclick="copyToClipboard('{{ youtube_description_short.description }}')">Copier</button></p>
-                    <p><strong>Complète :</strong></p>
-                    <pre>{{ youtube_description_full.description }} ({{ youtube_description_full.character_count }} / 5000)</pre>
-                    <button class="copy-button" onclick="copyToClipboard('{{ youtube_description_full.description }}')">Copier</button>
+                    <div class="suggestions-grid">
+                        {% for title in long_titles %}
+                            <div class="suggestion-item">
+                                <p>{{ title }} ({{ title | length }} / 55) <button class="copy-button" onclick="copyToClipboard('{{ title }}')">Copier</button></p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">▶ Descriptions Longues</div>
+                <div class="section-content">
+                    <div class="suggestions-grid">
+                        {% if long_descriptions %}
+                            {% for desc in long_descriptions %}
+                                <div class="suggestion-item">
+                                    <p>{{ desc.description }} ({{ desc.character_count }} / 80) <button class="copy-button" onclick="copyToClipboard('{{ desc.description }}')">Copier</button></p>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p>Aucune description longue disponible.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">▶ Description YouTube</div>
+                <div class="section-content">
+                    <div class="suggestions-grid">
+                        <div class="suggestion-item">
+                            <p><strong>Courte :</strong> {{ youtube_description_short.description }} ({{ youtube_description_short.character_count }} / 120) <button class="copy-button" onclick="copyToClipboard('{{ youtube_description_short.description }}')">Copier</button></p>
+                        </div>
+                        <div class="suggestion-item">
+                            <p><strong>Complète :</strong></p>
+                            <pre>{{ youtube_description_full.description }} ({{ youtube_description_full.character_count }} / 5000)</pre>
+                            <button class="copy-button" onclick="copyToClipboard('{{ youtube_description_full.description }}')">Copier</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <a href="/">Retour à l'accueil</a>
+            <a href="/" class="floating-back-btn">Retour</a>
         </div>
     </div>
-
-    <script>
-        document.querySelectorAll('.section-header').forEach(header => {
-            header.addEventListener('click', () => {
-                const content = header.nextElementSibling;
-                content.classList.toggle('show');
-                header.textContent = content.classList.contains('show') ? '▼ ' + header.textContent.slice(2) : '▶ ' + header.textContent.slice(2);
-            });
-        });
-
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Texte copié dans le presse-papiers !');
-            });
-        }
-    </script>
 </body>
 </html>
