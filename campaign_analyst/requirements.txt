@@ -7,3 +7,4 @@ serpapi==0.1.0
 openai==1.10.0
 musicbrainzngs==0.7.1
 cachetools==5.3.2
+google-api-python-client==2.149.0
