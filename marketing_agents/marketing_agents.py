@@ -36,10 +36,31 @@ def generate_prompt(data):
     bio_themes = data.get('bio_themes', 'émotion, créativité')
     target_audience = data.get('target_audience', 'tous publics')
 
+    # Déterminer les artistes similaires et tendances en fonction des genres
+    lookalike_artists = {
+        "rock": ["Nirvana", "Pearl Jam", "Soundgarden"],
+        "punk": ["Green Day", "The Offspring", "Blink-182"],
+        "grunge": ["Nirvana", "Alice in Chains", "Soundgarden"],
+        "pop": ["Coldplay", "Imagine Dragons", "Maroon 5"],
+        "metal": ["Metallica", "Rammstein", "Nightwish"],
+        "default": ["Artiste 1", "Artiste 2", "Artiste 3"]
+    }
+    trends = {
+        "rock": ["Rock Revival", "Live Energy", "Guitar Riffs"],
+        "punk": ["Punk Energy", "Rebellion Vibes", "Fast Beats"],
+        "grunge": ["Grunge Nostalgia", "Raw Emotion", "90s Revival"],
+        "pop": ["Pop Hits", "Melodic Vibes", "Chart Toppers"],
+        "metal": ["Metal Symphonique", "Dark Vibes", "Heavy Riffs"],
+        "default": ["Trend 1", "Trend 2", "Trend 3"]
+    }
+    primary_genre = genres[0].lower()
+    selected_lookalikes = lookalike_artists.get(primary_genre, lookalike_artists["default"])
+    selected_trends = trends.get(primary_genre, trends["default"])
+
     # Prompt structuré
     prompt = f"""
     📋 OBJECTIF
-    Générer un ensemble de contenus marketing pour promouvoir la {promotion_type} de l’artiste {artist}, avec un focus sur la chanson "{song}". Le contenu doit s’adapter au style musical ({', '.join(genres)}), au ton et aux thèmes de la biographie ({bio_summary}), et refléter les attentes du public cible ({target_audience}), en {language}. La réponse doit être un objet JSON structuré pour une intégration directe dans une page web.
+    Générer un ensemble de contenus marketing pour promouvoir la {promotion_type} de l’artiste {artist}, avec un focus sur la chanson "{song}". Le contenu doit s’adapter au style musical ({', '.join(genres)}), au ton et aux thèmes de la biographie ({bio_summary}), et refléter les attentes du public cible ({target_audience}), en {language}. La réponse doit être un objet JSON structuré pour une intégration directe dans une page web, avec un respect strict des limites de caractères.
 
     🔄 VARIABLES PRINCIPALES
     - {{promotion_type}} : "{promotion_type}"
@@ -57,7 +78,10 @@ def generate_prompt(data):
     🎸 ANALYSE CONTEXTUELLE
     1️⃣ Analyse des Genres Musicaux ({{genres}})
     - Identifier les caractéristiques et le vocabulaire spécifique :
-      - Rock/Metal : énergie, intensité, riffs, puissance, rébellion
+      - Rock : énergie, riffs, puissance, authenticité
+      - Punk : rébellion, énergie brute, urgence, attitude
+      - Grunge : émotion brute, nostalgie, intensité, authenticité
+      - Metal : intensité, riffs lourds, dramaturgie, puissance
       - Pop : mélodie, accessibilité, accrocheur, universalité, émotion
       - Électro/Dance : rythme, beats, immersion, modernité, euphorie
       - Rap/Hip-Hop : flow, authenticité, lyrics, urbanité, engagement
@@ -67,7 +91,7 @@ def generate_prompt(data):
       - R&B/Soul : sensualité, groove, émotion, chaleur
       - Reggae : détente, positivisme, spiritualité, vibration
     - Si plusieurs genres, prioriser le premier comme dominant.
-    - Adapter le ton recommandé par genre si {{tone}} n’est pas spécifié.
+    - Adapter le ton recommandé par genre si {{tone}} n’est pas spécifié (ex. énergique pour rock/punk).
 
     2️⃣ Analyse de la Biographie ({{bio_summary}})
     - Extraire les éléments clés :
@@ -75,7 +99,7 @@ def generate_prompt(data):
       - **Style musical** : Influences, description du style, particularités sonores.
       - **Thèmes narratifs** : Histoires personnelles, valeurs, messages récurrents.
     - Déterminer le ton dominant ({{bio_tone}}) : Formel, Décontracté, Poétique, Engagé, Humoristique.
-    - Identifier 2-3 thèmes principaux ({{bio_themes}}) : ex. liberté, innovation, tradition.
+    - Identifier 2-3 thèmes principaux ({{bio_themes}}) : ex. rébellion, authenticité, nostalgie.
 
     3️⃣ Fusion Genre-Biographie
     - Combiner les caractéristiques du genre avec les éléments biographiques :
@@ -88,42 +112,51 @@ def generate_prompt(data):
     Retourner un objet JSON avec les clés suivantes :
 
     1️⃣ "short_titles" : Liste de 5 titres courts (max 30 caractères)
-    - Utiliser le vocabulaire spécifique à {{genres}}.
-    - Intégrer 1 élément biographique ou thématique ({{bio_themes}}).
+    - Utiliser le vocabulaire spécifique à {{genres}} (ex. "riffs", "énergie brute" pour rock/punk/grunge).
+    - Intégrer 1 élément thématique ({{bio_themes}}) dans au moins 2 titres.
     - Inclure {{song}} dans au moins 2 titres.
-    - 2-3 appels à l’action adaptés au genre.
+    - 2-3 appels à l’action variés adaptés au genre (ex. "Rockez", "Plongez", "Vibrez").
     - Ton aligné sur {{bio_tone}} et intensité du genre.
     - Contenu en {{language}}.
+    - **Respect strict** : Aucun titre ne doit dépasser 30 caractères.
 
     2️⃣ "long_titles" : Liste de 5 titres longs (max 55 caractères)
     - Combiner élément accrocheur (genre), descriptif (bio), et appel à l’action.
     - Mentionner {{song}} dans 2 titres, {{artist}} dans 1-2 titres.
-    - Référencer {{genres}} via vocabulaire ou ambiance.
+    - Référencer {{genres}} via vocabulaire ou ambiance (ex. "riffs percutants").
     - Intégrer un thème de {{bio_themes}} dans au moins 2 titres.
     - Adapter le ton à {{bio_tone}} avec nuances du genre.
     - Contenu en {{language}}.
+    - **Respect strict** : Aucun titre ne doit dépasser 55 caractères.
 
     3️⃣ "long_descriptions" : Liste de 5 objets avec "description" (max 80 caractères) et "character_count"
     - Structurer : accroche (genre) + contexte (bio) + appel à l’action.
-    - Mentionner {{song}} dans 2 descriptions, {{artist}} dans 2 max.
+    - Mentionner {{song}} in 2 descriptions, {{artist}} in 2 max.
     - Intégrer {{bio_themes}} et vocabulaire de {{genres}}.
-    - Inclure 3 appels à l’action variés.
+    - Inclure 3 appels à l’action variés (ex. "Plongez", "Vibrez", "Découvrez").
     - Aligner le style sur {{bio_tone}} et l’intensité du genre.
     - Contenu en {{language}}.
+    - **Respect strict** : Aucune description ne doit dépasser 80 caractères.
 
     4️⃣ "youtube_description_short" : Objet avec "description" (max 120 caractères) et "character_count"
     - Créer une description concise pour YouTube, adaptée à {{genres}} et {{bio_tone}}.
-    - Inclure un appel à l’action.
+    - Mentionner {{song}} et inclure un appel à l’action.
+    - **Respect strict** : Ne pas dépasser 120 caractères.
 
     5️⃣ "youtube_description_full" : Objet avec "description" (max 5000 caractères) et "character_count"
-    - Structurer : Introduction (contexte bio), Corps (description de la sortie), Conclusion (invitation).
+    - Structurer :
+      - Introduction : Contexte biographique ({{bio_summary}}). Il faut un texte mélant biographie et promotion du single.
+      - Corps : Description de la sortie ({{song}}, {{promotion_type}}, lien avec {{genres}} et {{bio_themes}}).
+      - Conclusion : Invitation à écouter (inclure {{song_link}}) et hashtags adaptés à {{genres}}.
     - Intégrer {{bio_themes}}, {{genres}}, et un ton aligné sur {{bio_tone}}.
-    - Inclure {{song_link}} et des hashtags adaptés à {{genres}}.
+    - Ne pas inclure les paroles de la chanson.
+    - Inclure des placeholders pour les liens et crédits (ex. "collez votre smartlink").
+    - **Respect strict** : Ne pas dépasser 5000 caractères.
 
     6️⃣ "analysis" : Objet avec :
-      - "trends" : Liste de 3 tendances liées à {{genres}} (ex. ["Metal Symphonique", "Dark Vibes"]).
-      - "lookalike_artists" : Liste de 3 artistes similaires (ex. ["Rammstein", "Nightwish", "Lacuna Coil"]).
-      - "artist_image_url" : URL d’image fictive (ex. "https://example.com/artist.jpg").
+      - "trends" : Liste de 3 tendances liées à {{genres}}.
+      - "lookalike_artists" : Liste de 3 artistes similaires mais distincts.
+      - "artist_image_url" : URL fictive (ex. "https://example.com/{artist.lower().replace(' ', '-')}.jpg").
 
     **Format de sortie** :
     {{
@@ -139,9 +172,9 @@ def generate_prompt(data):
       "youtube_description_short": {{"description": "desc", "character_count": 41}},
       "youtube_description_full": {{"description": "desc", "character_count": 200}},
       "analysis": {{
-        "trends": ["trend1", "trend2", "trend3"],
-        "lookalike_artists": ["artist1", "artist2", "artist3"],
-        "artist_image_url": "https://example.com/artist.jpg"
+        "trends": {json.dumps(selected_trends)},
+        "lookalike_artists": {json.dumps(selected_lookalikes)},
+        "artist_image_url": "https://example.com/{artist.lower().replace(' ', '-')}.jpg"
       }}
     }}
     """
