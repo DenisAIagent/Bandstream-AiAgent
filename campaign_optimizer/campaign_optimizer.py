@@ -1,11 +1,11 @@
 from flask import Flask, request, jsonify
-import openai
 import os
 from dotenv import load_dotenv
-from cachetools import TTLCache
 import logging
-import json
-import re
+import aiohttp
+import asyncio
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 app = Flask(__name__)
 
@@ -15,94 +15,143 @@ logger = logging.getLogger(__name__)
 
 # Chargement des variables d'environnement
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
-if not openai.api_key:
-    logger.critical("OPENAI_API_KEY manquant")
-    raise ValueError("OPENAI_API_KEY manquant")
+youtube_api_key = os.getenv("YOUTUBE_API_KEY")
 
-# Cache avec TTL de 24h
-cache = TTLCache(maxsize=100, ttl=86400)
+if not youtube_api_key:
+    logger.critical("YOUTUBE_API_KEY manquant")
+    raise ValueError("YOUTUBE_API_KEY manquant")
 
-def generate_prompt(data):
-    # Extraction et validation des données
-    artist = data.get('artist', 'Artiste Inconnu')
-    song = data.get('song', '')
-    genres = data.get('genres', ['rock']) if isinstance(data.get('genres'), list) else [data.get('genres', 'rock')]
-    language = data.get('language', 'français')
-    tone = data.get('tone', 'authentique')
-    promotion_type = data.get('promotion_type', 'sortie')
-    song_link = data.get('song_link', '[insert link]')
-    bio_summary = data.get('bio', f"Artiste passionné par {genres[0]} avec une approche unique.")
-    bio_tone = data.get('bio_tone', 'authentique')
-    bio_themes = data.get('bio_themes', 'émotion, créativité')
-    target_audience = data.get('target_audience', 'tous publics')
-    announcement_style = data.get('announcement_style', 'Sérieux')  # Nouvel élément pour le style des annonces
+# Initialisation de l'API YouTube
+youtube = build('youtube', 'v3', developerKey=youtube_api_key)
 
-    # Déterminer les artistes similaires et tendances en fonction des genres
-    lookalike_artists = {
-        "rock": ["Nirvana", "Pearl Jam", "Soundgarden"],
-        "punk": ["Green Day", "The Offspring", "Blink-182"],
-        "grunge": ["Nirvana", "Alice in Chains", "Soundgarden"],
-        "pop": ["Coldplay", "Imagine Dragons", "Maroon 5"],
-        "metal": ["Metallica", "Rammstein", "Nightwish"],
-        "default": ["Artiste 1", "Artiste 2", "Artiste 3"]
-    }
-    trends = {
-        "rock": ["best rock song 2025", "best playlist rock 2025", "top grunge bands 2025"],
-        "punk": ["best punk song 2025", "top punk bands 2025", "punk revival 2025"],
-        "grunge": ["best grunge song 2025", "grunge revival 2025", "top grunge bands 2025"],
-        "pop": ["best pop song 2025", "top pop hits 2025", "pop chart toppers 2025"],
-        "metal": ["best metal song 2025", "top metal bands 2025", "metal symphonique 2025"],
-        "default": ["Trend 1", "Trend 2", "Trend 3"]
-    }
-    primary_genre = genres[0].lower()
-    selected_lookalikes = lookalike_artists.get(primary_genre, lookalike_artists["default"])
-    selected_trends = trends.get(primary_genre, trends["default"])
+async def fetch_data(session, url, data, retries=5):
+    for attempt in range(retries):
+        try:
+            async with session.post(url, json=data) as response:
+                response.raise_for_status()
+                return await response.json()
+        except Exception as e:
+            logger.warning(f"Attempt {attempt + 1}/{retries} failed for {url}: {str(e)}")
+            if attempt + 1 == retries:
+                raise Exception(f"Failed to call {url} after {retries} attempts: {str(e)}")
+            await asyncio.sleep(2 ** attempt)
 
-    # Nouveau prompt amélioré incluant la recherche internet et le style des annonces
-    prompt = f"""
-OBJECTIF :
-Générer du contenu marketing pour promouvoir la {promotion_type} de l'artiste {artist} autour de la chanson "{song}". Le contenu doit être rédigé en {language} et refléter l'ambiance et le style de {genres[0]} avec un ton {bio_tone}. La réponse devra être un objet JSON structuré, prêt à intégrer dans une page web, en respectant strictement les limites de caractères indiquées. Utilisez toute la puissance de GPT-4o pour la rédaction et, si nécessaire, effectuez des recherches sur internet afin d'enrichir les données et compléter les éléments manquants ou obsolètes.
+async def fetch_analysis_data(session, artist, song):
+    try:
+        data = {'artist': artist, 'song': song}
+        return await fetch_data(session, "https://analyst-production.up.railway.app/analyze", data)
+    except Exception as e:
+        logger.error(f"Error fetching analysis data: {str(e)}")
+        # Fallback en cas d'erreur
+        return {
+            'artist': artist,
+            'song': song,
+            'styles': ['rock'],  # Valeur par défaut
+            'artist_image_url': None,
+            'lookalike_artists': [],
+            'trends': []
+        }
 
-VARIABLES :
-- promotion_type : "{promotion_type}"
-- artiste : "{artist}"
-- chanson : "{song}"
-- genres : "{', '.join(genres)}"
-- langue : "{language}"
-- ton général : "{tone}"
-- style des annonces : "{announcement_style}" (Engageant = Fomo et descriptif, Poétique = envolée lyrique et honirique, Humoristique = avec une tendance à l'humour et sarcasme, Sérieux = purement descriptif)
-- lien chanson : "{song_link}"
-- biographie : "{bio_summary}" (thèmes : {bio_themes})
-- public cible : "{target_audience}"
+def fetch_youtube_data(genre):
+    try:
+        # Générer des mots-clés "long tail" basés sur le genre
+        long_tail_keywords = [
+            f"best {genre} song 2025",
+            f"best playlist {genre} 2025",
+            f"top {genre} bands 2025"
+        ]
 
-INSTRUCTIONS :
+        # Recherche YouTube pour identifier les artistes similaires
+        search_query = f"{long_tail_keywords[0]}"
+        request = youtube.search().list(
+            part="snippet",
+            q=search_query,
+            type="video",
+            maxResults=5,
+            order="relevance"
+        )
+        response = request.execute()
 
-1. Adaptez l'ensemble des contenus (titres, descriptions, etc.) au style des annonces spécifié. Veuillez vous assurer que le ton global reflète ce style :
-   - Engageant : induire un sentiment d'urgence (FOMO) et être descriptif.
-   - Poétique : adopter une envolée lyrique et honirique.
-   - Humoristique : intégrer de l'humour et du sarcasme.
-   - Sérieux : rester purement descriptif.
+        # Extraire les artistes similaires à partir des résultats
+        lookalike_artists = set()
+        for item in response.get('items', []):
+            title = item['snippet']['title']
+            description = item['snippet']['description']
+            # Recherche simple d'artistes dans le titre ou la description
+            for artist in ["Nirvana", "Pearl Jam", "Soundgarden", "Green Day", "The Offspring", "Blink-182", "Coldplay", "Imagine Dragons", "Maroon 5", "Metallica", "Rammstein", "Nightwish"]:
+                if artist.lower() in title.lower() or artist.lower() in description.lower():
+                    lookalike_artists.add(artist)
+                    if len(lookalike_artists) >= 3:
+                        break
 
-2. TITRES COURTS
-   - Générer 5 titres courts, chacun ne dépassant pas 30 caractères.
-   - Exemple : "Riffs & Révolte", "Énergie {song}", "Vibrez Ensemble".
-   - Au moins 2 titres doivent mentionner la chanson "{song}".
-   - Utiliser le vocabulaire spécifique à {genres[0]} et intégrer un élément thématique issu de {bio_themes}.
+        # Si moins de 3 artistes trouvés, utiliser une liste par défaut
+        if len(lookalike_artists) < 3:
+            lookalike_artists = ["Nirvana", "Pearl Jam", "Soundgarden"]
 
-3. TITRES LONGS
-   - Générer 5 titres longs, chacun ne dépassant pas 55 caractères.
-   - Exemple : "Découvrez {song} par {artist}", "Plongez dans l'univers {genres[0]}".
-   - Au moins 2 titres doivent mentionner la chanson "{song}" et 1 titre doit mentionner l'artiste "{artist}".
-   - Incorporer des éléments descriptifs en lien avec la biographie.
+        return list(lookalike_artists)[:3], long_tail_keywords
 
-4. DESCRIPTIONS LONGUES
-   - Créer 5 descriptions, chacune ne dépassant pas 80 caractères.
-   - Exemple : "Vibrez avec {song} – énergie et passion en live !".
-   - Au moins 2 descriptions doivent mentionner la chanson "{song}" et 2 l'artiste "{artist}".
-   - Varier les formulations et éviter les phrases génériques.
+    except HttpError as e:
+        logger.error(f"Erreur lors de la recherche YouTube : {str(e)}")
+        # Fallback en cas d'erreur (ex. quota dépassé)
+        return ["Nirvana", "Pearl Jam", "Soundgarden"], [f"best {genre} song 2025", f"best playlist {genre} 2025", f"top {genre} bands 2025"]
 
-5. DESCRIPTION YOUTUBE COURTE
-   - Générer une description concise (max 120 caractères).
-   - Exemple : "Découvrez {song} – un mix explosif, à écouter sans modération !"
-   - Inclure un appel à
+@app.route('/optimize', methods=['POST'])
+async def optimize_campaign():
+    try:
+        data = request.get_json()
+        if not data:
+            logger.error("Aucune donnée JSON fournie")
+            return jsonify({"error": "Aucune donnée fournie"}), 400
+
+        artist = data.get('artist', 'Artiste Inconnu')
+        song = data.get('song', '')
+        genres = data.get('genres', ['rock']) if isinstance(data.get('genres'), list) else [data.get('genres', 'rock')]
+
+        logger.info(f"Optimizing campaign for artist: {artist}, song: {song}")
+
+        # Récupérer les données d'analyse
+        async with aiohttp.ClientSession() as session:
+            analysis_data = await fetch_analysis_data(session, artist, song)
+
+        logger.info(f"Successfully fetched data from https://analyst-production.up.railway.app/analyze: {analysis_data}")
+
+        # Vérifier et corriger les styles si incorrects
+        analysis_styles = analysis_data.get('styles', genres)
+        if set(analysis_styles).isdisjoint(set(genres)):
+            logger.warning(f"Styles incorrects dans analysis_data ({analysis_styles}), utilisation des genres fournis ({genres})")
+            analysis_styles = genres
+
+        # Récupérer les tendances et artistes similaires via YouTube
+        lookalike_artists, trends = fetch_youtube_data(genres[0])
+
+        # Mettre à jour les données d'analyse avec les informations correctes
+        analysis_data['styles'] = genres
+        analysis_data['trends'] = trends
+        analysis_data['lookalike_artists'] = lookalike_artists
+
+        # Définir la stratégie d'optimisation
+        strategy = {
+            "target_audience": f"Fans of {', '.join(lookalike_artists)}",
+            "channels": ["Spotify", "YouTube", "Instagram"],
+            "budget_allocation": {
+                "Spotify": 0.4,
+                "YouTube": 0.4,
+                "Instagram": 0.2
+            }
+        }
+
+        # Réponse finale
+        response = {
+            "analysis": analysis_data,
+            "strategy": strategy
+        }
+
+        logger.info(f"Returning optimized campaign: {response}")
+        return jsonify(response)
+
+    except Exception as e:
+        logger.error(f"Error in optimize_campaign: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=8080)
