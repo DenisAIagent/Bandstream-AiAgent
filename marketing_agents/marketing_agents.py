@@ -1,4 +1,3 @@
-```python
 from flask import Flask, request, jsonify
 import openai
 import os
@@ -37,7 +36,7 @@ def generate_prompt(data):
     bio_tone = data.get('bio_tone', 'authentique')
     bio_themes = data.get('bio_themes', 'émotion, créativité')
     target_audience = data.get('target_audience', 'tous publics')
-    announcement_style = data.get('announcement_style', 'Sérieux')  # Nouvel élément pour le style des annonces
+    announcement_style = data.get('announcement_style', 'Sérieux')  # Style des annonces
 
     # Déterminer les artistes similaires et tendances en fonction des genres
     lookalike_artists = {
@@ -116,9 +115,9 @@ INSTRUCTIONS :
    - Ne pas inclure les paroles de la chanson.
 
 7. ANALYSE
-   - "trends" : Fournir une liste de 3 mots-clés long tail pour {genres[0]} en 2025, par exemple ["best {genres[0]} song 2025", "top {genres[0]} hits 2025", "influence {genres[0]} 2025"].
-   - "lookalike_artists" : Fournir une liste de 3 artistes similaires (exemple pour metal : ["Metallica", "Rammstein", "Nightwish"]).
-   - "artist_image_url" : Générer une URL fictive au format "https://example.com/{artist.lower().replace(' ', '-')}.jpg".
+   - "trends" : Fournir une liste de 5 mots-clés long tail pour {genres[0]} en 2025, par exemple ["best {genres[0]} song 2025", "top {genres[0]} hits 2025", "influence {genres[0]} 2025"].
+   - "lookalike_artists" : Fournir une liste de 15 artistes similaires (exemple pour metal : ["Metallica", "Rammstein", "Nightwish"]).
+   - "artist_image_url" : rechercher une image de l'artiste au format "https://example.com/{artist.lower().replace(' ', '-')}.jpg".
 
 FORMAT DE SORTIE ATTENDU (objet JSON) :
 {{
@@ -227,6 +226,3 @@ def generate_ads():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
-```
-
-Veillez à déployer ce fichier sans aucun texte supplémentaire (par exemple, pas de commentaires ou de lignes non encadrées en dehors des chaînes de caractères) afin d'éviter les erreurs de syntaxe.
