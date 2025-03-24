@@ -47,11 +47,11 @@ def generate_prompt(data):
         "default": ["Artiste 1", "Artiste 2", "Artiste 3"]
     }
     trends = {
-        "rock": ["Rock Revival", "Punk Energy", "Grunge Nostalgia"],
-        "punk": ["Punk Energy", "Rebellion Vibes", "Fast Beats"],
-        "grunge": ["Grunge Nostalgia", "Raw Emotion", "90s Revival"],
-        "pop": ["Pop Hits", "Melodic Vibes", "Chart Toppers"],
-        "metal": ["Metal Symphonique", "Dark Vibes", "Heavy Riffs"],
+        "rock": ["best rock song 2025", "best playlist rock 2025", "top grunge bands 2025"],
+        "punk": ["best punk song 2025", "top punk bands 2025", "punk revival 2025"],
+        "grunge": ["best grunge song 2025", "grunge revival 2025", "top grunge bands 2025"],
+        "pop": ["best pop song 2025", "top pop hits 2025", "pop chart toppers 2025"],
+        "metal": ["best metal song 2025", "top metal bands 2025", "metal symphonique 2025"],
         "default": ["Trend 1", "Trend 2", "Trend 3"]
     }
     primary_genre = genres[0].lower()
@@ -61,7 +61,7 @@ def generate_prompt(data):
     # Prompt structuré pour GPT-4o
     prompt = f"""
     📋 OBJECTIF
-    Générer un ensemble de contenus marketing pour promouvoir la {promotion_type} de l’artiste {artist}, avec un focus sur la chanson "{song}". Le contenu doit s’adapter au style musical ({', '.join(genres)}), au ton et aux thèmes de la biographie ({bio_summary}), et refléter les attentes du public cible ({target_audience}), en {language}. La réponse doit être un objet JSON structuré pour une intégration directe dans une page web, avec un respect strict des limites de caractères.
+    Générer un ensemble de contenus marketing pour promouvoir la {promotion_type} de l’artiste {artist}, avec un focus sur la chanson "{song}". Le contenu doit s’adapter au style musical ({', '.join(genres)}), au ton et aux thèmes de la biographie ({bio_summary}), et refléter les attentes du public cible ({target_audience}), en {language}. La réponse doit être un objet JSON structuré pour une intégration directe dans une page web, avec un respect strict des limites de caractères. Les contenus doivent être uniques, percutants, et personnalisés, en évitant les phrases génériques recyclées.
 
     🔄 VARIABLES PRINCIPALES
     - {{promotion_type}} : "{promotion_type}"
@@ -102,7 +102,11 @@ def generate_prompt(data):
     - Déterminer le ton dominant ({{bio_tone}}) : Formel, Décontracté, Poétique, Engagé, Humoristique.
     - Identifier 2-3 thèmes principaux ({{bio_themes}}) : ex. rébellion, authenticité, nostalgie.
 
-    3️⃣ Fusion Genre-Biographie
+    3️⃣ Recherche de Tendances et Artistes Similaires
+    - Générer 3 mots-clés "long tail" liés à {{genres}} et à l’année 2025 (ex. "best rock song 2025", "best playlist rock 2025", "top grunge bands 2025").
+    - Simuler une recherche YouTube avec ces mots-clés pour identifier 3 artistes similaires mais distincts (ex. pour "best rock song 2025", on pourrait trouver "Nirvana", "Pearl Jam", "Soundgarden").
+
+    4️⃣ Fusion Genre-Biographie
     - Combiner les caractéristiques du genre avec les éléments biographiques :
       - Prioriser {{genres}} pour le cadre général (vocabulaire, intensité).
       - Ajuster avec {{bio_tone}} pour le style d’écriture.
@@ -120,6 +124,7 @@ def generate_prompt(data):
     - Ton aligné sur {{bio_tone}} et intensité du genre.
     - Contenu en {{language}}.
     - **Respect strict** : Aucun titre ne doit dépasser 30 caractères.
+    - **Unicité** : Éviter les phrases génériques (ex. "Plongez dans l'émotion") et privilégier des formulations percutantes.
 
     2️⃣ "long_titles" : Liste de 5 titres longs (max 55 caractères)
     - Combiner élément accrocheur (genre), descriptif (bio), et appel à l’action.
@@ -129,6 +134,7 @@ def generate_prompt(data):
     - Adapter le ton à {{bio_tone}} avec nuances du genre.
     - Contenu en {{language}}.
     - **Respect strict** : Aucun titre ne doit dépasser 55 caractères.
+    - **Unicité** : Éviter les répétitions (ex. ne pas répéter "Foo Fighters" dans tous les titres).
 
     3️⃣ "long_descriptions" : Liste de 5 objets avec "description" (max 80 caractères) et "character_count"
     - Structurer : accroche (genre) + contexte (bio) + appel à l’action.
@@ -138,25 +144,28 @@ def generate_prompt(data):
     - Aligner le style sur {{bio_tone}} et l’intensité du genre.
     - Contenu en {{language}}.
     - **Respect strict** : Aucune description ne doit dépasser 80 caractères.
+    - **Unicité** : Éviter les phrases génériques (ex. "Plongez dans l'énergie") et varier les formulations.
 
     4️⃣ "youtube_description_short" : Objet avec "description" (max 120 caractères) et "character_count"
     - Créer une description concise pour YouTube, adaptée à {{genres}} et {{bio_tone}}.
     - Mentionner {{song}} et inclure un appel à l’action.
     - **Respect strict** : Ne pas dépasser 120 caractères.
+    - **Unicité** : Éviter les phrases génériques (ex. "Plongez dans le clip rock").
 
     5️⃣ "youtube_description_full" : Objet avec "description" (max 5000 caractères) et "character_count"
     - Structurer :
-      - Introduction : Contexte biographique ({{bio_summary}}). Il faut rédiger un texte mélant la bio, les paroles, l'histoire du groupe et éléments de promotion.
+      - Introduction : Contexte biographique ({{bio_summary}}).
       - Corps : Description de la sortie ({{song}}, {{promotion_type}}, lien avec {{genres}} et {{bio_themes}}).
       - Conclusion : Invitation à écouter (inclure {{song_link}}) et hashtags adaptés à {{genres}}.
     - Intégrer {{bio_themes}}, {{genres}}, et un ton aligné sur {{bio_tone}}.
     - Ne pas inclure les paroles de la chanson.
     - Inclure des placeholders pour les liens et crédits (ex. "collez votre smartlink").
     - **Respect strict** : Ne pas dépasser 5000 caractères.
+    - **Unicité** : Éviter les phrases génériques recyclées (ex. "Avec son style unique, Foo Fighters rencontre un succès...").
 
     6️⃣ "analysis" : Objet avec :
-      - "trends" : Liste de 3 tendances liées à {{genres}}.
-      - "lookalike_artists" : Liste de 3 artistes similaires mais distincts.
+      - "trends" : Liste de 3 mots-clés "long tail" liés à {{genres}} et 2025 (ex. ["best rock song 2025", "best playlist rock 2025", "top grunge bands 2025"]).
+      - "lookalike_artists" : Liste de 3 artistes similaires mais distincts, identifiés via la recherche simulée (ex. ["Nirvana", "Pearl Jam", "Soundgarden"]).
       - "artist_image_url" : URL fictive (ex. "https://example.com/{artist.lower().replace(' ', '-')}.jpg").
 
     **Format de sortie** :
@@ -216,7 +225,7 @@ def generate_ads():
 
         # Appel à l'API OpenAI avec GPT-4o
         response = openai.ChatCompletion.create(
-            model="gpt-4o",  # Utilisation de GPT-4o
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=2000,
             temperature=0.7
