@@ -59,10 +59,10 @@ def generate_prompt(data):
     selected_lookalikes = lookalike_artists.get(primary_genre, lookalike_artists["default"])
     selected_trends = trends.get(primary_genre, trends["default"])
 
-    # Nouveau prompt amélioré avec exemples inspirés de vos annonces
+    # Nouveau prompt amélioré incluant la recherche internet et le style des annonces
     prompt = f"""
 OBJECTIF :
-Générer du contenu marketing pour promouvoir la {promotion_type} de l'artiste {artist} autour de la chanson "{song}". Le contenu doit être rédigé en {language} et refléter l'ambiance et le style de {genres[0]} avec un ton {bio_tone}. La réponse devra être un objet JSON structuré, prêt à intégrer dans une page web, en respectant strictement les limites de caractères indiquées. Utilisez toute la puissance de GPT-4o et, si nécessaire, effectuez des recherches sur internet pour enrichir les données.
+Générer du contenu marketing pour promouvoir la {promotion_type} de l'artiste {artist} autour de la chanson "{song}". Le contenu doit être rédigé en {language} et refléter l'ambiance et le style de {genres[0]} avec un ton {bio_tone}. La réponse devra être un objet JSON structuré, prêt à intégrer dans une page web, en respectant strictement les limites de caractères indiquées. Utilisez toute la puissance de GPT-4o pour la rédaction et, si nécessaire, effectuez des recherches sur internet afin d'enrichir les données et compléter les éléments manquants ou obsolètes.
 
 VARIABLES :
 - promotion_type : "{promotion_type}"
@@ -71,45 +71,50 @@ VARIABLES :
 - genres : "{', '.join(genres)}"
 - langue : "{language}"
 - ton général : "{tone}"
-- style des annonces : "{announcement_style}" (Engageant = Fomo et descriptif, Poétique = envolée lyrique et honirique, Humoristique = humour et sarcasme, Sérieux = purement descriptif)
+- style des annonces : "{announcement_style}" (Engageant = Fomo et descriptif, Poétique = envolée lyrique et honirique, Humoristique = avec une tendance à l'humour et sarcasme, Sérieux = purement descriptif)
 - lien chanson : "{song_link}"
 - biographie : "{bio_summary}" (thèmes : {bio_themes})
 - public cible : "{target_audience}"
 
 INSTRUCTIONS :
 
-1. Adaptez l'ensemble des contenus (titres, descriptions, etc.) au style des annonces spécifié.
+1. Adaptez l'ensemble des contenus (titres, descriptions, etc.) au style des annonces spécifié. Veuillez vous assurer que le ton global reflète ce style :
+   - Engageant : induire un sentiment d'urgence (FOMO) et être descriptif.
+   - Poétique : adopter une envolée lyrique et honirique.
+   - Humoristique : intégrer de l'humour et du sarcasme.
+   - Sérieux : rester purement descriptif.
 
-2. TITRES COURTS (max 30 caractères)  
-   Exemples à suivre :  
-   - "Nouveau Clip Jeanne Cherhal"  
-   - "Jeanne Cherhal avec Dedienne"  
-   - "Jeanne Cherhal présente Jean"  
-   - "Jeanne Cherhal duo complice"  
-   - "Jeanne Cherhal et Jean"
+2. TITRES COURTS
+   - Générer 5 titres courts, chacun ne dépassant pas 30 caractères.
+   - Exemple : "Riffs & Révolte", "Énergie {song}", "Vibrez Ensemble".
+   - Au moins 2 titres doivent mentionner la chanson "{song}".
+   - Utiliser le vocabulaire spécifique à {genres[0]} et intégrer un élément thématique issu de {bio_themes}.
 
-3. TITRES LONGS (max 90 caractères)  
-   Exemples à suivre :  
-   - "Nouveau Clip Jeanne Cherhal avec l’irrésistible Vincent Dedienne à ses côtés dans Jean"  
-   - "Jeanne Cherhal dévoile Jean accompagnée par Vincent Dedienne un clip drôle et charmant"  
-   - "Jeanne Cherhal et Vincent Dedienne ensemble dans Jean un moment pétillant à découvrir"  
-   - "Jean par Jeanne Cherhal avec Vincent Dedienne une complicité qui fait plaisir à voir"  
-   - "Découvrez Jean, le nouveau clip joyeux de Jeanne Cherhal avec le brillant Vincent Dedienne"
+3. TITRES LONGS
+   - Générer 5 titres longs, chacun ne dépassant pas 55 caractères.
+   - Exemple : "Découvrez {song} par {artist}", "Plongez dans l'univers {genres[0]}".
+   - Au moins 2 titres doivent mentionner la chanson "{song}" et 1 titre doit mentionner l'artiste "{artist}".
+   - Incorporer des éléments descriptifs en lien avec la biographie.
 
-4. DESCRIPTIONS AVEC CALL TO ACTION  
-   Exemples à suivre :  
-   - "Qui est Jean Jeanne Cherhal répond avec humour aux côtés du talentueux Vincent Dedienne"  
-   - "Jeanne Cherhal réalise son rêve avec Vincent Dedienne dans son nouveau clip Jean"  
-   - "Le nouveau clip Jean de Jeanne Cherhal, complice et drôle avec Vincent Dedienne"  
-   - "Découvrez la belle complicité entre Jeanne Cherhal et Vincent Dedienne dans le clip Jean"  
-   - "À découvrir dès maintenant, le clip de Jean par Jeanne Cherhal et Vincent Dedienne"
+4. DESCRIPTIONS LONGUES
+   - Créer 5 descriptions, chacune ne dépassant pas 80 caractères.
+   - Exemple : "Vibrez avec {song} – énergie et passion en live !".
+   - Au moins 2 descriptions doivent mentionner la chanson "{song}" et 2 l'artiste "{artist}".
+   - Varier les formulations et éviter les phrases génériques.
 
-5. DESCRIPTION YOUTUBE  
-   La description YouTube doit être structurée en deux parties :  
-   - **Courte** (max 120 caractères) : Exemple, "Plongez dans le chaos musical avec Silver Dust !"  
-   - **Complète** (max 5000 caractères) : Inclure une introduction (biographie), le corps (détails sur la sortie, lien avec le style et les thèmes, éventuellement les paroles si c'est souhaité), et une conclusion avec appel à l'action, crédits et informations complémentaires.
+5. DESCRIPTION YOUTUBE COURTE
+   - Générer une description concise (max 120 caractères).
+   - Exemple : "Découvrez {song} – un mix explosif, à écouter sans modération !"
+   - Inclure un appel à l'action.
 
-6. ANALYSE  
+6. DESCRIPTION YOUTUBE LONGUE
+   - Fournir une description détaillée (max 5000 caractères) structurée en 3 parties :
+     • Introduction : Présenter la biographie ("{bio_summary}").
+     • Corps : Décrire la sortie de "{song}" et son lien avec {genres[0]} et {bio_themes}, en mentionnant la {promotion_type}.
+     • Conclusion : Inclure un appel à écouter avec le lien "{song_link}" et ajouter des hashtags pertinents.
+   - Ne pas inclure les paroles de la chanson.
+
+7. ANALYSE
    - "trends" : Fournir une liste de 3 mots-clés long tail pour {genres[0]} en 2025, par exemple ["best {genres[0]} song 2025", "top {genres[0]} hits 2025", "influence {genres[0]} 2025"].
    - "lookalike_artists" : Fournir une liste de 3 artistes similaires (exemple pour metal : ["Metallica", "Rammstein", "Nightwish"]).
    - "artist_image_url" : Générer une URL fictive au format "https://example.com/{artist.lower().replace(' ', '-')}.jpg".
