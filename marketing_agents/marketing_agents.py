@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from cachetools import TTLCache
 import logging
 import json
+import re
 
 app = Flask(__name__)
 
@@ -31,7 +32,7 @@ def generate_prompt(data):
     tone = data.get('tone', 'authentique')
     promotion_type = data.get('promotion_type', 'sortie')
     song_link = data.get('song_link', '[insert link]')
-    bio_summary = data.get('bio_summary', f"Artiste passionné par {genres[0]} avec une approche unique.")
+    bio_summary = data.get('bio', f"Artiste passionné par {genres[0]} avec une approche unique.")
     bio_tone = data.get('bio_tone', 'authentique')
     bio_themes = data.get('bio_themes', 'émotion, créativité')
     target_audience = data.get('target_audience', 'tous publics')
@@ -46,7 +47,7 @@ def generate_prompt(data):
         "default": ["Artiste 1", "Artiste 2", "Artiste 3"]
     }
     trends = {
-        "rock": ["Rock Revival", "Live Energy", "Guitar Riffs"],
+        "rock": ["Rock Revival", "Punk Energy", "Grunge Nostalgia"],
         "punk": ["Punk Energy", "Rebellion Vibes", "Fast Beats"],
         "grunge": ["Grunge Nostalgia", "Raw Emotion", "90s Revival"],
         "pop": ["Pop Hits", "Melodic Vibes", "Chart Toppers"],
@@ -57,7 +58,7 @@ def generate_prompt(data):
     selected_lookalikes = lookalike_artists.get(primary_genre, lookalike_artists["default"])
     selected_trends = trends.get(primary_genre, trends["default"])
 
-    # Prompt structuré
+    # Prompt structuré pour GPT-4o
     prompt = f"""
     📋 OBJECTIF
     Générer un ensemble de contenus marketing pour promouvoir la {promotion_type} de l’artiste {artist}, avec un focus sur la chanson "{song}". Le contenu doit s’adapter au style musical ({', '.join(genres)}), au ton et aux thèmes de la biographie ({bio_summary}), et refléter les attentes du public cible ({target_audience}), en {language}. La réponse doit être un objet JSON structuré pour une intégration directe dans une page web, avec un respect strict des limites de caractères.
@@ -145,7 +146,7 @@ def generate_prompt(data):
 
     5️⃣ "youtube_description_full" : Objet avec "description" (max 5000 caractères) et "character_count"
     - Structurer :
-      - Introduction : Contexte biographique ({{bio_summary}}). Il faut un texte mélant biographie et promotion du single.
+      - Introduction : Contexte biographique ({{bio_summary}}).
       - Corps : Description de la sortie ({{song}}, {{promotion_type}}, lien avec {{genres}} et {{bio_themes}}).
       - Conclusion : Invitation à écouter (inclure {{song_link}}) et hashtags adaptés à {{genres}}.
     - Intégrer {{bio_themes}}, {{genres}}, et un ton aligné sur {{bio_tone}}.
@@ -213,9 +214,9 @@ def generate_ads():
         prompt = generate_prompt(data)
         logger.info("Prompt généré avec succès")
 
-        # Appel à l'API OpenAI
+        # Appel à l'API OpenAI avec GPT-4o
         response = openai.ChatCompletion.create(
-            model="gpt-4o",
+            model="gpt-4o",  # Utilisation de GPT-4o
             messages=[{"role": "user", "content": prompt}],
             max_tokens=2000,
             temperature=0.7
@@ -223,11 +224,14 @@ def generate_ads():
         result = response.choices[0].message['content']
         logger.info("Réponse OpenAI reçue")
 
+        # Nettoyer la réponse pour enlever les balises ```json ... ```
+        result_cleaned = re.sub(r'^```json\n|\n```$', '', result).strip()
+
         # Vérification que la réponse est un JSON valide
         try:
-            result_json = json.loads(result)
+            result_json = json.loads(result_cleaned)
         except json.JSONDecodeError as e:
-            logger.error(f"Réponse OpenAI non-JSON : {result}")
+            logger.error(f"Réponse OpenAI non-JSON après nettoyage : {result_cleaned}")
             return jsonify({"error": "La génération a échoué : réponse non-JSON"}), 500
 
         # Vérification des clés attendues
@@ -236,6 +240,17 @@ def generate_ads():
         if missing_keys:
             logger.error(f"Clés manquantes dans la réponse JSON : {missing_keys}")
             return jsonify({"error": f"Clés manquantes dans la réponse : {missing_keys}"}), 500
+
+        # Vérification du nombre d'éléments
+        if len(result_json["short_titles"]) != 5:
+            logger.error(f"Nombre incorrect de short_titles : {len(result_json['short_titles'])}")
+            return jsonify({"error": "Nombre incorrect de short_titles"}), 500
+        if len(result_json["long_titles"]) != 5:
+            logger.error(f"Nombre incorrect de long_titles : {len(result_json['long_titles'])}")
+            return jsonify({"error": "Nombre incorrect de long_titles"}), 500
+        if len(result_json["long_descriptions"]) != 5:
+            logger.error(f"Nombre incorrect de long_descriptions : {len(result_json['long_descriptions'])}")
+            return jsonify({"error": "Nombre incorrect de long_descriptions"}), 500
 
         # Mise en cache et réponse
         cache[cache_key] = result_json
@@ -250,4 +265,4 @@ def generate_ads():
         return jsonify({"error": f"Erreur interne : {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=8080)
