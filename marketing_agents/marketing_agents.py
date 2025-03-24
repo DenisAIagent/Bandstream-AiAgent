@@ -1,3 +1,6 @@
+Voici le code complet mis à jour avec le nouveau prompt :
+
+```python
 from flask import Flask, request, jsonify
 import openai
 import os
@@ -58,10 +61,10 @@ def generate_prompt(data):
     selected_lookalikes = lookalike_artists.get(primary_genre, lookalike_artists["default"])
     selected_trends = trends.get(primary_genre, trends["default"])
 
-    # Nouveau prompt amélioré
+    # Nouveau prompt amélioré incluant la recherche internet si nécessaire
     prompt = f"""
 OBJECTIF :
-Générer du contenu marketing pour promouvoir la {promotion_type} de l'artiste {artist} autour de la chanson "{song}". Le contenu doit être rédigé en {language} et refléter l'ambiance et le style de {genres[0]} avec un ton {bio_tone}. La réponse devra être un objet JSON structuré, prêt à intégrer dans une page web, en respectant strictement les limites de caractères indiquées.
+Générer du contenu marketing pour promouvoir la {promotion_type} de l'artiste {artist} autour de la chanson "{song}". Le contenu doit être rédigé en {language} et refléter l'ambiance et le style de {genres[0]} avec un ton {bio_tone}. La réponse devra être un objet JSON structuré, prêt à intégrer dans une page web, en respectant strictement les limites de caractères indiquées. Utilisez toute la puissance de GPT-4o pour la rédaction et, si nécessaire, effectuez des recherches sur internet afin d'enrichir les données et compléter les éléments manquants ou obsolètes.
 
 VARIABLES :
 - promotion_type : "{promotion_type}"
@@ -218,3 +221,4 @@ def generate_ads():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
+```
