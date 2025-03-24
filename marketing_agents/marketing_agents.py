@@ -146,7 +146,7 @@ def generate_prompt(data):
 
     5️⃣ "youtube_description_full" : Objet avec "description" (max 5000 caractères) et "character_count"
     - Structurer :
-      - Introduction : Contexte biographique ({{bio_summary}}).
+      - Introduction : Contexte biographique ({{bio_summary}}). Il faut rédiger un texte mélant la bio, les paroles, l'histoire du groupe et éléments de promotion.
       - Corps : Description de la sortie ({{song}}, {{promotion_type}}, lien avec {{genres}} et {{bio_themes}}).
       - Conclusion : Invitation à écouter (inclure {{song_link}}) et hashtags adaptés à {{genres}}.
     - Intégrer {{bio_themes}}, {{genres}}, et un ton aligné sur {{bio_tone}}.
