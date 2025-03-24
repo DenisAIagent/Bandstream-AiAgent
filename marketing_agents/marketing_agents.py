@@ -1,5 +1,3 @@
-Assurez-vous que votre fichier Python ne contient aucune ligne non valide, comme du texte brut en dehors des commentaires ou des chaînes de caractères. Voici le fichier complet corrigé, sans texte superflu, qui intègre le nouveau prompt avec la gestion du style des annonces :
-
 ```python
 from flask import Flask, request, jsonify
 import openai
