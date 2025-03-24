@@ -215,7 +215,7 @@ def generate_ads():
 
         # Appel à l'API OpenAI
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=2000,
             temperature=0.7
