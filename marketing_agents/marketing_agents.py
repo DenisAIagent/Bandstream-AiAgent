@@ -31,6 +31,7 @@ def generate_ads():
     promotion_type = data.get('promotion_type')
     song = data.get('song', '')  # Ajout du champ song
     song_link = data.get('song_link', '[insert link]')  # Récupérer le lien de la chanson
+    artist_bio = data.get('artist_bio', f"Formé en 2013 en Suisse, {artist} est connu pour son approche théâtrale et cinématographique, mêlant metal gothique et éléments industriels, créant un univers sombre et dramatique.")
 
     if not artist or not genres or not language or not tone or not promotion_type:
         logger.error("Missing required fields in request")
@@ -47,42 +48,214 @@ def generate_ads():
 
     # Générer le prompt avec la partie optimisée
     prompt = f"""
-    Generate marketing content for a campaign promoting the {promotion_type} of artist {artist} with song {song} (genres: {genres}). Use language {language} and tone {tone}. The artist is a French band formed in 1997, known for blending metal with electro-industrial influences, creating a powerful and energetic sound. The song's lyrics are a mix of French and English, reflecting a duality in themes or emotions, such as tension, rebellion, or inner conflict. Ensure all generated content, including titles, descriptions, and YouTube description, is strictly in {language} to match the selected language. Do not use English if {language} is French.
+    📋 OBJECTIF
+    Générer un ensemble complet de contenus marketing percutants pour promouvoir la {promotion_type} d’un artiste musical, avec un focus sur une chanson spécifique. Le contenu s’adaptera automatiquement au style musical sélectionné ({genres}) et au ton de la biographie de l’artiste ({artist_bio}), tout en étant optimisé pour maximiser l’engagement sur différentes plateformes.
 
-    1. **5 Short Titles (max 30 characters each)**:
-       - Create bold, energetic titles that reflect the {genres} style (e.g., heavy riffs, industrial beats, electro-metal energy).
-       - Include at least 2 calls to action (e.g., "Écoutez maintenant", "Plongez dans le son").
-       - Mention the song {song} in at least 2 titles.
-       - Avoid repeating the artist's name in every title.
-       - Use a tone that matches the intensity of metal music.
-       - Ensure all titles are in {language}.
+    🔄 VARIABLES ESSENTIELLES
+    - {{promotion_type}}: Type de promotion musicale → "{promotion_type}"
+    - {{artist}}: Nom de l’artiste ou du groupe → "{artist}"
+    - {{song}}: Titre de la chanson à promouvoir → "{song}"
+    - {{genres}}: Styles musicaux (séparés par virgules) → "{genres}"
+    - {{language}}: Langue du contenu généré → "{language}"
+    - {{tone}}: Ton et attitude du contenu → "{tone}"
+    - {{song_link}}: Lien vers la chanson/clip → "{song_link}"
+    - {{artist_bio}}: Biographie complète de l’artiste → "{artist_bio}"
 
-    2. **5 Long Titles (max 55 characters each)**:
-       - Create descriptive titles that evoke the raw energy and duality of the {genres} style.
-       - Include at least 2 calls to action (e.g., "Découvrez l’énergie", "Vibrez avec le son").
-       - Mention the song {song} in at least 2 titles.
-       - Avoid repetition of the artist's name in every title.
-       - Highlight the industrial and electro-metal vibe.
-       - Ensure all titles are in {language}.
+    🎸 ANALYSE CONTEXTUELLE
+    Avant de générer le contenu, analyser la biographie de l’artiste ({artist_bio}) et le genre musical ({genres}) pour extraire :
+    - **Ton dominant de la biographie** : Dramatique, mystique (style sombre et théâtral, avec une écriture évocatrice).
+    - **Thèmes récurrents dans la biographie** : Théâtralité, mysticisme, tension dramatique, univers cinématographique.
+    - **Éléments distinctifs de l’artiste** : Approche théâtrale et cinématographique, mélange de metal gothique et indus, création d’un univers sombre et dramatique.
+    - **Caractéristiques du genre musical** :
+      - **Rock théâtral** : Dramaturgie, mise en scène musicale, émotions exacerbées.
+      - **Metal gothique** : Ambiance sombre, riffs lourds, esthétique mystique.
+      - **Indus** : Sonorités industrielles, textures mécaniques, intensité dramatique.
+    Tout le contenu généré doit respecter l’identité artistique extraite de la biographie et être exclusivement dans la langue {language} spécifiée.
 
-    3. **5 Long Descriptions (max 80 characters each)**:
-       - Create descriptions that capture the song's mood, blending the {genres} style with the French/English lyrical duality.
-       - Include at least 3 calls to action (e.g., "Écoutez maintenant", "Regardez le clip", "Vibrez avec nous").
-       - Mention the song {song} in at least 2 descriptions.
-       - Avoid repetition of the artist's name in every description.
-       - Reflect the song's themes (e.g., tension, rebellion, inner conflict) based on the mixed French/English lyrics.
-       - Ensure all descriptions are in {language}.
+    📱 CONTENU À GÉNÉRER
 
-    4. **YouTube Description**:
-       - **Short (max 120 characters)**: A bold, engaging hook that highlights the {genres} style and the song {song}, ending with a strong call to action (e.g., "Écoutez maintenant!"). Example: "Plongez dans l’énergie de {song} par {artist}! Écoutez maintenant!".
-       - **Full (max 5000 characters)**: A captivating and structured description to promote the song {song} by artist {artist}, designed to draw listeners in and make them eager to discover the artist, including:
-         - A powerful introduction (1-2 sentences) about {artist}, mentioning their legacy as a French band formed in 1997, their unique blend of {genres}, and introducing the song {song} (e.g., "Depuis 1997, {artist} fusionne metal et électro dans un style {genres} unique avec leur nouveau titre {song}!").
-         - A vivid description (2-3 sentences) of the song {song}, focusing on its emotional impact, themes (inspired by the French/English lyrical duality, such as tension, rebellion, or inner conflict), and the {genres} style (e.g., "Ce titre mêle riffs lourds et beats électro, avec des paroles en français et anglais qui explorent une tension émotionnelle.").
-         - A clear and enthusiastic call to action with the song link (e.g., "Écoutez {song} maintenant: {song_link}", "Abonnez-vous pour plus de musique et de performances live!").
-         - Hashtags to boost visibility (e.g., #{artist.replace(' ', '')} #{song.replace(' ', '')} #{genres[0].replace(' ', '')}).
-         - Avoid repetition of phrases or the artist's name within sentences for variety.
-         - Use a tone that radiates intensity, energy, and connection, matching the {genres} style.
-         - Ensure all content is in {language}.
+    1️⃣ TITRES COURTS (5 titres, max 30 caractères chacun)
+    **Objectif** : Capter l’attention immédiatement avec un impact maximal.
+    **Structure recommandée** :
+    - Verbe d’action puissant + élément accrocheur.
+    - Terme émotionnel fort + référence musicale.
+    - Référence au style {genres} avec terminologie adaptée.
+    **Adaptation au genre musical** :
+    - **Rock théâtral** : Utiliser un vocabulaire dramatique et évocateur (ex : "Plongez dans l’ombre", "Vibrez dans le mystère").
+    - **Metal gothique** : Mettre en avant l’esthétique sombre et mystique (ex : "Mysticisme gothique", "Riffs sombres").
+    - **Indus** : Souligner l’intensité et les textures mécaniques (ex : "Son indus percutant", "Tension mécanique").
+    **Intégration biographique** :
+    - Incorporer un élément distinctif : Approche théâtrale et cinématographique.
+    - Adapter le ton : Dramatique, mystique.
+    - Refléter les thèmes : Mysticisme, tension dramatique.
+    **Exigences précises** :
+    - 2-3 titres avec appels à l’action directs adaptés au genre (ex : "Écoutez maintenant", "Plongez dans l’ombre").
+    - 2-3 titres évoquant l’ambiance ou l’émotion de la chanson (ex : "Mysticisme gothique", "Tension dramatique").
+    - Mention de {song} dans au moins 2 titres.
+    - Maximum 1 titre mentionnant {artist}.
+    - Ton correspondant à la fusion entre {genres} et le ton de la biographie.
+    - Contenu exclusivement en {language}.
+    **Exemples adaptés** :
+    - "Salve Regina : mystère gothique ! (30 / 30)"
+    - "Plongez dans l’ombre ! (22 / 30)"
+    - "Salve Regina : vibrez ! (22 / 30)"
+    - "Tension indus, écoutez ! (24 / 30)"
+    - "Théâtre sombre, découvrez ! (27 / 30)"
+
+    2️⃣ TITRES LONGS (5 titres, max 55 caractères chacun)
+    **Objectif** : Développer l’accroche avec plus de contexte et de détails.
+    **Structure recommandée** :
+    - Élément accrocheur + élément descriptif + élément incitatif.
+    - Référence musicale + évocation émotionnelle + appel à l’action.
+    **Adaptation au genre musical** :
+    - **Rock théâtral** : Développer sur la dramaturgie et l’émotion (ex : "Un voyage théâtral dans l’ombre").
+    - **Metal gothique** : Mettre en avant l’esthétique sombre et mystique (ex : "Un hymne gothique empreint de mystère").
+    - **Indus** : Souligner l’intensité et les textures industrielles (ex : "Une tension indus qui vous happe").
+    **Intégration biographique** :
+    - Incorporer un élément narratif : Approche théâtrale et cinématographique.
+    - Faire référence à l’évolution artistique : Création d’un univers sombre et dramatique.
+    - Refléter l’approche créative : Mélange de metal gothique et indus.
+    **Exigences précises** :
+    - 2-3 titres incluant un appel à l’action explicite adapté au genre (ex : "Découvrez le mystère", "Vibrez dans l’ombre").
+    - 2-3 titres évoquant l’expérience d’écoute ou l’impact émotionnel.
+    - Mention de {song} dans au moins 2 titres.
+    - Référence à {artist} dans 1-2 titres maximum.
+    - Inclusion d’au moins un élément spécifique au style {genres} dans chaque titre.
+    - Ton correspondant à la fusion entre {genres} et le ton de la biographie.
+    - Contenu exclusivement en {language}.
+    **Exemples adaptés** :
+    - "Salve Regina : un voyage gothique ! (34 / 55)"
+    - "Plongez dans un univers théâtral ! (34 / 55)"
+    - "Salve Regina : mystère indus ! (29 / 55)"
+    - "Vibrez avec un son dramatique ! (30 / 55)"
+    - "Silver Dust : tension gothique ! (31 / 55)"
+
+    3️⃣ DESCRIPTIONS LONGUES (5 descriptions, max 80 caractères chacune)
+    **Objectif** : Approfondir l’intérêt et créer une connexion émotionnelle.
+    **Structure recommandée** :
+    - Accroche émotionnelle + élément descriptif + appel à l’action clair.
+    - Référence thématique + élément musical distinctif + incitation.
+    **Adaptation au genre musical** :
+    - **Rock théâtral** : Mettre en avant la dramaturgie et l’émotion (ex : "Un voyage théâtral dans l’ombre").
+    - **Metal gothique** : Évoquer l’ambiance sombre et mystique (ex : "Un hymne gothique empreint de mystère").
+    - **Indus** : Souligner l’intensité et les textures industrielles (ex : "Une tension indus qui vous happe").
+    **Intégration biographique** :
+    - Incorporer des thèmes : Mysticisme, tension dramatique.
+    - Faire référence à l’approche créative : Mélange de metal gothique et indus.
+    - Adapter le style d’écriture : Dramatique, mystique.
+    **Exigences précises** :
+    - Chaque description doit contenir au moins un appel à l’action.
+    - Au moins 3 descriptions avec des appels à l’action variés adaptés au genre (ex : "Écoutez maintenant", "Regardez le clip", "Plongez dans l’ombre").
+    - Mention de {song} dans au moins 2 descriptions.
+    - Référence à {artist} dans 2 descriptions maximum.
+    - Évocation des thèmes : Mysticisme, rédemption, tension dramatique.
+    - Utilisation de termes évocateurs liés aux genres {genres}.
+    - Ton correspondant à la fusion entre {genres} et le ton de la biographie.
+    - Contenu exclusivement en {language}.
+    **Exemples adaptés** :
+    - "Salve Regina : mystère gothique et riffs ! Écoutez ! (49 / 80)"
+    - "Un voyage théâtral dans l’ombre ! Plongez dedans ! (48 / 80)"
+    - "Salve Regina : tension indus et mysticisme ! Regardez ! (52 / 80)"
+    - "Silver Dust : un hymne dramatique ! Écoutez maintenant ! (53 / 80)"
+    - "Ambiance sombre et industrielle ! Vibrez avec nous ! (49 / 80)"
+
+    4️⃣ DESCRIPTION YOUTUBE
+    **A. Description Courte (max 120 caractères)** :
+    **Objectif** : Capturer l’attention immédiatement dans les aperçus et notifications.
+    **Structure recommandée** :
+    - Accroche puissante + référence au style + appel à l’action fort.
+    **Adaptation au genre et à la biographie** :
+    - Adapter le vocabulaire : Dramaturgie, mysticisme, intensité.
+    - Intégrer un élément distinctif : Approche théâtrale et cinématographique.
+    - Ajuster le ton : Dramatique, mystique.
+    **Exigences précises** :
+    - Inclusion obligatoire de {song}.
+    - Mention de {artist} recommandée.
+    - Référence au style {genres} ou à l’ambiance.
+    - Appel à l’action clair et incitatif adapté au genre.
+    - Langage reflétant la fusion entre {genres} et le ton de la biographie.
+    - Contenu exclusivement en {language}.
+    **Exemple adapté** :
+    - "Plongez dans le mystère de Salve Regina par Silver Dust ! Écoutez ! (65 / 120)"
+
+    **B. Description Complète (max 5000 caractères)** :
+    **Objectif** : Fournir une présentation complète et engageante pour maximiser la conversion.
+    **Structure recommandée** :
+    - [INTRODUCTION CAPTIVANTE - 10-15%] : Présentation percutante de {artist} et {song}, référence à un élément marquant de la biographie.
+    - [DESCRIPTION IMMERSIVE DE LA CHANSON - 30-40%] : Analyse évocatrice de {song}, description de l’impact émotionnel, références aux éléments musicaux distinctifs.
+    - [CONTEXTE ARTISTIQUE - 20-25%] : Positionnement dans le parcours de l’artiste, référence à l’évolution stylistique.
+    - [APPELS À L’ACTION STRATÉGIQUES - 15-20%] : Écouter la chanson, s’abonner, suivre sur les réseaux sociaux.
+    - [SECTION TECHNIQUE ET CRÉDITS - 5-10%] : Informations sur la production, crédits.
+    - [HASHTAGS OPTIMISÉS] : Hashtags liés au style musical.
+    **Adaptation au genre musical** :
+    - **Rock théâtral** : Mettre en avant la dramaturgie et l’émotion.
+    - **Metal gothique** : Évoquer l’ambiance sombre et mystique.
+    - **Indus** : Souligner l’intensité et les textures industrielles.
+    **Intégration biographique** :
+    - Introduction : Mentionner l’approche théâtrale et cinématographique.
+    - Description : Relier la sortie aux thèmes de mysticisme et tension.
+    - Contexte : Situer la sortie dans l’évolution artistique de Silver Dust.
+    - Style d’écriture : Dramatique, mystique.
+    **Exigences générales** :
+    - Paragraphes structurés avec progression logique.
+    - Variation des longueurs de phrases pour un rythme dynamique.
+    - Utilisation stratégique d’émojis adaptés au genre (ex : 🎭, 🖤, ⚙️).
+    - Inclusion d’au moins 3 appels à l’action distincts adaptés au genre.
+    - Éviter la répétition excessive de {artist} et {song}.
+    - Maintien d’un ton cohérent : Dramatique, mystique.
+    - Adaptation du style d’écriture aux conventions de YouTube.
+    - Optimisation SEO avec mots-clés : "rock théâtral", "metal gothique", "indus".
+    - Contenu exclusivement en {language}.
+    **Exemple adapté** :
+    - **Introduction** : "Depuis 2013, Silver Dust enchante avec un style rock théâtral théâtral et cinématographique, dévoilant leur nouveau titre Salve Regina ! 🎭"
+    - **Description** : "Ce titre mêle riffs gothiques et sonorités industrielles, évoquant un mysticisme profond et une tension dramatique, comme un hymne à la rédemption. Une expérience sonore qui vous transporte dans un univers sombre et théâtral. 🖤"
+    - **Contexte** : "Avec Salve Regina, Silver Dust poursuit son exploration d’un metal gothique dramatique, renforçant leur place unique dans la scène indus."
+    - **Appels à l’action** : "Écoutez Salve Regina maintenant : [insert link]. Abonnez-vous pour plus de musique et de performances live ! Suivez Silver Dust sur Instagram et TikTok !"
+    - **Section technique et crédits** : "Label : [collez l’email du label]. Booking Europe, Africa & North America : [collez l’email de booking]."
+    - **Hashtags** : "#SilverDust #SalveRegina #RockThéâtral #MetalGothique #Indus"
+
+    🔍 DIRECTIVES D’ADAPTATION
+    **Matrice d’Adaptation au Genre Musical** :
+    - **Rock théâtral** : Tons : Dramaturgique, Évocateur. Vocabulaire : théâtre, mystère, dramaturgie. Appels à l’action : "Plongez dans l’ombre", "Vibrez dans le mystère".
+    - **Metal gothique** : Tons : Sombre, Mystique. Vocabulaire : gothique, mysticisme, riffs sombres. Appels à l’action : "Découvrez le mystère", "Ressentez l’obscurité".
+    - **Indus** : Tons : Intense, Mécanique. Vocabulaire : indus, tension, textures mécaniques. Appels à l’action : "Plongez dans le chaos", "Vibrez avec l’intensité".
+
+    **Analyse et Intégration de la Biographie** :
+    - **Extraction du ton dominant** : Dramatique, mystique (style sombre et théâtral, avec une écriture évocatrice).
+    - **Identification des thèmes récurrents** : Théâtralité, mysticisme, tension dramatique, univers cinématographique.
+    - **Repérage des éléments distinctifs** : Approche théâtrale et cinématographique, mélange de metal gothique et indus.
+    - **Application dans le contenu** :
+      - Titres courts : 1 élément distinctif (ex : "Théâtre sombre").
+      - Titres longs : 1-2 éléments biographiques (ex : "Univers théâtral").
+      - Descriptions : 2-3 références au parcours ou aux thèmes (ex : "Mysticisme profond").
+      - Description YouTube : Intégration structurée et complète.
+
+    **Fusion Genre-Biographie** :
+    - **Principe de base** : Le genre musical définit le cadre, la biographie apporte la personnalisation.
+    - **Règle de cohérence** : En cas de contradiction, privilégier le ton de la biographie.
+    - **Règle d’intensité** : Adapter le niveau d’expressivité à celui observé dans la biographie.
+    - **Règle de spécificité** : Les éléments uniques de la biographie priment sur les généralités du genre.
+
+    **Adaptation aux Plateformes** :
+    - **Instagram/TikTok** : Privilégier titres courts, émojis stratégiques (🎭, 🖤, ⚙️).
+    - **Facebook/Twitter** : Efficacité des titres longs et descriptions courtes avec ton dramatique.
+    - **YouTube** : Description complète essentielle avec style reflétant la biographie.
+    - **Streaming** : Adaptation des descriptions pour les plateformes d’écoute selon le genre.
+
+    **Éléments Visuels par Genre** :
+    - **Rock théâtral** : 🎭, 🎬, ⚡
+    - **Metal gothique** : 🖤, 🕯️, 🌙
+    - **Indus** : ⚙️, 🔩, 🔥
+
+    📊 CRITÈRES DE QUALITÉ
+    - Adaptation précise au genre musical spécifié.
+    - Intégration naturelle des éléments biographiques.
+    - Cohérence du ton entre le genre et la biographie.
+    - Originalité et créativité dans les formulations.
+    - Respect strict des contraintes de caractères.
+    - Utilisation exclusive de la langue {language}.
+    - Potentiel d’engagement et de conversion.
+    - Optimisation pour le référencement (SEO).
     """
 
     try:
@@ -129,7 +302,7 @@ def generate_ads():
                         ad_data["youtube_description_short"] = {"description": desc, "character_count": char_count}
                     except (IndexError, ValueError) as e:
                         logger.error(f"Error parsing YouTube short description: {e}")
-                        ad_data["youtube_description_short"] = {"description": f"Plongez dans l’énergie de {song} par {artist}! Écoutez maintenant!", "character_count": len(f"Plongez dans l’énergie de {song} par {artist}! Écoutez maintenant!")}
+                        ad_data["youtube_description_short"] = {"description": f"Plongez dans le mystère de {song} par {artist}! Écoutez maintenant!", "character_count": len(f"Plongez dans le mystère de {song} par {artist}! Écoutez maintenant!")}
                 elif "Full" in line and current_section == "youtube_description":
                     try:
                         desc = line.split(": ")[1].split(" (")[0]
@@ -138,8 +311,8 @@ def generate_ads():
                     except (IndexError, ValueError) as e:
                         logger.error(f"Error parsing YouTube full description: {e}")
                         ad_data["youtube_description_full"] = {
-                            "description": f"Depuis 1997, {artist} fusionne metal et électro dans un style {genres[0]} unique avec leur nouveau titre {song}! Ce titre mêle riffs lourds et beats électro, avec des paroles en français et anglais qui explorent une tension émotionnelle. Écoutez {song} maintenant: {song_link}. Abonnez-vous pour plus de musique et de performances live! #{artist.replace(' ', '')} #{song.replace(' ', '')} #{genres[0].replace(' ', '')}",
-                            "character_count": len(f"Depuis 1997, {artist} fusionne metal et électro dans un style {genres[0]} unique avec leur nouveau titre {song}! Ce titre mêle riffs lourds et beats électro, avec des paroles en français et anglais qui explorent une tension émotionnelle. Écoutez {song} maintenant: {song_link}. Abonnez-vous pour plus de musique et de performances live! #{artist.replace(' ', '')} #{song.replace(' ', '')} #{genres[0].replace(' ', '')}")
+                            "description": f"Depuis 2013, {artist} enchante avec un style {genres[0]} théâtral et cinématographique, dévoilant leur nouveau titre {song}! Ce titre mêle riffs gothiques et sonorités industrielles, évoquant un mysticisme profond et une tension dramatique. Écoutez {song} maintenant: {song_link}. Abonnez-vous pour plus de musique et de performances live! #{artist.replace(' ', '')} #{song.replace(' ', '')} #{genres[0].replace(' ', '')}",
+                            "character_count": len(f"Depuis 2013, {artist} enchante avec un style {genres[0]} théâtral et cinématographique, dévoilant leur nouveau titre {song}! Ce titre mêle riffs gothiques et sonorités industrielles, évoquant un mysticisme profond et une tension dramatique. Écoutez {song} maintenant: {song_link}. Abonnez-vous pour plus de musique et de performances live! #{artist.replace(' ', '')} #{song.replace(' ', '')} #{genres[0].replace(' ', '')}")
                         }
                 elif line.startswith("- ") and current_section in ["short_titles", "long_titles"]:
                     title = line[2:].split(" (")[0]
@@ -157,25 +330,25 @@ def generate_ads():
             logger.error("OpenAI response did not contain expected data, generating fallback content")
             ad_data = {
                 "short_titles": [
-                    f"Énergie pure avec {song}! (25 / 30)",
-                    "Plongez dans le metal ! (23 / 30)",
+                    f"Salve Regina : mystère gothique ! (30 / 30)",
+                    "Plongez dans l’ombre ! (22 / 30)",
                     f"Découvrez {song} ! (17 / 30)",
-                    "Riffs lourds à fond ! (21 / 30)",
-                    "Écoutez maintenant ! (20 / 30)"
+                    "Ambiance indus, écoutez ! (24 / 30)",
+                    "Théâtre metal, vibrez ! (23 / 30)"
                 ],
                 "long_titles": [
-                    f"Découvrez {song}, un choc metal ! (32 / 55)",
-                    "Plongez dans l’univers électro-metal ! (38 / 55)",
-                    f"Vibrez avec {song} et ses riffs ! (32 / 55)",
-                    "Un son industriel qui déchire ! (31 / 55)",
-                    "Énergie pure, écoutez maintenant ! (34 / 55)"
+                    f"Salve Regina : un voyage gothique ! (34 / 55)",
+                    "Plongez dans un univers théâtral ! (34 / 55)",
+                    f"Découvrez {song}, mystère indus ! (32 / 55)",
+                    "Vibrez avec un son dramatique ! (30 / 55)",
+                    "Metal gothique, écoutez ! (25 / 55)"
                 ],
                 "long_descriptions": [
-                    {"description": f"{song} : riffs lourds et électro ! Écoutez ! (43 / 80)", "character_count": 43},
-                    {"description": "Un son qui déchire, vibrez avec nous ! (37 / 80)", "character_count": 37},
-                    {"description": f"Découvrez {song}, un choc metal ! Regardez ! (42 / 80)", "character_count": 42},
-                    {"description": "Énergie brute et dualité ! Écoutez maintenant ! (46 / 80)", "character_count": 46},
-                    {"description": "Metal industriel à fond ! Plongez dedans ! (41 / 80)", "character_count": 41}
+                    {"description": f"{song} : riffs gothiques et mystère ! Écoutez ! (46 / 80)", "character_count": 46},
+                    {"description": "Un son théâtral, plongez dans l’ombre ! (38 / 80)", "character_count": 38},
+                    {"description": f"{song} : rédemption et tension ! Regardez ! (42 / 80)", "character_count": 42},
+                    {"description": "Mysticisme indus, écoutez maintenant ! (37 / 80)", "character_count": 37},
+                    {"description": "Ambiance dramatique ! Vibrez avec nous ! (39 / 80)", "character_count": 39}
                 ],
                 "youtube_description_short": ad_data["youtube_description_short"],
                 "youtube_description_full": ad_data["youtube_description_full"]
