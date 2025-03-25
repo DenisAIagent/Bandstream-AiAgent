@@ -82,11 +82,17 @@ def generate_ads():
             logger.error("Aucune donnée JSON fournie")
             return jsonify({"error": "Aucune donnée fournie"}), 400
 
-        required_fields = ['artist', 'genres', 'language', 'promotion_type']
+        required_fields = ['artist', 'language', 'promotion_type']
         missing_fields = [field for field in required_fields if not data.get(field)]
         if missing_fields:
             logger.error(f"Champs manquants : {missing_fields}")
             return jsonify({"error": f"Champs manquants : {missing_fields}"}), 400
+
+        genres = data.get('genres') or data.get('styles')
+        if not genres:
+            logger.error("Genres/styles manquants dans les données")
+            return jsonify({"error": "Genres/styles manquants dans les données"}), 400
+        data['genres'] = genres
 
         if 'song_lyrics' not in data:
             data['song_lyrics'] = ""
