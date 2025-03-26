@@ -49,7 +49,6 @@ async def fetch_musicbrainz_data(artist):
             return []
 
         artist_data = artists[0]
-        # Récupérer les tags (genres)
         tags = [tag["name"] for tag in artist_data.get("tag-list", []) if tag.get("name")]
         return tags
 
@@ -76,7 +75,6 @@ async def fetch_youtube_data(artist, song):
 
         video = items[0]
         video_id = video["id"]["videoId"]
-        # Récupérer les détails de la vidéo (par exemple, nombre de vues)
         video_request = youtube.videos().list(
             part="statistics",
             id=video_id
@@ -93,7 +91,7 @@ async def fetch_youtube_data(artist, song):
 async def analyze_with_openai(artist, song, genres, additional_data):
     """Analyse les données avec OpenAI pour affiner les styles."""
     try:
-        client = openai.OpenAI(api_key=openai_api_key)
+        client = openai.OpenAI(api_key=openai_api_key)  # Initialisation sans proxies
         prompt = f"""
         Tu es un analyste musical expert. Analyse les données suivantes pour affiner les styles musicaux de l'artiste et fournir une analyse concise.
 
@@ -125,10 +123,9 @@ async def analyze_with_openai(artist, song, genres, additional_data):
         )
         result = response.choices[0].message.content
 
-        # Nettoyer la réponse pour enlever les balises ```json ... ```
         result_cleaned = result.strip().replace("```json\n", "").replace("\n```", "")
         try:
-            result_json = eval(result_cleaned)  # Utilisation d'eval pour parser le JSON (à remplacer par json.loads si possible)
+            result_json = eval(result_cleaned)
             return result_json.get("styles", genres), result_json.get("explanation", "Analyse basée sur les données fournies.")
         except Exception as e:
             logger.error(f"Erreur lors du parsing de la réponse OpenAI : {str(e)}")
@@ -187,9 +184,9 @@ async def analyze():
             "artist": artist,
             "song": song,
             "styles": refined_styles,
-            "artist_image_url": f"https://example.com/{artist.lower().replace(' ', '-')}.jpg",  # Plus d'image Spotify, on utilise une URL fictive
-            "lookalike_artists": [],  # Géré par l'Optimizer
-            "trends": [],  # Géré par l'Optimizer
+            "artist_image_url": f"https://example.com/{artist.lower().replace(' ', '-')}.jpg",
+            "lookalike_artists": [],
+            "trends": [],
             "analysis_explanation": explanation
         }
 
