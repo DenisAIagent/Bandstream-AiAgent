@@ -4,3 +4,4 @@ python-dotenv==0.21.0
 cachetools==5.3.0
 httpx==0.27.0  # Version compatible avec OpenAI
 gunicorn==20.1.0  # Ajout explicite de Gunicorn pour Railway
+werkzeug==2.0.3  # Version compatible avec Flask 2.0.1
