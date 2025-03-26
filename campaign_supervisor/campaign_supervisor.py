@@ -3,7 +3,7 @@ import logging
 from flask import Flask, render_template, request, jsonify
 import aiohttp
 from jinja2 import Environment, FileSystemLoader
-from asgiref.wsgi import WsgiToAsgi  # Pour convertir WSGI en ASGI
+from asgiref.wsgi import WsgiToAsgi
 
 app = Flask(__name__)
 
