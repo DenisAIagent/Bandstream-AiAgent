@@ -24,6 +24,11 @@ if not openai.api_key:
 # Cache avec TTL de 24h
 cache = TTLCache(maxsize=100, ttl=86400)
 
+# Endpoint de test pour vérifier que le serveur est accessible
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy", "message": "Marketing Agent is running"}), 200
+
 def clean_description(description):
     # Liste de phrases génériques à éviter
     generic_phrases = [
@@ -56,7 +61,7 @@ def validate_data(data):
     if not genres:
         raise ValueError("Les genres ne peuvent pas être vides")
 
-    # Validation des lookalike_artists
+    # Validation des lookalike_artists (fournis par l'Optimizer)
     lookalike_artists = data.get('lookalike_artists', [])
     if not lookalike_artists or not all(isinstance(artist, str) and artist and not artist.isspace() for artist in lookalike_artists):
         logger.warning("Lookalike artists invalides, utilisation des valeurs par défaut")
@@ -75,6 +80,91 @@ def validate_data(data):
 
     return data
 
+@app.route('/generate_ads', methods=['POST'])
+def generate_ads():
+    try:
+        data = request.get_json()
+        if not data:
+            logger.error("Aucune donnée JSON fournie")
+            return jsonify({"error": "Aucune donnée fournie"}), 400
+
+        # Validation des données d'entrée
+        data = validate_data(data)
+
+        # Clé de cache
+        cache_key = "_".join([str(data.get(field, '')) for field in ['artist', 'genres', 'language', 'promotion_type', 'song', 'tone']])
+        logger.info(f"Clé de cache : {cache_key}")
+
+        # Vérification du cache
+        if cache_key in cache:
+            logger.info(f"Réponse trouvée dans le cache pour : {cache_key}")
+            cached_result = cache[cache_key]
+            if not cached_result or "short_titles" not in cached_result:
+                logger.warning(f"Données en cache vides ou corrompues pour : {cache_key}")
+                cache.pop(cache_key)
+            else:
+                return jsonify(cached_result)
+
+        # Génération du prompt
+        prompt = generate_prompt(data)
+        logger.info("Prompt généré avec succès")
+
+        # Appel à l'API OpenAI avec GPT-4o
+        # Configuration explicite pour éviter l'argument 'proxies'
+        client = openai.OpenAI(api_key=openai.api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=2000,
+            temperature=0.7
+        )
+        result = response.choices[0].message.content
+        logger.info("Réponse OpenAI reçue")
+
+        # Nettoyer la réponse pour enlever les balises ```json ... ```
+        result_cleaned = re.sub(r'^```json\n|\n```$', '', result).strip()
+
+        # Vérification que la réponse est un JSON valide
+        try:
+            result_json = json.loads(result_cleaned)
+        except json.JSONDecodeError as e:
+            logger.error(f"Réponse OpenAI non-JSON après nettoyage : {result_cleaned}")
+            return jsonify({"error": "La génération a échoué : réponse non-JSON"}), 500
+
+        # Vérification des clés attendues
+        required_keys = ["short_titles", "long_titles", "long_descriptions", "youtube_description_short", "youtube_description_full", "analysis"]
+        missing_keys = [key for key in required_keys if key not in result_json]
+        if missing_keys:
+            logger.error(f"Clés manquantes dans la réponse JSON : {missing_keys}")
+            return jsonify({"error": f"Clés manquantes dans la réponse : {missing_keys}"}), 500
+
+        # Vérification du nombre d'éléments
+        if len(result_json["short_titles"]) != 5:
+            logger.error(f"Nombre incorrect de short_titles : {len(result_json['short_titles'])}")
+            return jsonify({"error": "Nombre incorrect de short_titles"}), 500
+        if len(result_json["long_titles"]) != 5:
+            logger.error(f"Nombre incorrect de long_titles : {len(result_json['long_titles'])}")
+            return jsonify({"error": "Nombre incorrect de long_titles"}), 500
+        if len(result_json["long_descriptions"]) != 5:
+            logger.error(f"Nombre incorrect de long_descriptions : {len(result_json['long_descriptions'])}")
+            return jsonify({"error": "Nombre incorrect de long_descriptions"}), 500
+
+        # Nettoyer la description YouTube pour éviter les phrases génériques
+        result_json["youtube_description_full"]["description"] = clean_description(result_json["youtube_description_full"]["description"])
+        result_json["youtube_description_full"]["character_count"] = len(result_json["youtube_description_full"]["description"])
+
+        # Mise en cache et réponse
+        cache[cache_key] = result_json
+        logger.info(f"Contenu généré et mis en cache pour : {cache_key}")
+        return jsonify(result_json)
+
+    except openai.APIError as e:
+        logger.error(f"Erreur OpenAI : {str(e)}")
+        return jsonify({"error": f"Erreur OpenAI : {str(e)}"}), 500
+    except Exception as e:
+        logger.error(f"Erreur inattendue : {str(e)}")
+        return jsonify({"error": f"Erreur interne : {str(e)}"}), 500
+
 def generate_prompt(data):
     # Extraction et validation des données
     artist = data.get('artist', 'Artiste Inconnu')
@@ -91,36 +181,9 @@ def generate_prompt(data):
     announcement_style = data.get('announcement_style', 'Sérieux')  # Style des annonces
     song_lyrics = data.get('song_lyrics', '')
 
-    # Déterminer les artistes similaires et tendances en fonction des genres
-    lookalike_artists = {
-        "rock": ["Nirvana", "Pearl Jam", "Soundgarden", "Red Hot Chili Peppers", "The Smashing Pumpkins", "Radiohead", "The White Stripes", "Arctic Monkeys", "Queens of the Stone Age", "Linkin Park"],
-        "punk": ["Green Day", "The Offspring", "Blink-182", "Ramones", "Sex Pistols", "The Clash", "NOFX", "Bad Religion", "Rancid", "Sum 41"],
-        "grunge": ["Nirvana", "Alice in Chains", "Soundgarden", "Pearl Jam", "Mudhoney", "Stone Temple Pilots", "Screaming Trees", "Melvins", "Tad", "L7"],
-        "pop": ["Coldplay", "Imagine Dragons", "Maroon 5", "Ed Sheeran", "Taylor Swift", "Billie Eilish", "Dua Lipa", "The Weeknd", "Ariana Grande", "Shawn Mendes"],
-        "metal": ["Metallica", "Rammstein", "Nightwish", "Iron Maiden", "Slayer", "Pantera", "Megadeth", "Judas Priest", "Black Sabbath", "Slipknot"],
-        "metal symphonique": ["Nightwish", "Epica", "Within Temptation", "Evanescence", "Lacuna Coil", "Delain", "Amaranthe", "Tarja", "Symphony X", "Kamelot"],
-        "metal indus": ["Rammstein", "Marilyn Manson", "Nine Inch Nails", "Ministry", "KMFDM", "Rob Zombie", "Static-X", "Fear Factory", "Godflesh", "White Zombie"],
-        "default": ["Artiste 1", "Artiste 2", "Artiste 3", "Artiste 4", "Artiste 5", "Artiste 6", "Artiste 7", "Artiste 8", "Artiste 9", "Artiste 10"]
-    }
-    trends = {
-        "rock": ["best rock song 2025", "best playlist rock 2025", "top grunge bands 2025", "rock revival 2025", "alternative rock hits 2025"],
-        "punk": ["best punk song 2025", "top punk bands 2025", "punk revival 2025", "punk rock anthems 2025", "new punk releases 2025"],
-        "grunge": ["best grunge song 2025", "grunge revival 2025", "top grunge bands 2025", "90s grunge nostalgia 2025", "grunge rock hits 2025"],
-        "pop": ["best pop song 2025", "top pop hits 2025", "pop chart toppers 2025", "new pop releases 2025", "pop music trends 2025"],
-        "metal": ["best metal song 2025", "top metal bands 2025", "metal symphonique 2025", "thrash metal revival 2025", "heavy metal anthems 2025"],
-        "metal symphonique": ["best symphonic metal song 2025", "top symphonic metal bands 2025", "symphonic metal revival 2025", "new symphonic metal releases 2025", "symphonic metal anthems 2025"],
-        "metal indus": ["best industrial metal song 2025", "top industrial metal bands 2025", "industrial metal revival 2025", "new industrial metal releases 2025", "industrial metal anthems 2025"],
-        "default": ["Trend 1", "Trend 2", "Trend 3", "Trend 4", "Trend 5"]
-    }
-    primary_genre = genres[0].lower()
-    selected_lookalikes = data.get('lookalike_artists', lookalike_artists.get(primary_genre, lookalike_artists["default"]))
-    selected_trends = trends.get(primary_genre, trends["default"])
-
-    # Vérification des genres pour éviter des incohérences
-    if primary_genre not in lookalike_artists or primary_genre not in trends:
-        logger.warning(f"Genre principal {primary_genre} non reconnu, utilisation des valeurs par défaut")
-        selected_lookalikes = lookalike_artists["default"]
-        selected_trends = trends["default"]
+    # Utiliser les lookalike_artists et trends fournis par l'Optimizer
+    selected_lookalikes = data.get('lookalike_artists', [])
+    selected_trends = data.get('trends', [])
 
     # Prompt structuré pour GPT-4o
     prompt = f"""
@@ -202,8 +265,8 @@ INSTRUCTIONS :
        - Créer une description qui reflète l’identité unique de l’artiste et de la chanson.
 
 5. ANALYSE
-   - "trends" : Fournir une liste de 5 mots-clés long tail pour {genres[0]} en 2025, par exemple ["best {genres[0]} song 2025", "top {genres[0]} hits 2025", "influence {genres[0]} 2025", "new {genres[0]} releases 2025", "{genres[0]} anthems 2025"].
-   - "lookalike_artists" : Fournir une liste de 10 artistes similaires (exemple pour metal : ["Metallica", "Rammstein", "Nightwish", "Iron Maiden", "Slayer", "Pantera", "Megadeth", "Judas Priest", "Black Sabbath", "Slipknot"]).
+   - "trends" : Utiliser la liste fournie par l'Optimizer : {json.dumps(selected_trends)}.
+   - "lookalike_artists" : Utiliser la liste fournie par l'Optimizer : {json.dumps(selected_lookalikes)}.
    - "artist_image_url" : Générer une URL fictive au format "https://example.com/{artist.lower().replace(' ', '-')}.jpg".
 
 FORMAT DE SORTIE ATTENDU (objet JSON) :
@@ -220,8 +283,8 @@ FORMAT DE SORTIE ATTENDU (objet JSON) :
   "youtube_description_short": {{"description": "desc", "character_count": 41}},
   "youtube_description_full": {{"description": "desc", "character_count": 200}},
   "analysis": {{
-    "trends": ["trend1", "trend2", "trend3", "trend4", "trend5"],
-    "lookalike_artists": ["artist1", "artist2", "artist3", "artist4", "artist5", "artist6", "artist7", "artist8", "artist9", "artist10"],
+    "trends": {json.dumps(selected_trends)},
+    "lookalike_artists": {json.dumps(selected_lookalikes)},
     "artist_image_url": "https://example.com/{artist.lower().replace(' ', '-')}.jpg"
   }}
 }}
