@@ -3,8 +3,6 @@ import openai
 import os
 from dotenv import load_dotenv
 import logging
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
 import musicbrainzngs
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -21,25 +19,17 @@ logger = logging.getLogger(__name__)
 # Chargement des variables d'environnement
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
-spotify_client_id = os.getenv("SPOTIFY_CLIENT_ID")
-spotify_client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
 youtube_api_key = os.getenv("YOUTUBE_API_KEY")
 
 # Validation des variables d'environnement
 if not openai_api_key:
     logger.critical("OPENAI_API_KEY manquant")
     raise ValueError("OPENAI_API_KEY manquant")
-if not spotify_client_id or not spotify_client_secret:
-    logger.critical("SPOTIFY_CLIENT_ID ou SPOTIFY_CLIENT_SECRET manquant")
-    raise ValueError("SPOTIFY_CLIENT_ID ou SPOTIFY_CLIENT_SECRET manquant")
 if not youtube_api_key:
     logger.critical("YOUTUBE_API_KEY manquant")
     raise ValueError("YOUTUBE_API_KEY manquant")
 
 # Initialisation des clients
-# Spotify
-sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=spotify_client_id, client_secret=spotify_client_secret))
-
 # MusicBrainz
 musicbrainzngs.set_useragent("music-analyzer", "1.0", "your-email@example.com")
 
@@ -48,34 +38,6 @@ youtube = build('youtube', 'v3', developerKey=youtube_api_key)
 
 # Cache avec TTL de 24h
 cache = TTLCache(maxsize=100, ttl=86400)
-
-async def fetch_spotify_data(artist, song):
-    """Récupère des données sur l'artiste et la chanson via Spotify."""
-    try:
-        # Recherche de l'artiste
-        results = sp.search(q=f"artist:{artist} track:{song}", type="track", limit=1)
-        tracks = results.get("tracks", {}).get("items", [])
-        if not tracks:
-            logger.warning(f"Aucune donnée Spotify trouvée pour {artist} - {song}")
-            return None, []
-
-        track = tracks[0]
-        artist_id = track["artists"][0]["id"]
-        artist_info = sp.artist(artist_id)
-        
-        # Récupérer les genres de l'artiste
-        genres = artist_info.get("genres", [])
-        if not genres:
-            logger.warning(f"Aucun genre trouvé sur Spotify pour {artist}")
-        
-        # Récupérer l'image de l'artiste
-        artist_image_url = artist_info.get("images", [{}])[0].get("url") if artist_info.get("images") else None
-        
-        return artist_image_url, genres
-
-    except Exception as e:
-        logger.error(f"Erreur lors de la récupération des données Spotify : {str(e)}")
-        return None, []
 
 async def fetch_musicbrainz_data(artist):
     """Récupère des données sur l'artiste via MusicBrainz."""
@@ -141,7 +103,7 @@ async def analyze_with_openai(artist, song, genres, additional_data):
         Données supplémentaires : {additional_data}
 
         Instructions :
-        - Affine les genres initiaux en te basant sur les données supplémentaires (par exemple, genres Spotify, tags MusicBrainz).
+        - Affine les genres initiaux en te basant sur les données supplémentaires (par exemple, tags MusicBrainz).
         - Si les genres initiaux sont incorrects ou trop génériques (ex. "rock" pour un artiste de metal symphonique), corrige-les.
         - Renvoie une liste de styles précis et pertinents (max 3 styles).
         - Fournis une courte explication (1-2 phrases) sur pourquoi ces styles ont été choisis.
@@ -206,15 +168,13 @@ async def analyze():
 
         # Récupérer des données supplémentaires
         tasks = [
-            fetch_spotify_data(artist, song),
             fetch_musicbrainz_data(artist),
             fetch_youtube_data(artist, song)
         ]
-        (spotify_image_url, spotify_genres), musicbrainz_tags, youtube_views = await asyncio.gather(*tasks)
+        musicbrainz_tags, youtube_views = await asyncio.gather(*tasks)
 
         # Combiner les données pour l'analyse
         additional_data = {
-            "spotify_genres": spotify_genres,
             "musicbrainz_tags": musicbrainz_tags,
             "youtube_views": youtube_views
         }
@@ -227,7 +187,7 @@ async def analyze():
             "artist": artist,
             "song": song,
             "styles": refined_styles,
-            "artist_image_url": spotify_image_url if spotify_image_url else f"https://example.com/{artist.lower().replace(' ', '-')}.jpg",
+            "artist_image_url": f"https://example.com/{artist.lower().replace(' ', '-')}.jpg",  # Plus d'image Spotify, on utilise une URL fictive
             "lookalike_artists": [],  # Géré par l'Optimizer
             "trends": [],  # Géré par l'Optimizer
             "analysis_explanation": explanation
