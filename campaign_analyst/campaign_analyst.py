@@ -3,6 +3,14 @@ import openai
 import os
 from dotenv import load_dotenv
 import logging
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+import musicbrainzngs
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+import aiohttp
+import asyncio
+from cachetools import TTLCache
 
 app = Quart(__name__)
 
@@ -12,10 +20,164 @@ logger = logging.getLogger(__name__)
 
 # Chargement des variables d'environnement
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
-if not openai.api_key:
+openai_api_key = os.getenv("OPENAI_API_KEY")
+spotify_client_id = os.getenv("SPOTIFY_CLIENT_ID")
+spotify_client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
+youtube_api_key = os.getenv("YOUTUBE_API_KEY")
+
+# Validation des variables d'environnement
+if not openai_api_key:
     logger.critical("OPENAI_API_KEY manquant")
     raise ValueError("OPENAI_API_KEY manquant")
+if not spotify_client_id or not spotify_client_secret:
+    logger.critical("SPOTIFY_CLIENT_ID ou SPOTIFY_CLIENT_SECRET manquant")
+    raise ValueError("SPOTIFY_CLIENT_ID ou SPOTIFY_CLIENT_SECRET manquant")
+if not youtube_api_key:
+    logger.critical("YOUTUBE_API_KEY manquant")
+    raise ValueError("YOUTUBE_API_KEY manquant")
+
+# Initialisation des clients
+# Spotify
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=spotify_client_id, client_secret=spotify_client_secret))
+
+# MusicBrainz
+musicbrainzngs.set_useragent("music-analyzer", "1.0", "your-email@example.com")
+
+# YouTube
+youtube = build('youtube', 'v3', developerKey=youtube_api_key)
+
+# Cache avec TTL de 24h
+cache = TTLCache(maxsize=100, ttl=86400)
+
+async def fetch_spotify_data(artist, song):
+    """Récupère des données sur l'artiste et la chanson via Spotify."""
+    try:
+        # Recherche de l'artiste
+        results = sp.search(q=f"artist:{artist} track:{song}", type="track", limit=1)
+        tracks = results.get("tracks", {}).get("items", [])
+        if not tracks:
+            logger.warning(f"Aucune donnée Spotify trouvée pour {artist} - {song}")
+            return None, []
+
+        track = tracks[0]
+        artist_id = track["artists"][0]["id"]
+        artist_info = sp.artist(artist_id)
+        
+        # Récupérer les genres de l'artiste
+        genres = artist_info.get("genres", [])
+        if not genres:
+            logger.warning(f"Aucun genre trouvé sur Spotify pour {artist}")
+        
+        # Récupérer l'image de l'artiste
+        artist_image_url = artist_info.get("images", [{}])[0].get("url") if artist_info.get("images") else None
+        
+        return artist_image_url, genres
+
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des données Spotify : {str(e)}")
+        return None, []
+
+async def fetch_musicbrainz_data(artist):
+    """Récupère des données sur l'artiste via MusicBrainz."""
+    try:
+        result = musicbrainzngs.search_artists(artist=artist, limit=1)
+        artists = result.get("artist-list", [])
+        if not artists:
+            logger.warning(f"Aucune donnée MusicBrainz trouvée pour {artist}")
+            return []
+
+        artist_data = artists[0]
+        # Récupérer les tags (genres)
+        tags = [tag["name"] for tag in artist_data.get("tag-list", []) if tag.get("name")]
+        return tags
+
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des données MusicBrainz : {str(e)}")
+        return []
+
+async def fetch_youtube_data(artist, song):
+    """Récupère des données via YouTube (par exemple, popularité ou tendances)."""
+    try:
+        search_query = f"{artist} {song} official"
+        request = youtube.search().list(
+            part="snippet",
+            q=search_query,
+            type="video",
+            maxResults=1,
+            order="relevance"
+        )
+        response = request.execute()
+        items = response.get("items", [])
+        if not items:
+            logger.warning(f"Aucune vidéo YouTube trouvée pour {artist} - {song}")
+            return None
+
+        video = items[0]
+        video_id = video["id"]["videoId"]
+        # Récupérer les détails de la vidéo (par exemple, nombre de vues)
+        video_request = youtube.videos().list(
+            part="statistics",
+            id=video_id
+        )
+        video_response = video_request.execute()
+        stats = video_response.get("items", [{}])[0].get("statistics", {})
+        view_count = int(stats.get("viewCount", 0))
+        return view_count
+
+    except HttpError as e:
+        logger.error(f"Erreur lors de la recherche YouTube : {str(e)}")
+        return None
+
+async def analyze_with_openai(artist, song, genres, additional_data):
+    """Analyse les données avec OpenAI pour affiner les styles."""
+    try:
+        client = openai.OpenAI(api_key=openai_api_key)
+        prompt = f"""
+        Tu es un analyste musical expert. Analyse les données suivantes pour affiner les styles musicaux de l'artiste et fournir une analyse concise.
+
+        Artiste : {artist}
+        Chanson : {song}
+        Genres initiaux : {', '.join(genres)}
+        Données supplémentaires : {additional_data}
+
+        Instructions :
+        - Affine les genres initiaux en te basant sur les données supplémentaires (par exemple, genres Spotify, tags MusicBrainz).
+        - Si les genres initiaux sont incorrects ou trop génériques (ex. "rock" pour un artiste de metal symphonique), corrige-les.
+        - Renvoie une liste de styles précis et pertinents (max 3 styles).
+        - Fournis une courte explication (1-2 phrases) sur pourquoi ces styles ont été choisis.
+
+        Format de sortie (JSON) :
+        {{
+          "styles": ["style1", "style2", "style3"],
+          "explanation": "Explication concise."
+        }}
+        """
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "Tu es un analyste musical."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=200,
+            temperature=0.7
+        )
+        result = response.choices[0].message.content
+
+        # Nettoyer la réponse pour enlever les balises ```json ... ```
+        result_cleaned = result.strip().replace("```json\n", "").replace("\n```", "")
+        try:
+            result_json = eval(result_cleaned)  # Utilisation d'eval pour parser le JSON (à remplacer par json.loads si possible)
+            return result_json.get("styles", genres), result_json.get("explanation", "Analyse basée sur les données fournies.")
+        except Exception as e:
+            logger.error(f"Erreur lors du parsing de la réponse OpenAI : {str(e)}")
+            return genres, "Erreur lors de l'analyse OpenAI."
+
+    except openai.APIError as e:
+        logger.error(f"Erreur OpenAI : {str(e)}")
+        return genres, "Erreur lors de l'analyse OpenAI."
+    except Exception as e:
+        logger.error(f"Erreur inattendue lors de l'analyse OpenAI : {str(e)}")
+        return genres, "Erreur lors de l'analyse OpenAI."
 
 @app.route('/analyze', methods=['POST'])
 async def analyze():
@@ -34,36 +196,49 @@ async def analyze():
 
         artist = data.get('artist')
         song = data.get('song')
-        genres = data.get('genres')
+        genres = data.get('genres') if isinstance(data.get('genres'), list) else [data.get('genres')]
 
-        # Appel à l'API OpenAI pour analyser les données (exemple simplifié)
-        client = openai.OpenAI(api_key=openai.api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "Tu es un analyste musical. Analyse les données suivantes et renvoie les styles, une URL d'image fictive, et des tendances."},
-                {"role": "user", "content": f"Artiste : {artist}, Chanson : {song}, Genres : {', '.join(genres)}"}
-            ],
-            max_tokens=500,
-            temperature=0.7
-        )
-        result = response.choices[0].message.content
+        # Clé de cache
+        cache_key = f"{artist}_{song}_{'_'.join(genres)}"
+        if cache_key in cache:
+            logger.info(f"Réponse trouvée dans le cache pour : {cache_key}")
+            return jsonify(cache[cache_key])
 
-        # Simuler une réponse (à adapter selon la logique réelle)
+        # Récupérer des données supplémentaires
+        tasks = [
+            fetch_spotify_data(artist, song),
+            fetch_musicbrainz_data(artist),
+            fetch_youtube_data(artist, song)
+        ]
+        (spotify_image_url, spotify_genres), musicbrainz_tags, youtube_views = await asyncio.gather(*tasks)
+
+        # Combiner les données pour l'analyse
+        additional_data = {
+            "spotify_genres": spotify_genres,
+            "musicbrainz_tags": musicbrainz_tags,
+            "youtube_views": youtube_views
+        }
+
+        # Analyser avec OpenAI pour affiner les styles
+        refined_styles, explanation = await analyze_with_openai(artist, song, genres, additional_data)
+
+        # Construire la réponse
         analysis_data = {
             "artist": artist,
             "song": song,
-            "styles": genres,  # Utiliser les genres fournis
-            "artist_image_url": f"https://example.com/{artist.lower().replace(' ', '-')}.jpg",
-            "lookalike_artists": [],  # Ne pas inclure ici, géré par l'Optimizer
-            "trends": []  # Ne pas inclure ici, géré par l'Optimizer
+            "styles": refined_styles,
+            "artist_image_url": spotify_image_url if spotify_image_url else f"https://example.com/{artist.lower().replace(' ', '-')}.jpg",
+            "lookalike_artists": [],  # Géré par l'Optimizer
+            "trends": [],  # Géré par l'Optimizer
+            "analysis_explanation": explanation
         }
+
+        # Mettre en cache
+        cache[cache_key] = analysis_data
+        logger.info(f"Analyse générée et mise en cache pour : {cache_key}")
 
         return jsonify(analysis_data), 200
 
-    except openai.APIError as e:
-        logger.error(f"Erreur OpenAI : {str(e)}")
-        return jsonify({"error": f"Erreur OpenAI : {str(e)}"}), 500
     except Exception as e:
         logger.error(f"Erreur inattendue : {str(e)}")
         return jsonify({"error": f"Erreur interne : {str(e)}"}), 500
