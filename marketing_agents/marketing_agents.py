@@ -6,7 +6,6 @@ from cachetools import TTLCache
 import logging
 import json
 import re
-import httpx
 
 app = Flask(__name__)
 
@@ -16,10 +15,13 @@ logger = logging.getLogger(__name__)
 
 # Chargement des variables d'environnement
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
-if not openai.api_key:
+openai_api_key = os.getenv("OPENAI_API_KEY")
+if not openai_api_key:
     logger.critical("OPENAI_API_KEY manquant")
     raise ValueError("OPENAI_API_KEY manquant")
+
+# Initialisation du client OpenAI
+openai.api_key = openai_api_key  # Définir la clé API globalement
 
 # Cache avec TTL de 24h
 cache = TTLCache(maxsize=100, ttl=86400)
@@ -30,7 +32,6 @@ def health_check():
     return jsonify({"status": "healthy", "message": "Marketing Agent is running"}), 200
 
 def clean_description(description):
-    # Liste de phrases génériques à éviter
     generic_phrases = [
         r"Avec son style unique, .* rencontre un succès grandissant aux quatre coins du globe",
         r"With his unique style, .* is experiencing growing success across the globe",
@@ -39,8 +40,6 @@ def clean_description(description):
         r"s’imposant comme une figure essentielle de la scène",
         r"cementing his place as a key figure in the .* scene"
     ]
-
-    # Remplacer les phrases génériques par une alternative plus spécifique
     for phrase in generic_phrases:
         if re.search(phrase, description, re.IGNORECASE):
             description = re.sub(phrase, "", description, flags=re.IGNORECASE)
@@ -48,35 +47,32 @@ def clean_description(description):
     return description.strip()
 
 def validate_data(data):
-    # Vérification des champs obligatoires
     required_fields = ['artist', 'genres', 'language', 'promotion_type']
     missing_fields = [field for field in required_fields if not data.get(field)]
     if missing_fields:
         raise ValueError(f"Champs manquants : {missing_fields}")
 
-    # Validation des genres
     genres = data.get('genres', ['rock'])
     if not isinstance(genres, list):
         genres = [genres]
     if not genres:
         raise ValueError("Les genres ne peuvent pas être vides")
 
-    # Validation des lookalike_artists (fournis par l'Optimizer)
     lookalike_artists = data.get('lookalike_artists', [])
     if not lookalike_artists or not all(isinstance(artist, str) and artist and not artist.isspace() for artist in lookalike_artists):
         logger.warning("Lookalike artists invalides, utilisation des valeurs par défaut")
         primary_genre = genres[0].lower()
         default_lookalikes = {
-            "rock": ["Nirvana", "Pearl Jam", "Soundgarden", "Red Hot Chili Peppers", "The Smashing Pumpkins", "Radiohead", "The White Stripes", "Arctic Monkeys", "Queens of the Stone Age", "Linkin Park"],
-            "punk": ["Green Day", "The Offspring", "Blink-182", "Ramones", "Sex Pistols", "The Clash", "NOFX", "Bad Religion", "Rancid", "Sum 41"],
-            "grunge": ["Nirvana", "Alice in Chains", "Soundgarden", "Pearl Jam", "Mudhoney", "Stone Temple Pilots", "Screaming Trees", "Melvins", "Tad", "L7"],
-            "pop": ["Coldplay", "Imagine Dragons", "Maroon 5", "Ed Sheeran", "Taylor Swift", "Billie Eilish", "Dua Lipa", "The Weeknd", "Ariana Grande", "Shawn Mendes"],
-            "metal": ["Metallica", "Rammstein", "Nightwish", "Iron Maiden", "Slayer", "Pantera", "Megadeth", "Judas Priest", "Black Sabbath", "Slipknot"],
-            "metal symphonique": ["Nightwish", "Epica", "Within Temptation", "Evanescence", "Lacuna Coil", "Delain", "Amaranthe", "Tarja", "Symphony X", "Kamelot"],
-            "metal indus": ["Rammstein", "Marilyn Manson", "Nine Inch Nails", "Ministry", "KMFDM", "Rob Zombie", "Static-X", "Fear Factory", "Godflesh", "White Zombie"],
-            "default": ["Artiste 1", "Artiste 2", "Artiste 3", "Artiste 4", "Artiste 5", "Artiste 6", "Artiste 7", "Artiste 8", "Artiste 9", "Artiste 10"]
+            "rock": ["Nirvana", "Pearl Jam", "Soundgarden"],
+            "punk": ["Green Day", "The Offspring", "Blink-182"],
+            "grunge": ["Nirvana", "Alice in Chains", "Soundgarden"],
+            "pop": ["Coldplay", "Imagine Dragons", "Maroon 5"],
+            "metal": ["Metallica", "Rammstein", "Nightwish"],
+            "metal symphonique": ["Nightwish", "Epica", "Within Temptation"],
+            "metal indus": ["Rammstein", "Marilyn Manson", "Nine Inch Nails"],
+            "default": ["Artiste 1", "Artiste 2", "Artiste 3"]
         }
-        data['lookalike_artists'] = default_lookalikes.get(primary_genre, default_lookalikes["default"])
+        data['lookalike_artists'] = default_lookalikes.get(primary_genre, default_lookalikes["default"])[:3]
 
     return data
 
@@ -110,8 +106,7 @@ def generate_ads():
         logger.info("Prompt généré avec succès")
 
         # Appel à l'API OpenAI avec GPT-4o
-        # Configuration explicite pour éviter l'argument 'proxies'
-        client = openai.OpenAI(api_key=openai.api_key)
+        client = openai.OpenAI(api_key=openai_api_key)  # Initialisation sans proxies
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
@@ -166,7 +161,6 @@ def generate_ads():
         return jsonify({"error": f"Erreur interne : {str(e)}"}), 500
 
 def generate_prompt(data):
-    # Extraction et validation des données
     artist = data.get('artist', 'Artiste Inconnu')
     song = data.get('song', '')
     genres = data.get('genres', ['rock']) if isinstance(data.get('genres'), list) else [data.get('genres', 'rock')]
@@ -178,21 +172,19 @@ def generate_prompt(data):
     bio_tone = data.get('bio_tone', 'authentique')
     bio_themes = data.get('bio_themes', 'émotion, créativité')
     target_audience = data.get('target_audience', 'tous publics')
-    announcement_style = data.get('announcement_style', 'Sérieux')  # Style des annonces
+    announcement_style = data.get('announcement_style', 'Sérieux')
     song_lyrics = data.get('song_lyrics', '')
 
-    # Utiliser les lookalike_artists et trends fournis par l'Optimizer
     selected_lookalikes = data.get('lookalike_artists', [])
     selected_trends = data.get('trends', [])
 
-    # Prompt structuré pour GPT-4o
     prompt = f"""
 OBJECTIF :
-Générer du contenu marketing pour promouvoir la {promotion_type} de l'artiste {artist} autour de la chanson "{song}". Le contenu doit être rédigé en {language} et refléter l'ambiance et le style de {genres[0]} avec un ton {bio_tone}. La réponse devra être un objet JSON structuré, prêt à intégrer dans une page web, en respectant strictement les limites de caractères indiquées. Utilisez toute la puissance de GPT-4o et, si nécessaire, effectuez des recherches sur internet pour enrichir les données.
+Générer du contenu marketing pour promouvoir la {promotion_type} de l'artiste {artist} autour de la chanson "{song}". Le contenu doit être rédigé en {language} et refléter l'ambiance et le style de {genres[0]} avec un ton {bio_tone}. La réponse devra être un objet JSON structuré, prêt à intégrer dans une page web, en respectant strictement les limites de caractères indiquées.
 
 IMPORTANT :
 - Utilisez systématiquement le nom complet de l'artiste dans tous les éléments (titres, descriptions, etc.) sans abréviation.
-- La description YouTube complète doit être entièrement personnalisée pour chaque campagne. N'utilisez aucun template préétabli et adaptez le contenu aux spécificités de la campagne (nom complet de l'artiste, de la chanson et contexte unique).
+- La description YouTube complète doit être entièrement personnalisée pour chaque campagne.
 
 VARIABLES :
 - promotion_type : "{promotion_type}"
@@ -204,7 +196,7 @@ VARIABLES :
 - lien chanson : "{song_link}"
 - biographie : "{bio_summary}" (thèmes : {bio_themes})
 - public cible : "{target_audience}"
-- style des annonces : "{announcement_style}" (Engageant = Fomo et descriptif, Poétique = envolée lyrique et onirique, Humoristique = humour et sarcasme, Sérieux = purely descriptif)
+- style des annonces : "{announcement_style}"
 - paroles : "{song_lyrics}"
 
 INSTRUCTIONS :
@@ -240,19 +232,17 @@ INSTRUCTIONS :
      - Inclure le nom complet de l'artiste ({artist}), le titre de la chanson ({song}), et un mot-clé lié au genre ({genres[0]}).
      - Ajouter un appel à l’action (ex. "Découvrez maintenant !").
    - Complète (max 5000 caractères) :
-     Doit être rédigée de manière entièrement personnalisée pour la campagne.
      Structure suggérée :
-       • Introduction (1-2 phrases) : Une accroche captivante mentionnant {artist}, {song}, et un élément clé de {bio_summary} (ex. une anecdote ou un fait marquant).
+       • Introduction (1-2 phrases) : Une accroche captivante mentionnant {artist}, {song}, et un élément clé de {bio_summary}.
        • Corps :
-         - Contexte biographique ({bio_summary}). Inclure un fait marquant ou une anecdote tirée de la biographie pour renforcer l’authenticité (ex. une référence à une performance live, un moment clé de la carrière, ou une influence majeure).
-         - Description de la sortie ({song}, {promotion_type}, lien avec {genres} et {bio_themes}). S’inspirer des thèmes des paroles ({song_lyrics}) pour refléter l’ambiance et le message de la chanson, sans citer directement les paroles.
-         - Inclure un extrait des paroles (1-2 lignes significatives) pour donner un aperçu, mais ne pas inclure l’intégralité des paroles.
-         - Intégrer une référence aux tendances ({json.dumps(selected_trends)}) et aux artistes similaires ({json.dumps(selected_lookalikes)}) pour contextualiser et optimiser le SEO.
-       • Conclusion : Inclure un appel à l’action (ex. "Regardez maintenant sur {song_link} ! Likez, commentez et abonnez-vous pour ne rien manquer !").
+         - Contexte biographique ({bio_summary}).
+         - Description de la sortie ({song}, {promotion_type}, lien avec {genres} et {bio_themes}).
+         - Intégrer une référence aux tendances ({json.dumps(selected_trends)}) et aux artistes similaires ({json.dumps(selected_lookalikes)}).
+       • Conclusion : Inclure un appel à l’action (ex. "Regardez maintenant sur {song_link} ! Likez, commentez et abonnez-vous !").
      Mise en Page :
        - Utiliser des sauts de ligne (\n) pour aérer le texte.
        - Séparer les sections avec des emojis (ex. 🔔 pour les abonnements, 📌 pour les crédits).
-       - Inclure des placeholders pour les liens (ex. "collez votre smartlink", "collez le lien de votre chaîne YouTube").
+       - Inclure des placeholders pour les liens.
        - Ajouter des liens sociaux (Instagram, TikTok, site web) avec des placeholders.
        - Ajouter 3-5 hashtags pertinents à la fin (ex. #{artist}, #{song}, #{genres[0]}).
      SEO :
@@ -260,13 +250,10 @@ INSTRUCTIONS :
        - Intégrer les tendances ({json.dumps(selected_trends)}) pour capter les recherches spécifiques.
        - Mentionner les artistes similaires ({json.dumps(selected_lookalikes)}) pour apparaître dans les recherches associées.
        - Encourager l’engagement (ex. "Abonnez-vous", "Likez", "Commentez").
-     Unicité :
-       - Éviter les phrases génériques recyclées comme "Avec son style unique, [artiste] rencontre un succès grandissant..." ou "À chacune de ses sorties, il continue de surprendre...".
-       - Créer une description qui reflète l’identité unique de l’artiste et de la chanson.
 
 5. ANALYSE
-   - "trends" : Utiliser la liste fournie par l'Optimizer : {json.dumps(selected_trends)}.
-   - "lookalike_artists" : Utiliser la liste fournie par l'Optimizer : {json.dumps(selected_lookalikes)}.
+   - "trends" : Utiliser la liste fournie : {json.dumps(selected_trends)}.
+   - "lookalike_artists" : Utiliser la liste fournie : {json.dumps(selected_lookalikes)}.
    - "artist_image_url" : Générer une URL fictive au format "https://example.com/{artist.lower().replace(' ', '-')}.jpg".
 
 FORMAT DE SORTIE ATTENDU (objet JSON) :
