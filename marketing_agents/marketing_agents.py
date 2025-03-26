@@ -64,6 +64,8 @@ def generate_prompt(data):
         "grunge": ["Nirvana", "Alice in Chains", "Soundgarden", "Pearl Jam", "Mudhoney", "Stone Temple Pilots", "Screaming Trees", "Melvins", "Tad", "L7"],
         "pop": ["Coldplay", "Imagine Dragons", "Maroon 5", "Ed Sheeran", "Taylor Swift", "Billie Eilish", "Dua Lipa", "The Weeknd", "Ariana Grande", "Shawn Mendes"],
         "metal": ["Metallica", "Rammstein", "Nightwish", "Iron Maiden", "Slayer", "Pantera", "Megadeth", "Judas Priest", "Black Sabbath", "Slipknot"],
+        "metal symphonique": ["Nightwish", "Epica", "Within Temptation", "Evanescence", "Lacuna Coil", "Delain", "Amaranthe", "Tarja", "Symphony X", "Kamelot"],
+        "metal indus": ["Rammstein", "Marilyn Manson", "Nine Inch Nails", "Ministry", "KMFDM", "Rob Zombie", "Static-X", "Fear Factory", "Godflesh", "White Zombie"],
         "default": ["Artiste 1", "Artiste 2", "Artiste 3", "Artiste 4", "Artiste 5", "Artiste 6", "Artiste 7", "Artiste 8", "Artiste 9", "Artiste 10"]
     }
     trends = {
@@ -72,11 +74,19 @@ def generate_prompt(data):
         "grunge": ["best grunge song 2025", "grunge revival 2025", "top grunge bands 2025", "90s grunge nostalgia 2025", "grunge rock hits 2025"],
         "pop": ["best pop song 2025", "top pop hits 2025", "pop chart toppers 2025", "new pop releases 2025", "pop music trends 2025"],
         "metal": ["best metal song 2025", "top metal bands 2025", "metal symphonique 2025", "thrash metal revival 2025", "heavy metal anthems 2025"],
+        "metal symphonique": ["best symphonic metal song 2025", "top symphonic metal bands 2025", "symphonic metal revival 2025", "new symphonic metal releases 2025", "symphonic metal anthems 2025"],
+        "metal indus": ["best industrial metal song 2025", "top industrial metal bands 2025", "industrial metal revival 2025", "new industrial metal releases 2025", "industrial metal anthems 2025"],
         "default": ["Trend 1", "Trend 2", "Trend 3", "Trend 4", "Trend 5"]
     }
     primary_genre = genres[0].lower()
     selected_lookalikes = lookalike_artists.get(primary_genre, lookalike_artists["default"])
     selected_trends = trends.get(primary_genre, trends["default"])
+
+    # Vérification des genres pour éviter des incohérences
+    if primary_genre not in lookalike_artists or primary_genre not in trends:
+        logger.warning(f"Genre principal {primary_genre} non reconnu, utilisation des valeurs par défaut")
+        selected_lookalikes = lookalike_artists["default"]
+        selected_trends = trends["default"]
 
     # Prompt structuré pour GPT-4o
     prompt = f"""
@@ -222,13 +232,13 @@ def generate_ads():
         logger.info("Prompt généré avec succès")
 
         # Appel à l'API OpenAI avec GPT-4o
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=2000,
             temperature=0.7
         )
-        result = response.choices[0].message['content']
+        result = response.choices[0].message.content
         logger.info("Réponse OpenAI reçue")
 
         # Nettoyer la réponse pour enlever les balises ```json ... ```
