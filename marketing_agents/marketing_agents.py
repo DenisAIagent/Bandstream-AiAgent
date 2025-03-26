@@ -6,6 +6,7 @@ from cachetools import TTLCache
 import logging
 import json
 import re
+import httpx
 
 app = Flask(__name__)
 
@@ -112,7 +113,7 @@ def generate_prompt(data):
         "default": ["Trend 1", "Trend 2", "Trend 3", "Trend 4", "Trend 5"]
     }
     primary_genre = genres[0].lower()
-    selected_lookalikes = lookalike_artists.get(primary_genre, lookalike_artists["default"])
+    selected_lookalikes = data.get('lookalike_artists', lookalike_artists.get(primary_genre, lookalike_artists["default"]))
     selected_trends = trends.get(primary_genre, trends["default"])
 
     # Vérification des genres pour éviter des incohérences
@@ -257,7 +258,9 @@ def generate_ads():
         logger.info("Prompt généré avec succès")
 
         # Appel à l'API OpenAI avec GPT-4o
-        response = openai.chat.completions.create(
+        # Configuration explicite pour éviter l'argument 'proxies'
+        client = openai.OpenAI(api_key=openai.api_key)
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=2000,
@@ -283,32 +286,4 @@ def generate_ads():
             logger.error(f"Clés manquantes dans la réponse JSON : {missing_keys}")
             return jsonify({"error": f"Clés manquantes dans la réponse : {missing_keys}"}), 500
 
-        # Vérification du nombre d'éléments
-        if len(result_json["short_titles"]) != 5:
-            logger.error(f"Nombre incorrect de short_titles : {len(result_json['short_titles'])}")
-            return jsonify({"error": "Nombre incorrect de short_titles"}), 500
-        if len(result_json["long_titles"]) != 5:
-            logger.error(f"Nombre incorrect de long_titles : {len(result_json['long_titles'])}")
-            return jsonify({"error": "Nombre incorrect de long_titles"}), 500
-        if len(result_json["long_descriptions"]) != 5:
-            logger.error(f"Nombre incorrect de long_descriptions : {len(result_json['long_descriptions'])}")
-            return jsonify({"error": "Nombre incorrect de long_descriptions"}), 500
-
-        # Nettoyer la description YouTube pour éviter les phrases génériques
-        result_json["youtube_description_full"]["description"] = clean_description(result_json["youtube_description_full"]["description"])
-        result_json["youtube_description_full"]["character_count"] = len(result_json["youtube_description_full"]["description"])
-
-        # Mise en cache et réponse
-        cache[cache_key] = result_json
-        logger.info(f"Contenu généré et mis en cache pour : {cache_key}")
-        return jsonify(result_json)
-
-    except openai.APIError as e:
-        logger.error(f"Erreur OpenAI : {str(e)}")
-        return jsonify({"error": f"Erreur OpenAI : {str(e)}"}), 500
-    except Exception as e:
-        logger.error(f"Erreur inattendue : {str(e)}")
-        return jsonify({"error": f"Erreur interne : {str(e)}"}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8080)
+        # Vérification du
