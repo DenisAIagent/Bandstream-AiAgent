@@ -41,6 +41,39 @@ def clean_description(description):
             description += "\nDécouvrez une expérience musicale authentique et vibrante !"
     return description.strip()
 
+def validate_data(data):
+    # Vérification des champs obligatoires
+    required_fields = ['artist', 'genres', 'language', 'promotion_type']
+    missing_fields = [field for field in required_fields if not data.get(field)]
+    if missing_fields:
+        raise ValueError(f"Champs manquants : {missing_fields}")
+
+    # Validation des genres
+    genres = data.get('genres', ['rock'])
+    if not isinstance(genres, list):
+        genres = [genres]
+    if not genres:
+        raise ValueError("Les genres ne peuvent pas être vides")
+
+    # Validation des lookalike_artists
+    lookalike_artists = data.get('lookalike_artists', [])
+    if not lookalike_artists or not all(isinstance(artist, str) and artist and not artist.isspace() for artist in lookalike_artists):
+        logger.warning("Lookalike artists invalides, utilisation des valeurs par défaut")
+        primary_genre = genres[0].lower()
+        default_lookalikes = {
+            "rock": ["Nirvana", "Pearl Jam", "Soundgarden", "Red Hot Chili Peppers", "The Smashing Pumpkins", "Radiohead", "The White Stripes", "Arctic Monkeys", "Queens of the Stone Age", "Linkin Park"],
+            "punk": ["Green Day", "The Offspring", "Blink-182", "Ramones", "Sex Pistols", "The Clash", "NOFX", "Bad Religion", "Rancid", "Sum 41"],
+            "grunge": ["Nirvana", "Alice in Chains", "Soundgarden", "Pearl Jam", "Mudhoney", "Stone Temple Pilots", "Screaming Trees", "Melvins", "Tad", "L7"],
+            "pop": ["Coldplay", "Imagine Dragons", "Maroon 5", "Ed Sheeran", "Taylor Swift", "Billie Eilish", "Dua Lipa", "The Weeknd", "Ariana Grande", "Shawn Mendes"],
+            "metal": ["Metallica", "Rammstein", "Nightwish", "Iron Maiden", "Slayer", "Pantera", "Megadeth", "Judas Priest", "Black Sabbath", "Slipknot"],
+            "metal symphonique": ["Nightwish", "Epica", "Within Temptation", "Evanescence", "Lacuna Coil", "Delain", "Amaranthe", "Tarja", "Symphony X", "Kamelot"],
+            "metal indus": ["Rammstein", "Marilyn Manson", "Nine Inch Nails", "Ministry", "KMFDM", "Rob Zombie", "Static-X", "Fear Factory", "Godflesh", "White Zombie"],
+            "default": ["Artiste 1", "Artiste 2", "Artiste 3", "Artiste 4", "Artiste 5", "Artiste 6", "Artiste 7", "Artiste 8", "Artiste 9", "Artiste 10"]
+        }
+        data['lookalike_artists'] = default_lookalikes.get(primary_genre, default_lookalikes["default"])
+
+    return data
+
 def generate_prompt(data):
     # Extraction et validation des données
     artist = data.get('artist', 'Artiste Inconnu')
@@ -202,19 +235,11 @@ def generate_ads():
             logger.error("Aucune donnée JSON fournie")
             return jsonify({"error": "Aucune donnée fournie"}), 400
 
-        # Vérification des champs obligatoires
-        required_fields = ['artist', 'genres', 'language', 'promotion_type']
-        missing_fields = [field for field in required_fields if not data.get(field)]
-        if missing_fields:
-            logger.error(f"Champs manquants : {missing_fields}")
-            return jsonify({"error": f"Champs manquants : {missing_fields}"}), 400
-
-        # Ajouter les paroles de la chanson si elles ne sont pas fournies
-        if 'song_lyrics' not in data:
-            data['song_lyrics'] = ""
+        # Validation des données d'entrée
+        data = validate_data(data)
 
         # Clé de cache
-        cache_key = "_".join([str(data.get(field, '')) for field in required_fields + ['song', 'tone']])
+        cache_key = "_".join([str(data.get(field, '')) for field in ['artist', 'genres', 'language', 'promotion_type', 'song', 'tone']])
         logger.info(f"Clé de cache : {cache_key}")
 
         # Vérification du cache
@@ -278,7 +303,7 @@ def generate_ads():
         logger.info(f"Contenu généré et mis en cache pour : {cache_key}")
         return jsonify(result_json)
 
-    except openai.error.OpenAIError as e:
+    except openai.APIError as e:
         logger.error(f"Erreur OpenAI : {str(e)}")
         return jsonify({"error": f"Erreur OpenAI : {str(e)}"}), 500
     except Exception as e:
