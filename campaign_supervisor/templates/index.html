@@ -162,52 +162,6 @@
             display: block;
         }
     </style>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const steps = document.querySelectorAll('.form-step');
-            let currentStep = 0;
-
-            // Afficher la première étape
-            steps[currentStep].classList.add('active');
-
-            // Gérer le bouton "Suivant"
-            document.querySelectorAll('.next-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    const requiredInput = steps[currentStep].querySelector('input[required], select[required]');
-                    if (requiredInput && !requiredInput.value) {
-                        alert('Veuillez remplir ce champ avant de continuer.');
-                        return;
-                    }
-
-                    // Si on est à l'étape "Type de Promotion", gérer l'affichage conditionnel
-                    if (steps[currentStep].querySelector('#promotion_type')) {
-                        const promotionType = document.querySelector('#promotion_type').value;
-                        const albumStep = document.querySelector('#album-name-step');
-                        if (promotionType === 'album') {
-                            albumStep.classList.add('active');
-                        } else {
-                            albumStep.classList.remove('active');
-                        }
-                    }
-
-                    steps[currentStep].classList.remove('active');
-                    currentStep++;
-                    if (currentStep < steps.length) {
-                        steps[currentStep].classList.add('active');
-                    }
-                });
-            });
-
-            // Gérer le bouton "Précédent"
-            document.querySelectorAll('.prev-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    steps[currentStep].classList.remove('active');
-                    currentStep--;
-                    steps[currentStep].classList.add('active');
-                });
-            });
-        });
-    </script>
 </head>
 <body>
     <header>
@@ -224,7 +178,7 @@
             {% if error %}
             <p class="error">{{ error }}</p>
             {% endif %}
-            <form action="/generate_campaign" method="POST">
+            <form id="campaignForm">
                 <div class="form-step">
                     <div class="form-group">
                         <label for="artist">Nom de l'Artiste</label>
@@ -320,5 +274,108 @@
             </form>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const steps = document.querySelectorAll('.form-step');
+            let currentStep = 0;
+
+            // Afficher la première étape
+            steps[currentStep].classList.add('active');
+
+            // Gérer le bouton "Suivant"
+            document.querySelectorAll('.next-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const requiredInput = steps[currentStep].querySelector('input[required], select[required]');
+                    if (requiredInput && !requiredInput.value) {
+                        alert('Veuillez remplir ce champ avant de continuer.');
+                        return;
+                    }
+
+                    // Si on est à l'étape "Type de Promotion", gérer l'affichage conditionnel
+                    if (steps[currentStep].querySelector('#promotion_type')) {
+                        const promotionType = document.querySelector('#promotion_type').value;
+                        const albumStep = document.querySelector('#album-name-step');
+                        if (promotionType === 'album') {
+                            albumStep.classList.add('active');
+                        } else {
+                            albumStep.classList.remove('active');
+                        }
+                    }
+
+                    steps[currentStep].classList.remove('active');
+                    currentStep++;
+                    if (currentStep < steps.length) {
+                        steps[currentStep].classList.add('active');
+                    }
+                });
+            });
+
+            // Gérer le bouton "Précédent"
+            document.querySelectorAll('.prev-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    steps[currentStep].classList.remove('active');
+                    currentStep--;
+                    steps[currentStep].classList.add('active');
+                });
+            });
+
+            // Gérer la soumission du formulaire
+            document.getElementById('campaignForm').addEventListener('submit', async function(event) {
+                event.preventDefault(); // Empêche la soumission par défaut du formulaire
+
+                // Récupérer les données du formulaire
+                const artist = document.getElementById('artist').value;
+                const song = document.getElementById('song').value;
+                const style = document.getElementById('style').value;
+                const promotionType = document.getElementById('promotion_type').value;
+                const albumName = document.getElementById('album_name').value;
+                const language = document.getElementById('language').value;
+                const tone = document.getElementById('tone').value;
+                const lyrics = document.getElementById('lyrics').value;
+                const bio = document.getElementById('bio').value;
+                const songUrl = document.getElementById('song_url').value;
+
+                // Convertir le champ "style" en tableau
+                const genres = style ? style.split(',').map(s => s.trim()) : [];
+
+                // Créer l'objet JSON
+                const data = {
+                    artist: artist,
+                    song: song,
+                    genres: genres,
+                    promotion_type: promotionType,
+                    album_name: albumName || undefined, // Inclure uniquement si non vide
+                    language: language,
+                    tone: tone,
+                    lyrics: lyrics || undefined, // Inclure uniquement si non vide
+                    bio: bio || undefined, // Inclure uniquement si non vide
+                    song_url: songUrl || undefined // Inclure uniquement si non vide
+                };
+
+                try {
+                    // Envoyer la requête POST au format JSON
+                    const response = await fetch('/generate_campaign', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Échec de la génération de la campagne');
+                    }
+
+                    const result = await response.text();
+                    // Afficher le résultat (remplacer le contenu de la page)
+                    document.body.innerHTML = result;
+                } catch (error) {
+                    alert('Erreur : ' + error.message);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
