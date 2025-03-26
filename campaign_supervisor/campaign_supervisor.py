@@ -34,6 +34,11 @@ def index():
 @app.route('/generate_campaign', methods=['POST'])
 async def generate_campaign():
     try:
+        # Vérifier le Content-Type de la requête
+        if request.content_type != 'application/json':
+            logger.error("Content-Type incorrect: attendu 'application/json', reçu '%s'", request.content_type)
+            return jsonify({"error": "Content-Type must be 'application/json'"}), 400
+
         data = request.get_json()
         if not data:
             logger.error("Aucune donnée JSON fournie")
@@ -89,8 +94,12 @@ async def generate_campaign():
 
     except Exception as e:
         logger.error(f"Error in generate_campaign: {str(e)}")
-        template = env.get_template('error.html')
-        return template.render(error=str(e)), 500
+        try:
+            template = env.get_template('error.html')
+            return template.render(error=str(e)), 500
+        except Exception as template_error:
+            logger.error(f"Template error.html not found: {str(template_error)}")
+            return jsonify({"error": str(e)}), 500
 
 # Convertir l'application Flask (WSGI) en ASGI pour Uvicorn
 asgi_app = WsgiToAsgi(app)
