@@ -3,6 +3,7 @@ import logging
 from flask import Flask, render_template, request, jsonify
 import aiohttp
 from jinja2 import Environment, FileSystemLoader
+from asgiref.wsgi import WsgiToAsgi  # Pour convertir WSGI en ASGI
 
 app = Flask(__name__)
 
@@ -39,12 +40,9 @@ async def generate_campaign():
             return jsonify({"error": "Aucune donnée fournie"}), 400
 
         artist = data.get('artist')
-        song = data.get('song', 'Unknown Song')  # Valeur par défaut si manquante
-        genres = data.get('genres', ['rock'])  # Valeur par défaut si manquante
-        if not isinstance(genres, list):
-            genres = [genres]
+        song = data.get('song', 'Unknown Song')
+        genres = data.get('genres', ['rock']) if isinstance(data.get('genres'), list) else [data.get('genres', 'rock')]
 
-        # Ajouter des champs supplémentaires pour l'Agent Marketing
         campaign_data = {
             "artist": artist,
             "song": song,
@@ -62,7 +60,6 @@ async def generate_campaign():
         }
 
         async with aiohttp.ClientSession() as session:
-            # Appels simultanés aux différents services
             analysis_task = fetch_data(session, "https://analyst-production.up.railway.app/analyze", {
                 "artist": artist,
                 "song": song,
@@ -75,15 +72,12 @@ async def generate_campaign():
             })
             analysis_data, optimizer_data = await asyncio.gather(analysis_task, optimizer_task)
 
-            # Ajouter les lookalike_artists et trends à campaign_data pour l'Agent Marketing
             campaign_data["lookalike_artists"] = optimizer_data["analysis"].get("lookalike_artists", [])
             campaign_data["trends"] = optimizer_data["analysis"].get("trends", [])
 
-            # Appeler l'Agent Marketing
             marketing_task = fetch_data(session, "https://marketing-agent-production.up.railway.app/generate_ads", campaign_data)
             ad_data = await marketing_task
 
-        # Combiner les données pour le rendu
         result = {
             "analysis": analysis_data,
             "ads": ad_data,
@@ -97,6 +91,9 @@ async def generate_campaign():
         logger.error(f"Error in generate_campaign: {str(e)}")
         template = env.get_template('error.html')
         return template.render(error=str(e)), 500
+
+# Convertir l'application Flask (WSGI) en ASGI pour Uvicorn
+asgi_app = WsgiToAsgi(app)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
