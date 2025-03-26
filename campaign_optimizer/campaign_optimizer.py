@@ -6,6 +6,7 @@ import aiohttp
 import asyncio
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+import urllib.parse
 
 app = Flask(__name__)
 
@@ -41,9 +42,9 @@ async def fetch_data(session, url, data, retries=5):
                 raise Exception(f"Failed to call {url} after {retries} attempts: {str(e)}")
             await asyncio.sleep(2 ** attempt)
 
-async def fetch_analysis_data(session, artist, song):
+async def fetch_analysis_data(session, artist, song, genres):
     try:
-        data = {'artist': artist, 'song': song}
+        data = {'artist': artist, 'song': song, 'genres': genres}
         return await fetch_data(session, "https://analyst-production.up.railway.app/analyze", data)
     except Exception as e:
         logger.error(f"Error fetching analysis data: {str(e)}")
@@ -51,7 +52,7 @@ async def fetch_analysis_data(session, artist, song):
         return {
             'artist': artist,
             'song': song,
-            'styles': ['rock'],  # Valeur par défaut
+            'styles': genres,  # Utiliser les genres fournis
             'artist_image_url': None,
             'lookalike_artists': [],  # Ne pas inclure ici, car cela doit venir de l'Optimizer
             'trends': []
@@ -91,12 +92,13 @@ async def fetch_chartmetric_similar_artists(session, access_token, artist_name, 
 
     try:
         # Étape 1 : Rechercher l'artiste pour obtenir son ID Chartmetric
-        search_url = f"https://api.chartmetric.com/api/artist/search?query={artist_name}"
+        encoded_artist_name = urllib.parse.quote(artist_name)
+        search_url = f"https://api.chartmetric.com/api/artist/search?name={encoded_artist_name}"
         headers = {"Authorization": f"Bearer {access_token}"}
         async with session.get(search_url, headers=headers) as response:
             response.raise_for_status()
             result = await response.json()
-            artists = result.get("artists", [])
+            artists = result.get("obj", {}).get("artists", [])
             if not artists:
                 logger.warning(f"Artiste {artist_name} non trouvé sur Chartmetric")
                 return genre_to_artists.get(genre.lower(), genre_to_artists["default"])[:3]
@@ -112,7 +114,7 @@ async def fetch_chartmetric_similar_artists(session, access_token, artist_name, 
         async with session.get(similar_url, headers=headers) as response:
             response.raise_for_status()
             result = await response.json()
-            similar_artists = result.get("similar_artists", [])
+            similar_artists = result.get("obj", [])
             if not similar_artists:
                 logger.warning(f"Aucun artiste similaire trouvé pour {artist_name} sur Chartmetric")
                 return genre_to_artists.get(genre.lower(), genre_to_artists["default"])[:3]
@@ -128,13 +130,26 @@ async def fetch_chartmetric_similar_artists(session, access_token, artist_name, 
 # Fonction pour récupérer des tendances via Chartmetric
 async def fetch_chartmetric_trends(session, access_token, genre):
     try:
+        # Ajuster le genre pour Chartmetric (utiliser des termes standard en anglais)
+        genre_mapping = {
+            "metal symphonique": "symphonic metal",
+            "metal indus": "industrial metal",
+            "rock": "rock",
+            "punk": "punk",
+            "grunge": "grunge",
+            "pop": "pop",
+            "metal": "metal"
+        }
+        chartmetric_genre = genre_mapping.get(genre.lower(), "rock")
+        encoded_genre = urllib.parse.quote(chartmetric_genre)
+
         # Récupérer les artistes populaires dans le genre
-        charts_url = f"https://api.chartmetric.com/api/charts/artists?genre={genre}&limit=5"
+        charts_url = f"https://api.chartmetric.com/api/artist/genre/{encoded_genre}/top?limit=5"
         headers = {"Authorization": f"Bearer {access_token}"}
         async with session.get(charts_url, headers=headers) as response:
             response.raise_for_status()
             result = await response.json()
-            artists = result.get("artists", [])
+            artists = result.get("obj", [])
             if not artists:
                 logger.warning(f"Aucune tendance trouvée pour le genre {genre} sur Chartmetric")
                 return [f"best {genre} song 2025", f"best playlist {genre} 2025", f"top {genre} bands 2025", f"new {genre} releases 2025", f"{genre} anthems 2025"]
@@ -246,7 +261,7 @@ async def optimize_campaign():
         # Récupérer les données d'analyse
         async with aiohttp.ClientSession() as session:
             # Récupérer les données de l'Analyst
-            analysis_data = await fetch_analysis_data(session, artist, song)
+            analysis_data = await fetch_analysis_data(session, artist, song, genres)
 
             # Obtenir l'access token Chartmetric
             access_token = await get_chartmetric_access_token(session)
