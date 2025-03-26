@@ -8,3 +8,4 @@ pytrends
 google-api-python-client
 serpapi
 asgiref==3.8.1
+aiohttp==3.10.5  # Ajout pour les appels HTTP asynchrones
