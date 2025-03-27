@@ -19,14 +19,8 @@ if not chartmetric_refresh_token:
     logger.critical("CHARTMETRIC_REFRESH_TOKEN manquant")
     raise ValueError("CHARTMETRIC_REFRESH_TOKEN manquant")
 
-# Définir la configuration avant l'initialisation de l'application
-app_config = {
-    'PROVIDE_AUTOMATIC_OPTIONS': True
-}
-
-# Initialisation de l'application avec la configuration
-app = Quart(__name__, instance_relative_config=False)
-app.config.from_mapping(app_config)
+# Initialisation de l'application
+app = Quart(__name__)
 
 # Initialisation des gestionnaires
 cache_manager = CacheManager(default_ttl=3600)  # 1 heure par défaut
