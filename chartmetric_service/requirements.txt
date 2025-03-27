@@ -1,1 +1,6 @@
-
+quart==0.19.4
+aiohttp==3.10.5
+python-dotenv==1.0.0
+cachetools==5.3.2
+hypercorn==0.14.4
+# Forcer une reconstruction - 27 mars 2025
