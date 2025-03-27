@@ -22,6 +22,9 @@ if not chartmetric_refresh_token:
 # Initialisation de l'application
 app = Quart(__name__)
 
+# Ajout de la configuration manquante pour éviter l'erreur KeyError
+app.config['PROVIDE_AUTOMATIC_OPTIONS'] = True
+
 # Initialisation des gestionnaires
 cache_manager = CacheManager(default_ttl=3600)  # 1 heure par défaut
 auth_manager = ChartmetricAuth(chartmetric_refresh_token)
