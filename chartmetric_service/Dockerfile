@@ -1,5 +1,4 @@
 FROM python:3.10-slim
-
 WORKDIR /app
 
 # Copier requirements.txt en premier pour exploiter le cache des couches Docker
