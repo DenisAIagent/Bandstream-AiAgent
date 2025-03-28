@@ -21,7 +21,8 @@ if not openai_api_key:
     raise ValueError("OPENAI_API_KEY manquant")
 
 # Initialisation du client OpenAI
-openai.api_key = openai_api_key  # Définir la clé API globalement
+from openai import OpenAI
+client = OpenAI(api_key=openai_api_key)
 
 # Cache avec TTL de 24h
 cache = TTLCache(maxsize=100, ttl=86400)
@@ -84,8 +85,15 @@ def generate_ads():
             logger.error("Aucune donnée JSON fournie")
             return jsonify({"error": "Aucune donnée fournie"}), 400
 
+        # Log des données reçues pour le débogage
+        logger.info(f"Données reçues : {data}")
+
         # Validation des données d'entrée
-        data = validate_data(data)
+        try:
+            data = validate_data(data)
+        except Exception as e:
+            logger.error(f"Erreur de validation des données : {str(e)}")
+            return jsonify({"error": f"Erreur de validation des données : {str(e)}"}), 400
 
         # Clé de cache
         cache_key = "_".join([str(data.get(field, '')) for field in ['artist', 'genres', 'language', 'promotion_type', 'song', 'tone']])
@@ -105,19 +113,21 @@ def generate_ads():
         prompt = generate_prompt(data)
         logger.info("Prompt généré avec succès")
 
-        # Appel à l'API OpenAI avec GPT-4o
-        # CORRECTION ICI : Utilisation correcte du client OpenAI sans proxies
-        from openai import OpenAI
-        client = OpenAI(api_key=openai_api_key)
+        # Ajout de logs pour le débogage
+        logger.info("Appel à l'API OpenAI...")
         
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=2000,
-            temperature=0.7
-        )
-        result = response.choices[0].message.content
-        logger.info("Réponse OpenAI reçue")
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=2000,
+                temperature=0.7
+            )
+            logger.info("Réponse OpenAI reçue avec succès")
+            result = response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"Erreur lors de l'appel à l'API OpenAI : {str(e)}")
+            return jsonify({"error": f"Erreur lors de l'appel à l'API OpenAI : {str(e)}"}), 500
 
         # Nettoyer la réponse pour enlever les balises ```json ... ```
         result_cleaned = re.sub(r'^```json\n|\n```$', '', result).strip()
@@ -156,9 +166,6 @@ def generate_ads():
         logger.info(f"Contenu généré et mis en cache pour : {cache_key}")
         return jsonify(result_json)
 
-    except openai.APIError as e:
-        logger.error(f"Erreur OpenAI : {str(e)}")
-        return jsonify({"error": f"Erreur OpenAI : {str(e)}"}), 500
     except Exception as e:
         logger.error(f"Erreur inattendue : {str(e)}")
         return jsonify({"error": f"Erreur interne : {str(e)}"}), 500
@@ -257,7 +264,7 @@ INSTRUCTIONS :
 5. ANALYSE
    - "trends" : Utiliser la liste fournie : {json.dumps(selected_trends)}.
    - "lookalike_artists" : Utiliser la liste fournie : {json.dumps(selected_lookalikes)}.
-   - "artist_image_url" : Générer une URL fictive au format "https://example.com/{artist.lower() .replace(' ', '-')}.jpg".
+   - "artist_image_url" : Générer une URL fictive au format "https://example.com/{artist.lower()  .replace(' ', '-')}.jpg".
 
 FORMAT DE SORTIE ATTENDU (objet JSON) :
 {{
@@ -275,7 +282,7 @@ FORMAT DE SORTIE ATTENDU (objet JSON) :
   "analysis": {{
     "trends": {json.dumps(selected_trends)},
     "lookalike_artists": {json.dumps(selected_lookalikes)},
-    "artist_image_url": "https://example.com/{artist.lower() .replace(' ', '-')}.jpg"
+    "artist_image_url": "https://example.com/{artist.lower()  .replace(' ', '-')}.jpg"
   }}
 }}
 """
