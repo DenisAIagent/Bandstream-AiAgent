@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Génération de campagne en cours</h3>
+                </div>
+                <div class="card-body text-center">
+                    <div class="spinner-border text-primary mb-4" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <h4 id="status-message">Veuillez patienter pendant que nous générons votre campagne...</h4>
+                    <div class="progress mt-4">
+                        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="progress-details" class="mt-3 text-start">
+                        <p id="chartmetric-status"><i class="fas fa-circle-notch fa-spin"></i> Analyse des tendances et artistes similaires...</p>
+                        <p id="analyst-status"><i class="fas fa-circle-notch fa-spin"></i> Analyse de l'artiste et de la chanson...</p>
+                        <p id="marketing-status"><i class="fas fa-circle-notch fa-spin"></i> Génération des annonces publicitaires...</p>
+                        <p id="optimizer-status"><i class="fas fa-circle-notch fa-spin"></i> Optimisation des annonces...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const campaignId = "{{ campaign_id }}";
+    const progressBar = document.getElementById('progress-bar');
+    const statusMessage = document.getElementById('status-message');
+    const chartmetricStatus = document.getElementById('chartmetric-status');
+    const analystStatus = document.getElementById('analyst-status');
+    const marketingStatus = document.getElementById('marketing-status');
+    const optimizerStatus = document.getElementById('optimizer-status');
+    
+    // Fonction pour mettre à jour l'interface en fonction du statut
+    function updateStatus(data) {
+        // Calculer la progression
+        let progress = 0;
+        let completedSteps = 0;
+        
+        // Vérifier le statut de chaque étape
+        if (data.progress.chartmetric === 'completed') {
+            chartmetricStatus.innerHTML = '<i class="fas fa-check-circle text-success"></i> Analyse des tendances et artistes similaires terminée';
+            completedSteps++;
+        } else if (data.progress.chartmetric === 'error') {
+            chartmetricStatus.innerHTML = '<i class="fas fa-exclamation-circle text-warning"></i> Erreur lors de l\'analyse des tendances (utilisation de données par défaut)';
+            completedSteps++;
+        } else if (data.progress.chartmetric === 'skipped') {
+            chartmetricStatus.innerHTML = '<i class="fas fa-forward text-info"></i> Analyse des tendances ignorée';
+            completedSteps++;
+        }
+        
+        if (data.progress.analyst === 'completed') {
+            analystStatus.innerHTML = '<i class="fas fa-check-circle text-success"></i> Analyse de l\'artiste et de la chanson terminée';
+            completedSteps++;
+        } else if (data.progress.analyst === 'error') {
+            analystStatus.innerHTML = '<i class="fas fa-exclamation-circle text-warning"></i> Erreur lors de l\'analyse (utilisation de données par défaut)';
+            completedSteps++;
+        } else if (data.progress.analyst === 'skipped') {
+            analystStatus.innerHTML = '<i class="fas fa-forward text-info"></i> Analyse ignorée';
+            completedSteps++;
+        }
+        
+        if (data.progress.marketing === 'completed') {
+            marketingStatus.innerHTML = '<i class="fas fa-check-circle text-success"></i> Génération des annonces publicitaires terminée';
+            completedSteps++;
+        } else if (data.progress.marketing === 'error') {
+            marketingStatus.innerHTML = '<i class="fas fa-exclamation-circle text-warning"></i> Erreur lors de la génération des annonces (utilisation de données par défaut)';
+            completedSteps++;
+        } else if (data.progress.marketing === 'skipped') {
+            marketingStatus.innerHTML = '<i class="fas fa-forward text-info"></i> Génération des annonces ignorée';
+            completedSteps++;
+        }
+        
+        if (data.progress.optimizer === 'completed') {
+            optimizerStatus.innerHTML = '<i class="fas fa-check-circle text-success"></i> Optimisation des annonces terminée';
+            completedSteps++;
+        } else if (data.progress.optimizer === 'error') {
+            optimizerStatus.innerHTML = '<i class="fas fa-exclamation-circle text-warning"></i> Erreur lors de l\'optimisation (utilisation de données par défaut)';
+            completedSteps++;
+        } else if (data.progress.optimizer === 'skipped') {
+            optimizerStatus.innerHTML = '<i class="fas fa-forward text-info"></i> Optimisation ignorée';
+            completedSteps++;
+        }
+        
+        // Calculer le pourcentage de progression
+        progress = (completedSteps / 4) * 100;
+        progressBar.style.width = progress + '%';
+        
+        // Mettre à jour le message de statut
+        if (data.status === 'completed') {
+            statusMessage.textContent = 'Génération de campagne terminée !';
+            // Rediriger vers la page de résultats
+            window.location.href = '/campaign_results/' + campaignId;
+        } else if (data.status === 'error') {
+            statusMessage.textContent = 'Erreur lors de la génération de la campagne.';
+        } else {
+            statusMessage.textContent = 'Génération de campagne en cours... (' + Math.round(progress) + '%)';
+        }
+    }
+    
+    // Fonction pour vérifier périodiquement le statut de la campagne
+    function checkCampaignStatus() {
+        fetch('/campaign_status?id=' + campaignId)
+            .then(response => response.json())
+            .then(data => {
+                updateStatus(data);
+                
+                // Si la campagne n'est pas terminée, vérifier à nouveau après un court délai
+                if (data.status !== 'completed' && data.status !== 'error') {
+                    setTimeout(checkCampaignStatus, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de la vérification du statut :', error);
+                setTimeout(checkCampaignStatus, 5000);
+            });
+    }
+    
+    // Commencer à vérifier le statut
+    checkCampaignStatus();
+});
+</script>
+{% endblock %}
