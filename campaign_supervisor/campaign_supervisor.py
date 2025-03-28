@@ -248,7 +248,7 @@ def view_results():
     # Si la campagne n'est pas trouvée, créer une campagne factice pour démonstration
     if campaign_id not in campaigns_store:
         logger.warning(f"Campagne {campaign_id} non trouvée, création d'une campagne de démonstration")
-        # Créer une campagne de démonstration
+        # Créer une campagne de démonstration avec plusieurs titres, descriptions, etc.
         campaigns_store[campaign_id] = {
             'id': campaign_id,
             'artist': 'Christophe Maé',
@@ -258,11 +258,53 @@ def view_results():
             'promotion_type': 'clip',
             'status': 'completed',
             'marketing_data': {
-                'short_title': "Découvrez On S'Attache par Christophe Maé",
-                'long_title': "Écoutez le nouveau clip On S'Attache de Christophe Maé maintenant",
-                'description': "Le nouveau clip On S'Attache de Christophe Maé est maintenant disponible. Écoutez-le dès maintenant sur toutes les plateformes de streaming.",
+                'short_titles': [
+                    "Découvrez On S'Attache par Christophe Maé",
+                    "Christophe Maé - On S'Attache - Nouveau",
+                    "On S'Attache - Clip officiel - C. Maé",
+                    "Maé revient avec On S'Attache",
+                    "On S'Attache - Chanson française"
+                ],
+                'long_titles': [
+                    "Écoutez le nouveau clip On S'Attache de Christophe Maé maintenant sur toutes les plateformes",
+                    "Christophe Maé présente son nouveau single On S'Attache - Une mélodie qui vous transportera",
+                    "On S'Attache - Le nouveau titre émouvant de Christophe Maé qui parle d'amour et d'attachement",
+                    "Découvrez la nouvelle chanson de Christophe Maé - On S'Attache - Un hymne à l'amour incontournable",
+                    "Christophe Maé revient avec On S'Attache - Une chanson qui vous touchera en plein cœur"
+                ],
+                'descriptions': [
+                    "Le nouveau clip On S'Attache de Christophe Maé est disponible. Écoutez-le sur toutes les plateformes.",
+                    "Christophe Maé nous présente On S'Attache, une chanson sur l'amour et les relations humaines.",
+                    "On S'Attache explore les thèmes de l'amour et de l'attachement avec des mélodies entraînantes.",
+                    "Avec On S'Attache, Christophe Maé nous offre une chanson sincère et touchante sur les relations.",
+                    "Découvrez On S'Attache, le nouveau single de Christophe Maé qui parle d'amour et d'émotions."
+                ],
                 'youtube_short': "Nouveau clip de Christophe Maé - On S'Attache",
-                'youtube_full': "Christophe Maé présente son nouveau clip On S'Attache. Une chanson qui parle d'amour et d'attachement, avec des mélodies entraînantes et des paroles touchantes. Abonnez-vous à la chaîne pour plus de contenu."
+                'youtube_full': "Christophe Maé présente son nouveau clip On S'Attache. Une chanson qui parle d'amour et d'attachement, avec des mélodies entraînantes et des paroles touchantes. Abonnez-vous à la chaîne pour plus de contenu.",
+                'long_tail_keywords': [
+                    "meilleure chanson française 2025",
+                    "Christophe Maé nouveau single",
+                    "chanson d'amour française populaire",
+                    "clip Christophe Maé 2025",
+                    "musique française romantique",
+                    "On S'Attache paroles et signification",
+                    "chanson française à succès",
+                    "Christophe Maé album 2025",
+                    "musique française contemporaine",
+                    "hits français 2025"
+                ],
+                'similar_artists': [
+                    "Patrick Bruel",
+                    "Calogero",
+                    "Vianney",
+                    "Amir",
+                    "Kendji Girac",
+                    "Zaz",
+                    "Jean-Jacques Goldman",
+                    "Florent Pagny",
+                    "M. Pokora",
+                    "Slimane"
+                ]
             }
         }
     
@@ -271,15 +313,113 @@ def view_results():
     # Forcer le statut à "completed" pour éviter le badge d'erreur
     campaign['status'] = 'completed'
     
-    # S'assurer que marketing_data existe
+    # S'assurer que marketing_data existe avec tous les champs nécessaires
     if 'marketing_data' not in campaign:
+        artist = campaign.get('artist', '')
+        song = campaign.get('song', '')
         campaign['marketing_data'] = {
-            'short_title': f"Découvrez {campaign.get('song', '')} par {campaign.get('artist', '')}",
-            'long_title': f"Écoutez le nouveau titre {campaign.get('song', '')} de {campaign.get('artist', '')} maintenant",
-            'description': f"Le nouveau titre {campaign.get('song', '')} de {campaign.get('artist', '')} est maintenant disponible. Écoutez-le dès maintenant sur toutes les plateformes de streaming.",
-            'youtube_short': f"Nouveau clip de {campaign.get('artist', '')} - {campaign.get('song', '')}",
-            'youtube_full': f"{campaign.get('artist', '')} présente son nouveau clip {campaign.get('song', '')}. Abonnez-vous à la chaîne pour plus de contenu."
+            'short_titles': [
+                f"Découvrez {song} par {artist}",
+                f"{artist} - {song} - Nouveau",
+                f"{song} - Clip officiel - {artist}",
+                f"{artist} revient avec {song}",
+                f"{song} - Nouvelle sortie"
+            ],
+            'long_titles': [
+                f"Écoutez le nouveau titre {song} de {artist} maintenant sur toutes les plateformes",
+                f"{artist} présente son nouveau single {song} - Une mélodie qui vous transportera",
+                f"{song} - Le nouveau titre émouvant de {artist} qui parle d'amour et d'émotions",
+                f"Découvrez la nouvelle chanson de {artist} - {song} - Un hymne musical incontournable",
+                f"{artist} revient avec {song} - Une chanson qui vous touchera en plein cœur"
+            ],
+            'descriptions': [
+                f"Le nouveau titre {song} de {artist} est disponible. Écoutez-le sur toutes les plateformes.",
+                f"{artist} nous présente {song}, une chanson sur l'amour et les relations humaines.",
+                f"{song} explore les thèmes de l'amour et des émotions avec des mélodies entraînantes.",
+                f"Avec {song}, {artist} nous offre une chanson sincère et touchante sur les relations.",
+                f"Découvrez {song}, le nouveau single de {artist} qui parle d'amour et d'émotions."
+            ],
+            'youtube_short': f"Nouveau clip de {artist} - {song}",
+            'youtube_full': f"{artist} présente son nouveau clip {song}. Abonnez-vous à la chaîne pour plus de contenu.",
+            'long_tail_keywords': [
+                "meilleure chanson 2025",
+                f"{artist} nouveau single",
+                "chanson d'amour populaire",
+                f"clip {artist} 2025",
+                "musique romantique",
+                f"{song} paroles et signification",
+                "chanson à succès",
+                f"{artist} album 2025",
+                "musique contemporaine",
+                "hits 2025"
+            ],
+            'similar_artists': [
+                "Artiste similaire 1",
+                "Artiste similaire 2",
+                "Artiste similaire 3",
+                "Artiste similaire 4",
+                "Artiste similaire 5",
+                "Artiste similaire 6",
+                "Artiste similaire 7",
+                "Artiste similaire 8",
+                "Artiste similaire 9",
+                "Artiste similaire 10"
+            ]
         }
+    # Conversion de l'ancien format vers le nouveau format si nécessaire
+    elif 'short_titles' not in campaign['marketing_data'] and 'short_title' in campaign['marketing_data']:
+        marketing_data = campaign['marketing_data']
+        artist = campaign.get('artist', '')
+        song = campaign.get('song', '')
+        short_title = marketing_data.get('short_title', '')
+        long_title = marketing_data.get('long_title', '')
+        description = marketing_data.get('description', '')
+        
+        campaign['marketing_data']['short_titles'] = [
+            short_title,
+            f"{artist} - {song} - Nouveau",
+            f"{song} - Clip officiel - {artist}",
+            f"{artist} revient avec {song}",
+            f"{song} - Nouvelle sortie"
+        ]
+        campaign['marketing_data']['long_titles'] = [
+            long_title,
+            f"{artist} présente son nouveau single {song} - Une mélodie qui vous transportera",
+            f"{song} - Le nouveau titre émouvant de {artist} qui parle d'amour et d'émotions",
+            f"Découvrez la nouvelle chanson de {artist} - {song} - Un hymne musical incontournable",
+            f"{artist} revient avec {song} - Une chanson qui vous touchera en plein cœur"
+        ]
+        campaign['marketing_data']['descriptions'] = [
+            description,
+            f"{artist} nous présente {song}, une chanson sur l'amour et les relations humaines.",
+            f"{song} explore les thèmes de l'amour et des émotions avec des mélodies entraînantes.",
+            f"Avec {song}, {artist} nous offre une chanson sincère et touchante sur les relations.",
+            f"Découvrez {song}, le nouveau single de {artist} qui parle d'amour et d'émotions."
+        ]
+        campaign['marketing_data']['long_tail_keywords'] = [
+            "meilleure chanson 2025",
+            f"{artist} nouveau single",
+            "chanson d'amour populaire",
+            f"clip {artist} 2025",
+            "musique romantique",
+            f"{song} paroles et signification",
+            "chanson à succès",
+            f"{artist} album 2025",
+            "musique contemporaine",
+            "hits 2025"
+        ]
+        campaign['marketing_data']['similar_artists'] = [
+            "Patrick Bruel",
+            "Calogero",
+            "Vianney",
+            "Amir",
+            "Kendji Girac",
+            "Zaz",
+            "Jean-Jacques Goldman",
+            "Florent Pagny",
+            "M. Pokora",
+            "Slimane"
+        ]
     
     # Préparer les données d'analyse pour le template
     analysis = {
@@ -294,8 +434,13 @@ def view_results():
         'short_title': marketing_data.get('short_title', ''),
         'long_title': marketing_data.get('long_title', ''),
         'description': marketing_data.get('description', ''),
+        'short_titles': marketing_data.get('short_titles', []),
+        'long_titles': marketing_data.get('long_titles', []),
+        'descriptions': marketing_data.get('descriptions', []),
         'youtube_short': marketing_data.get('youtube_short', ''),
-        'youtube_full': marketing_data.get('youtube_full', '')
+        'youtube_full': marketing_data.get('youtube_full', ''),
+        'long_tail_keywords': marketing_data.get('long_tail_keywords', []),
+        'similar_artists': marketing_data.get('similar_artists', [])
     }
     
     return render_template('results.html', 
