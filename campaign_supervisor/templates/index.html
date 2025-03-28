@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campaign Supervisor - Band Stream</title>
     <link rel="icon" type="image/png" href="https://i.postimg.cc/44MFBJPq/favicon-bandstream.png">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #0ED894;
             --primary-dark: #0cb77e;
-            --secondary: #6c63ff;
-            --text: #333333;
+            --secondary: #EBF5DF;
+            --text: #000000;
             --text-light: #6c757d;
             --background: #f8f9fa;
             --card: #ffffff;
@@ -28,14 +28,14 @@
         }
         
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--background) ;
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background);
             color: var(--text);
             line-height: 1.6;
         }
         
         header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: #000000;
             color: white;
             padding: 2rem 0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -57,9 +57,8 @@
         }
         
         .logo img {
-            max-width: 200px;
+            max-width: 300px;
             height: auto;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
         }
         
         h1 {
@@ -142,7 +141,7 @@
             border-radius: 8px;
             font-size: 1rem;
             transition: border-color 0.3s, box-shadow 0.3s;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Poppins', sans-serif;
         }
         
         input:focus, select:focus, textarea:focus {
@@ -280,7 +279,7 @@
     <header>
         <div class="header-content">
             <div class="logo">
-                <img src="https://i.postimg.cc/R0MPNqC6/Bandstream-logo-quadri-noir.png" alt="Band Stream Logo">
+                <img src="https://i.postimg.cc/6Q3DWRJ3/Bandstream-logo-quadri-blanc.png" alt="Band Stream Logo">
             </div>
             <h1>Campaign Supervisor</h1>
         </div>
@@ -348,6 +347,11 @@
                     </div>
                     
                     <div class="form-group">
+                        <label for="lyrics">Paroles du morceau (optionnel)</label>
+                        <textarea id="lyrics" name="lyrics" placeholder="Collez ici les paroles de votre morceau..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
                         <label for="bio">Biographie de l'artiste (optionnel) </label>
                         <textarea id="bio" name="bio" placeholder="Décrivez l'artiste, son parcours, son univers..."></textarea>
                     </div>
@@ -382,6 +386,7 @@
                 genres: document.getElementById('genres').value.split(',').map(g => g.trim()),
                 language: document.getElementById('language').value,
                 promotion_type: document.getElementById('promotion_type').value,
+                lyrics: document.getElementById('lyrics').value,
                 bio: document.getElementById('bio').value,
                 song_link: document.getElementById('song_link').value
             };
