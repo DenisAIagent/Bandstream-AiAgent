@@ -1,8 +1,8 @@
-from quart import Quart, jsonify
+from fastapi import FastAPI, Response
 import os
 from dotenv import load_dotenv
 import logging
-from api.routes import register_routes
+from api.routes import register_routes  # Fonction adaptée pour FastAPI
 from auth.chartmetric_auth import ChartmetricAuth
 from cache.cache_manager import CacheManager
 from client.chartmetric_client import ChartmetricClient
@@ -19,18 +19,11 @@ if not chartmetric_refresh_token:
     logger.critical("CHARTMETRIC_REFRESH_TOKEN manquant")
     raise ValueError("CHARTMETRIC_REFRESH_TOKEN manquant")
 
-# Sous-classer Quart pour initialiser la configuration manquante
-class CustomQuart(Quart):
-    def __init__(self, *args, **kwargs):
-        # Initialiser la configuration avant d'appeler le constructeur parent
-        self.config = {"PROVIDE_AUTOMATIC_OPTIONS": True}
-        super().__init__(*args, **kwargs)
-
-# Utiliser la classe personnalisée au lieu de Quart directement
-app = CustomQuart(__name__)
+# Initialisation de l'application FastAPI
+app = FastAPI(title="Chartmetric Service", version="1.0.0")
 
 # Initialisation des gestionnaires
-cache_manager = CacheManager(default_ttl=3600)  # 1 heure par défaut
+cache_manager = CacheManager(default_ttl=3600)
 auth_manager = ChartmetricAuth(chartmetric_refresh_token)
 chartmetric_client = ChartmetricClient(auth_manager, cache_manager)
 
@@ -38,13 +31,10 @@ chartmetric_client = ChartmetricClient(auth_manager, cache_manager)
 register_routes(app, chartmetric_client)
 
 # Route de santé
-@app.route('/health', methods=['GET'])
+@app.get('/health')
 async def health_check():
-    return jsonify({
+    return {
         "status": "healthy",
         "service": "Chartmetric Service",
         "version": "1.0.0"
-    })
-
-if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=8080)
+    }
