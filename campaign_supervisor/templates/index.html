@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campaign Supervisor - Band Stream</title>
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/44MFBJPq/favicon-bandstream.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -45,14 +46,27 @@
             margin: 0 auto;
             padding: 0 2rem;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
+            text-align: center;
         }
         
         .logo {
-            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+        
+        .logo img {
+            max-width: 200px;
+            height: auto;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+        
+        h1 {
+            font-size: 2.5rem;
             font-weight: 700;
-            letter-spacing: -0.5px;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .container {
@@ -73,12 +87,6 @@
         .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        }
-        
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
         }
         
         h2 {
@@ -271,7 +279,9 @@
 <body>
     <header>
         <div class="header-content">
-            <div class="logo">Band Stream</div>
+            <div class="logo">
+                <img src="https://i.postimg.cc/R0MPNqC6/Bandstream-logo-quadri-noir.png" alt="Band Stream Logo">
+            </div>
             <h1>Campaign Supervisor</h1>
         </div>
     </header>
@@ -332,7 +342,7 @@
                         </div>
                         
                         <div class="form-group">
-                            <label for="song_link">Lien vers le morceau (optionnel)</label>
+                            <label for="song_link">Lien vers le morceau (optionnel) </label>
                             <input type="url" id="song_link" name="song_link" placeholder="https://...">
                         </div>
                     </div>
