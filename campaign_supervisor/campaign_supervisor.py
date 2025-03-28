@@ -83,6 +83,63 @@ Facebook : /{artist.lower().replace(' ', '')}
     
     return short_desc, long_desc
 
+# Fonction pour obtenir des artistes similaires basés sur le genre
+def get_similar_artists(artist, genres):
+    # Normaliser les genres pour la recherche
+    normalized_genres = [genre.lower() for genre in genres]
+    
+    if any(genre in normalized_genres for genre in ['chanson francaise', 'variété française', 'variete francaise']):
+        return [
+            "Patrick Bruel", "Calogero", "Vianney", "Amir", "Kendji Girac",
+            "Zaz", "Jean-Jacques Goldman", "Florent Pagny", "M. Pokora", "Slimane"
+        ]
+    elif any(genre in normalized_genres for genre in ['rock', 'metal', 'punk', 'alternative']):
+        return [
+            "AC/DC", "Foo Fighters", "Muse", "Red Hot Chili Peppers", "Radiohead",
+            "Arctic Monkeys", "The Killers", "Queens of the Stone Age", "Imagine Dragons", "Coldplay"
+        ]
+    elif any(genre in normalized_genres for genre in ['rap', 'hip hop', 'hip-hop', 'trap']):
+        return [
+            "Booba", "Damso", "Nekfeu", "PNL", "SCH",
+            "Ninho", "Jul", "Orelsan", "Kaaris", "Niska"
+        ]
+    elif any(genre in normalized_genres for genre in ['pop', 'pop music']):
+        return [
+            "Ed Sheeran", "Taylor Swift", "Dua Lipa", "The Weeknd", "Billie Eilish",
+            "Justin Bieber", "Ariana Grande", "Harry Styles", "Adele", "Bruno Mars"
+        ]
+    elif any(genre in normalized_genres for genre in ['electro', 'electronic', 'edm', 'house', 'techno']):
+        return [
+            "David Guetta", "Calvin Harris", "Martin Garrix", "Avicii", "Daft Punk",
+            "Skrillex", "Marshmello", "Kygo", "Diplo", "Swedish House Mafia"
+        ]
+    elif any(genre in normalized_genres for genre in ['reggae', 'dancehall', 'reggaeton', 'ska']):
+        return [
+            "Bob Marley", "Damian Marley", "Sean Paul", "Shaggy", "Alpha Blondy",
+            "Tiken Jah Fakoly", "Steel Pulse", "Burning Spear", "Chronixx", "Protoje"
+        ]
+    elif any(genre in normalized_genres for genre in ['r&b', 'rnb', 'soul', 'funk']):
+        return [
+            "The Weeknd", "Beyoncé", "Rihanna", "Frank Ocean", "SZA",
+            "H.E.R.", "Daniel Caesar", "Jorja Smith", "Alicia Keys", "John Legend"
+        ]
+    elif any(genre in normalized_genres for genre in ['jazz', 'blues']):
+        return [
+            "Miles Davis", "John Coltrane", "Ella Fitzgerald", "Louis Armstrong", "Herbie Hancock",
+            "Nina Simone", "B.B. King", "Muddy Waters", "Billie Holiday", "Duke Ellington"
+        ]
+    elif any(genre in normalized_genres for genre in ['classique', 'classical', 'orchestra']):
+        return [
+            "Ludwig van Beethoven", "Wolfgang Amadeus Mozart", "Johann Sebastian Bach", "Frédéric Chopin", "Pyotr Ilyich Tchaikovsky",
+            "Claude Debussy", "Franz Schubert", "Johannes Brahms", "Antonio Vivaldi", "Richard Wagner"
+        ]
+    else:
+        # Artistes populaires génériques si le genre n'est pas reconnu
+        return [
+            "Drake", "Taylor Swift", "The Weeknd", "Billie Eilish", "Bad Bunny",
+            "Dua Lipa", "Ed Sheeran", "Ariana Grande", "Justin Bieber", "BTS"
+        ]
+
 # Route principale
 @app.route('/')
 def index():
@@ -157,63 +214,8 @@ def call_chartmetric_service(artist, genres):
         return response.json()
     except Exception as e:
         logger.error(f"Erreur lors de l'appel au service Chartmetric: {str(e)}")
-        # Génération d'artistes similaires basée sur le genre musical
-        similar_artists = []
-        
-        # Normaliser les genres pour la recherche
-        normalized_genres = [genre.lower() for genre in genres]
-        
-        if any(genre in normalized_genres for genre in ['chanson francaise', 'variété française', 'variete francaise']):
-            similar_artists = [
-                "Patrick Bruel", "Calogero", "Vianney", "Amir", "Kendji Girac",
-                "Zaz", "Jean-Jacques Goldman", "Florent Pagny", "M. Pokora", "Slimane"
-            ]
-        elif any(genre in normalized_genres for genre in ['rock', 'metal', 'punk', 'alternative']):
-            similar_artists = [
-                "AC/DC", "Foo Fighters", "Muse", "Red Hot Chili Peppers", "Radiohead",
-                "Arctic Monkeys", "The Killers", "Queens of the Stone Age", "Imagine Dragons", "Coldplay"
-            ]
-        elif any(genre in normalized_genres for genre in ['rap', 'hip hop', 'hip-hop', 'trap']):
-            similar_artists = [
-                "Booba", "Damso", "Nekfeu", "PNL", "SCH",
-                "Ninho", "Jul", "Orelsan", "Kaaris", "Niska"
-            ]
-        elif any(genre in normalized_genres for genre in ['pop', 'pop music']):
-            similar_artists = [
-                "Ed Sheeran", "Taylor Swift", "Dua Lipa", "The Weeknd", "Billie Eilish",
-                "Justin Bieber", "Ariana Grande", "Harry Styles", "Adele", "Bruno Mars"
-            ]
-        elif any(genre in normalized_genres for genre in ['electro', 'electronic', 'edm', 'house', 'techno']):
-            similar_artists = [
-                "David Guetta", "Calvin Harris", "Martin Garrix", "Avicii", "Daft Punk",
-                "Skrillex", "Marshmello", "Kygo", "Diplo", "Swedish House Mafia"
-            ]
-        elif any(genre in normalized_genres for genre in ['reggae', 'dancehall', 'reggaeton', 'ska']):
-            similar_artists = [
-                "Bob Marley", "Damian Marley", "Sean Paul", "Shaggy", "Alpha Blondy",
-                "Tiken Jah Fakoly", "Steel Pulse", "Burning Spear", "Chronixx", "Protoje"
-            ]
-        elif any(genre in normalized_genres for genre in ['r&b', 'rnb', 'soul', 'funk']):
-            similar_artists = [
-                "The Weeknd", "Beyoncé", "Rihanna", "Frank Ocean", "SZA",
-                "H.E.R.", "Daniel Caesar", "Jorja Smith", "Alicia Keys", "John Legend"
-            ]
-        elif any(genre in normalized_genres for genre in ['jazz', 'blues']):
-            similar_artists = [
-                "Miles Davis", "John Coltrane", "Ella Fitzgerald", "Louis Armstrong", "Herbie Hancock",
-                "Nina Simone", "B.B. King", "Muddy Waters", "Billie Holiday", "Duke Ellington"
-            ]
-        elif any(genre in normalized_genres for genre in ['classique', 'classical', 'orchestra']):
-            similar_artists = [
-                "Ludwig van Beethoven", "Wolfgang Amadeus Mozart", "Johann Sebastian Bach", "Frédéric Chopin", "Pyotr Ilyich Tchaikovsky",
-                "Claude Debussy", "Franz Schubert", "Johannes Brahms", "Antonio Vivaldi", "Richard Wagner"
-            ]
-        else:
-            # Artistes populaires génériques si le genre n'est pas reconnu
-            similar_artists = [
-                "Drake", "Taylor Swift", "The Weeknd", "Billie Eilish", "Bad Bunny",
-                "Dua Lipa", "Ed Sheeran", "Ariana Grande", "Justin Bieber", "BTS"
-            ]
+        # Utiliser la fonction get_similar_artists pour obtenir des artistes similaires
+        similar_artists = get_similar_artists(artist, genres)
         
         return {"trends": ["Tendance générique 1", "Tendance générique 2", "Tendance générique 3"], 
                 "lookalike_artists": similar_artists,
@@ -255,6 +257,9 @@ def call_marketing_service(artist, song, genres, language, promotion_type, lyric
         # Générer des descriptions YouTube professionnelles
         youtube_short, youtube_full = generate_youtube_descriptions(artist, song, genres, language)
         
+        # Obtenir des artistes similaires
+        similar_artists = get_similar_artists(artist, genres)
+        
         return {
             "short_titles": [
                 f"Découvrez {song} par {artist}",
@@ -278,7 +283,20 @@ def call_marketing_service(artist, song, genres, language, promotion_type, lyric
                 f"Découvrez {song}, le nouveau single de {artist} qui parle d'amour et d'émotions."
             ],
             "youtube_short": youtube_short,
-            "youtube_full": youtube_full
+            "youtube_full": youtube_full,
+            "long_tail_keywords": [
+                "meilleure chanson 2025",
+                f"{artist} nouveau single",
+                "chanson d'amour populaire",
+                f"clip {artist} 2025",
+                "musique romantique",
+                f"{song} paroles et signification",
+                "chanson à succès",
+                f"{artist} album 2025",
+                "musique contemporaine",
+                "hits 2025"
+            ],
+            "similar_artists": similar_artists
         }
 
 def call_optimizer_service(artist, song, genres, language, promotion_type, chartmetric_data, analyst_data, marketing_data):
@@ -391,6 +409,9 @@ def view_results():
         # Générer des descriptions YouTube professionnelles
         youtube_short, youtube_full = generate_youtube_descriptions(artist, song, genres, language)
         
+        # Obtenir des artistes similaires
+        similar_artists = get_similar_artists(artist, genres)
+        
         # Créer une campagne de démonstration avec plusieurs titres, descriptions, etc.
         campaigns_store[campaign_id] = {
             'id': campaign_id,
@@ -436,18 +457,7 @@ def view_results():
                     "musique française contemporaine",
                     "hits français 2025"
                 ],
-                'similar_artists': [
-                    "Patrick Bruel",
-                    "Calogero",
-                    "Vianney",
-                    "Amir",
-                    "Kendji Girac",
-                    "Zaz",
-                    "Jean-Jacques Goldman",
-                    "Florent Pagny",
-                    "M. Pokora",
-                    "Slimane"
-                ]
+                'similar_artists': similar_artists
             }
         }
     
@@ -455,6 +465,11 @@ def view_results():
     
     # Forcer le statut à "completed" pour éviter le badge d'erreur
     campaign['status'] = 'completed'
+    
+    # Forcer la mise à jour des artistes similaires
+    artist = campaign.get('artist', '')
+    genres = campaign.get('genres', [])
+    similar_artists = get_similar_artists(artist, genres)
     
     # S'assurer que marketing_data existe avec tous les champs nécessaires
     if 'marketing_data' not in campaign:
@@ -465,10 +480,6 @@ def view_results():
         
         # Générer des descriptions YouTube professionnelles
         youtube_short, youtube_full = generate_youtube_descriptions(artist, song, genres, language)
-        
-        # Obtenir des artistes similaires basés sur le genre
-        chartmetric_data = call_chartmetric_service(artist, genres)
-        similar_artists = chartmetric_data.get('lookalike_artists', [])
         
         campaign['marketing_data'] = {
             'short_titles': [
@@ -522,10 +533,6 @@ def view_results():
         # Générer des descriptions YouTube professionnelles
         youtube_short, youtube_full = generate_youtube_descriptions(artist, song, genres, language)
         
-        # Obtenir des artistes similaires basés sur le genre
-        chartmetric_data = call_chartmetric_service(artist, genres)
-        similar_artists = chartmetric_data.get('lookalike_artists', [])
-        
         campaign['marketing_data']['short_titles'] = [
             short_title,
             f"{artist} - {song} - Nouveau",
@@ -562,6 +569,9 @@ def view_results():
             "hits 2025"
         ]
         campaign['marketing_data']['similar_artists'] = similar_artists
+    
+    # Forcer la mise à jour des artistes similaires dans tous les cas
+    campaign['marketing_data']['similar_artists'] = similar_artists
     
     # Préparer les données d'analyse pour le template
     analysis = {
