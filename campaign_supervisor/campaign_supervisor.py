@@ -1,18 +1,23 @@
 import asyncio
 import logging
+import os
 from flask import Flask, render_template, request, jsonify
 import aiohttp
 from jinja2 import Environment, FileSystemLoader
 from asgiref.wsgi import WsgiToAsgi
 
-app = Flask(__name__)
+# Créer l'application Flask avec le chemin correct vers les templates
+app = Flask(__name__, 
+           template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__) ), 'templates'))
 
 # Configuration des logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Configuration de Jinja2
-env = Environment(loader=FileSystemLoader('templates'))
+# Configuration de Jinja2 avec un chemin absolu
+current_dir = os.path.dirname(os.path.abspath(__file__))
+templates_dir = os.path.join(current_dir, 'templates')
+env = Environment(loader=FileSystemLoader(templates_dir))
 
 async def fetch_data(session, url, data, retries=5):
     for attempt in range(retries):
@@ -64,23 +69,23 @@ async def generate_campaign():
             "song_lyrics": data.get('song_lyrics', '')
         }
 
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession()  as session:
             analysis_task = fetch_data(session, "https://analyst-production.up.railway.app/analyze", {
                 "artist": artist,
                 "song": song,
                 "genres": genres
-            })
+            }) 
             optimizer_task = fetch_data(session, "https://optimizer-production.up.railway.app/optimize", {
                 "artist": artist,
                 "song": song,
                 "genres": genres
-            })
+            }) 
             analysis_data, optimizer_data = await asyncio.gather(analysis_task, optimizer_task)
 
             campaign_data["lookalike_artists"] = optimizer_data["analysis"].get("lookalike_artists", [])
             campaign_data["trends"] = optimizer_data["analysis"].get("trends", [])
 
-            marketing_task = fetch_data(session, "https://marketing-agent-production.up.railway.app/generate_ads", campaign_data)
+            marketing_task = fetch_data(session, "https://marketing-agent-production.up.railway.app/generate_ads", campaign_data) 
             ad_data = await marketing_task
 
         result = {
