@@ -272,7 +272,5 @@ def campaign_status():
 def health():
     return jsonify({"status": "ok"})
 
-# Démarrage de l'application
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port)
+# Pour compatibilité ASGI
+asgi_app = app
