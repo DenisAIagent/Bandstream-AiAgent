@@ -52,3 +52,6 @@ def index():
         chartmetric_status="Opérationnel",
         chartmetric_status_class="status-ok"
     )
+
+# Créer l'application ASGI à partir de l'application WSGI
+asgi_app = WsgiToAsgi(app)
