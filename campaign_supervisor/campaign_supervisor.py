@@ -290,5 +290,14 @@ def campaign_status():
 def health():
     return jsonify({"status": "ok"})
 
-# Pour compatibilité ASGI
-asgi_app = app
+# Démarrage de l'application
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
+
+# Pour compatibilité ASGI avec Uvicorn
+from flask import Flask
+from asgiref.wsgi import WsgiToAsgi
+
+# Créer une application ASGI à partir de l'application WSGI Flask
+asgi_app = WsgiToAsgi(app)
