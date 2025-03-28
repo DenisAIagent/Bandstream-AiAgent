@@ -36,7 +36,10 @@ ANALYST_ANALYZE_ENDPOINT = f"{ANALYST_SERVICE_URL}/analyze"
 MARKETING_GENERATE_ENDPOINT = f"{MARKETING_AGENT_URL}/generate_ads"
 OPTIMIZER_OPTIMIZE_ENDPOINT = f"{OPTIMIZER_SERVICE_URL}/optimize"
 
-@app.route('/') 
+# Dictionnaire global pour stocker les campagnes (au lieu d'utiliser session) 
+campaigns_store = {}
+
+@app.route('/')
 def index():
     # Vérifier si une analyse existe déjà dans la session
     analysis = session.get('analysis', {})
@@ -106,11 +109,8 @@ def generate_campaign():
             }
         }
         
-        # Stocker la campagne dans la session
-        if 'campaigns' not in session:
-            session['campaigns'] = {}
-        session['campaigns'][campaign_id] = campaign
-        session.modified = True
+        # Stocker la campagne dans le dictionnaire global au lieu de la session
+        campaigns_store[campaign_id] = campaign
         
         # Lancer la génération de la campagne en arrière-plan
         threading.Thread(target=generate_campaign_background, args=(campaign_id, artist, song, genres, language, promotion_type, lyrics, bio, song_link)).start()
@@ -134,21 +134,19 @@ def campaign_status():
     
     # Si un ID spécifique est fourni, renvoyer uniquement cette campagne
     if campaign_id:
-        campaigns = session.get('campaigns', {})
-        campaign = campaigns.get(campaign_id)
+        campaign = campaigns_store.get(campaign_id)
         if campaign:
             return jsonify(campaign)
         else:
             return jsonify({"error": "Campagne non trouvée"}), 404
     
     # Sinon, renvoyer toutes les campagnes
-    return jsonify(session.get('campaigns', {}))
+    return jsonify(campaigns_store)
 
 @app.route('/campaign_results/<id>')
 def view_campaign_results(id):
-    # Récupérer les données de la campagne
-    campaigns = session.get('campaigns', {})
-    campaign = campaigns.get(id)
+    # Récupérer les données de la campagne depuis le dictionnaire global
+    campaign = campaigns_store.get(id)
     
     if not campaign:
         flash("Campagne non trouvée.")
@@ -179,9 +177,8 @@ def view_campaign_results(id):
                           })
 
 def generate_campaign_background(campaign_id, artist_name, song_name, genres, language, promotion_type, lyrics, bio, song_link):
-    # Récupérer la campagne depuis la session
-    campaigns = session.get('campaigns', {})
-    campaign = campaigns.get(campaign_id, {})
+    # Récupérer la campagne depuis le dictionnaire global au lieu de la session
+    campaign = campaigns_store.get(campaign_id, {})
     
     # Appel au service Chartmetric pour obtenir des tendances et des artistes similaires
     chartmetric_data = {}
@@ -293,10 +290,8 @@ def generate_campaign_background(campaign_id, artist_name, song_name, genres, la
     campaign["optimizer_data"] = optimizer_data
     campaign["status"] = "completed"
     
-    # Mettre à jour la session
-    campaigns[campaign_id] = campaign
-    session['campaigns'] = campaigns
-    session.modified = True
+    # Mettre à jour le dictionnaire global
+    campaigns_store[campaign_id] = campaign
     
     logger.info(f"Génération de campagne terminée pour {artist_name}")
 
