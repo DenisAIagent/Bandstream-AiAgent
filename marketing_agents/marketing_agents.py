@@ -35,9 +35,9 @@ def clean_description(description):
     generic_phrases = [
         r"Avec son style unique, .* rencontre un succès grandissant aux quatre coins du globe",
         r"With his unique style, .* is experiencing growing success across the globe",
-        r"À chacune de ses sorties, il continue de surprendre et de créer l’engouement",
+        r"À chacune de ses sorties, il continue de surprendre et de créer l'engouement",
         r"With each release, .* continues to surprise his audience and build excitement",
-        r"s’imposant comme une figure essentielle de la scène",
+        r"s'imposant comme une figure essentielle de la scène",
         r"cementing his place as a key figure in the .* scene"
     ]
     for phrase in generic_phrases:
@@ -106,7 +106,10 @@ def generate_ads():
         logger.info("Prompt généré avec succès")
 
         # Appel à l'API OpenAI avec GPT-4o
-        client = openai.OpenAI(api_key=openai_api_key)  # Initialisation sans proxies
+        # CORRECTION ICI : Utilisation correcte du client OpenAI sans proxies
+        from openai import OpenAI
+        client = OpenAI(api_key=openai_api_key)
+        
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
@@ -212,7 +215,7 @@ INSTRUCTIONS :
 
 2. TITRES LONGS (max 90 caractères)
    Exemples :
-   - "Nouveau Clip Jeanne Cherhal avec l’irrésistible Vincent Dedienne à ses côtés dans Jean"
+   - "Nouveau Clip Jeanne Cherhal avec l'irrésistible Vincent Dedienne à ses côtés dans Jean"
    - "Jeanne Cherhal dévoile Jean accompagnée par Vincent Dedienne un clip drôle et charmant"
    - "Jeanne Cherhal et Vincent Dedienne ensemble dans Jean un moment pétillant à découvrir"
    - "Jean par Jeanne Cherhal avec Vincent Dedienne une complicité qui fait plaisir à voir"
@@ -230,7 +233,7 @@ INSTRUCTIONS :
 4. DESCRIPTION YOUTUBE
    - Courte (max 120 caractères) : Exemple "Plongez dans le chaos musical avec Silver Dust !"
      - Inclure le nom complet de l'artiste ({artist}), le titre de la chanson ({song}), et un mot-clé lié au genre ({genres[0]}).
-     - Ajouter un appel à l’action (ex. "Découvrez maintenant !").
+     - Ajouter un appel à l'action (ex. "Découvrez maintenant !").
    - Complète (max 5000 caractères) :
      Structure suggérée :
        • Introduction (1-2 phrases) : Une accroche captivante mentionnant {artist}, {song}, et un élément clé de {bio_summary}.
@@ -238,9 +241,9 @@ INSTRUCTIONS :
          - Contexte biographique ({bio_summary}).
          - Description de la sortie ({song}, {promotion_type}, lien avec {genres} et {bio_themes}).
          - Intégrer une référence aux tendances ({json.dumps(selected_trends)}) et aux artistes similaires ({json.dumps(selected_lookalikes)}).
-       • Conclusion : Inclure un appel à l’action (ex. "Regardez maintenant sur {song_link} ! Likez, commentez et abonnez-vous !").
+       • Conclusion : Inclure un appel à l'action (ex. "Regardez maintenant sur {song_link} ! Likez, commentez et abonnez-vous !").
      Mise en Page :
-       - Utiliser des sauts de ligne (\n) pour aérer le texte.
+       - Utiliser des sauts de ligne (\\n) pour aérer le texte.
        - Séparer les sections avec des emojis (ex. 🔔 pour les abonnements, 📌 pour les crédits).
        - Inclure des placeholders pour les liens.
        - Ajouter des liens sociaux (Instagram, TikTok, site web) avec des placeholders.
@@ -249,12 +252,12 @@ INSTRUCTIONS :
        - Inclure {artist}, {song}, et {genres} dans les premières lignes.
        - Intégrer les tendances ({json.dumps(selected_trends)}) pour capter les recherches spécifiques.
        - Mentionner les artistes similaires ({json.dumps(selected_lookalikes)}) pour apparaître dans les recherches associées.
-       - Encourager l’engagement (ex. "Abonnez-vous", "Likez", "Commentez").
+       - Encourager l'engagement (ex. "Abonnez-vous", "Likez", "Commentez").
 
 5. ANALYSE
    - "trends" : Utiliser la liste fournie : {json.dumps(selected_trends)}.
    - "lookalike_artists" : Utiliser la liste fournie : {json.dumps(selected_lookalikes)}.
-   - "artist_image_url" : Générer une URL fictive au format "https://example.com/{artist.lower().replace(' ', '-')}.jpg".
+   - "artist_image_url" : Générer une URL fictive au format "https://example.com/{artist.lower() .replace(' ', '-')}.jpg".
 
 FORMAT DE SORTIE ATTENDU (objet JSON) :
 {{
@@ -272,7 +275,7 @@ FORMAT DE SORTIE ATTENDU (objet JSON) :
   "analysis": {{
     "trends": {json.dumps(selected_trends)},
     "lookalike_artists": {json.dumps(selected_lookalikes)},
-    "artist_image_url": "https://example.com/{artist.lower().replace(' ', '-')}.jpg"
+    "artist_image_url": "https://example.com/{artist.lower() .replace(' ', '-')}.jpg"
   }}
 }}
 """
