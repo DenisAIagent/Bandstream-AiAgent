@@ -3,46 +3,404 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Campaign Results - Band Stream</title>
+    <title>Campaign Supervisor - Band Stream</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 50px;
-            background-color: #f4f4f4;
+        :root {
+            --primary: #0ED894;
+            --primary-dark: #0cb77e;
+            --secondary: #6c63ff;
+            --text: #333333;
+            --text-light: #6c757d;
+            --background: #f8f9fa;
+            --card: #ffffff;
+            --border: #e9ecef;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
         }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background) ;
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 2rem 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
         .container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        
+        .card {
+            background-color: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            position: relative;
             display: inline-block;
         }
-        h1 {
-            color: #0ED894;
+        
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 3px;
         }
-        a {
-            color: #3498db;
-            text-decoration: none;
+        
+        p {
+            margin-bottom: 1.5rem;
+            font-size: 1.05rem;
         }
-        a:hover {
-            text-decoration: underline;
+        
+        .form-container {
+            margin-top: 2rem;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(14, 216, 148, 0.2);
+        }
+        
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-align: center;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(14, 216, 148, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .status-container {
+            background-color: rgba(14, 216, 148, 0.05);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .status-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+        
+        .status-list {
+            list-style: none;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-left: 0.8rem;
+        }
+        
+        .status-ok {
+            background-color: rgba(40, 167, 69, 0.15);
+            color: var(--success);
+        }
+        
+        .status-error {
+            background-color: rgba(220, 53, 69, 0.15);
+            color: var(--danger);
+        }
+        
+        .status-pending {
+            background-color: rgba(255, 193, 7, 0.15);
+            color: var(--warning);
+        }
+        
+        .service-name {
+            font-weight: 500;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(14, 216, 148, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
+    <header>
+        <div class="header-content">
+            <div class="logo">Band Stream</div>
+            <h1>Campaign Supervisor</h1>
+        </div>
+    </header>
+    
     <div class="container">
-        <h1>Campaign Generated Successfully</h1>
-        <h2>Analysis</h2>
-        <p>Artist: {{ analysis.artist }}</p>
-        <p>Song: {{ analysis.song }}</p>
-        <p>Styles: {{ analysis.styles | join(', ') }}</p>
-        <h2>Ads</h2>
-        <p>{{ ads | tojson }}</p>
-        <h2>Strategy</h2>
-        <p>Target Audience: {{ strategy.target_audience }}</p>
-        <p>Channels: {{ strategy.channels | join(', ') }}</p>
-        <p><a href="/">Generate Another Campaign</a></p>
+        <div class="card">
+            <h2>Créez votre campagne marketing</h2>
+            <p>Générez des campagnes marketing personnalisées pour vos artistes et leurs morceaux en quelques clics. Notre système utilise l'intelligence artificielle pour analyser les tendances et optimiser votre stratégie.</p>
+            
+            <div class="status-container">
+                <div class="status-title">État des services</div>
+                <ul class="status-list">
+                    <li class="status-item">
+                        <span class="service-name">Chartmetric Service</span>
+                        <span class="status-badge {{ chartmetric_status_class }}">{{ chartmetric_status }}</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="form-container">
+                <form id="campaignForm" action="/generate_campaign" method="POST">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="artist">Nom de l'artiste</label>
+                            <input type="text" id="artist" name="artist" required placeholder="Ex: Daft Punk">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="song">Titre du morceau</label>
+                            <input type="text" id="song" name="song" required placeholder="Ex: Get Lucky">
+                        </div>
+                    </div>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="genres">Genres musicaux</label>
+                            <input type="text" id="genres" name="genres" placeholder="Ex: rock, pop, électro">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="language">Langue de la campagne</label>
+                            <select id="language" name="language">
+                                <option value="français">Français</option>
+                                <option value="anglais">Anglais</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="promotion_type">Type de promotion</label>
+                            <select id="promotion_type" name="promotion_type">
+                                <option value="clip">Clip vidéo</option>
+                                <option value="single">Single</option>
+                                <option value="album">Album</option>
+                                <option value="concert">Concert</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="song_link">Lien vers le morceau (optionnel)</label>
+                            <input type="url" id="song_link" name="song_link" placeholder="https://...">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bio">Biographie de l'artiste (optionnel) </label>
+                        <textarea id="bio" name="bio" placeholder="Décrivez l'artiste, son parcours, son univers..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn">Générer la campagne</button>
+                </form>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading">
+            <div class="loading-spinner"></div>
+            <p>Génération de votre campagne en cours...</p>
+            <p>Cela peut prendre quelques instants</p>
+        </div>
     </div>
+    
+    <footer>
+        <p>&copy; 2025 Band Stream. Tous droits réservés.</p>
+    </footer>
+    
+    <script>
+        document.getElementById('campaignForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Afficher l'animation de chargement
+            document.getElementById('loading').style.display = 'block';
+            
+            // Récupérer les données du formulaire
+            const formData = {
+                artist: document.getElementById('artist').value,
+                song: document.getElementById('song').value,
+                genres: document.getElementById('genres').value.split(',').map(g => g.trim()),
+                language: document.getElementById('language').value,
+                promotion_type: document.getElementById('promotion_type').value,
+                bio: document.getElementById('bio').value,
+                song_link: document.getElementById('song_link').value
+            };
+            
+            // Envoyer les données en JSON
+            fetch('/generate_campaign', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    return response.text().then(html => {
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                document.getElementById('loading').style.display = 'none';
+                alert('Une erreur est survenue lors de la génération de la campagne.');
+            });
+        });
+    </script>
 </body>
 </html>
