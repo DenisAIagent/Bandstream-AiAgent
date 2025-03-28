@@ -20,9 +20,8 @@ if not openai_api_key:
     logger.critical("OPENAI_API_KEY manquant")
     raise ValueError("OPENAI_API_KEY manquant")
 
-# Initialisation du client OpenAI
-from openai import OpenAI
-client = OpenAI(api_key=openai_api_key)
+# Initialisation du client OpenAI (version compatible avec les anciennes versions)
+openai.api_key = openai_api_key
 
 # Cache avec TTL de 24h
 cache = TTLCache(maxsize=100, ttl=86400)
@@ -117,7 +116,8 @@ def generate_ads():
         logger.info("Appel à l'API OpenAI...")
         
         try:
-            response = client.chat.completions.create(
+            # Version compatible avec les anciennes versions de l'API OpenAI
+            response = openai.ChatCompletion.create(
                 model="gpt-4o",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=2000,
