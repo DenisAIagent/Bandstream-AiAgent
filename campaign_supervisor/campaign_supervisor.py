@@ -30,17 +30,18 @@ MARKETING_AGENT_URL = "https://marketing-agent-production.up.railway.app"
 OPTIMIZER_SERVICE_URL = "https://optimizer-production.up.railway.app"
 API_SERVER_URL = "https://api-server-production-e858.up.railway.app"
 
-# Endpoints API
-CHARTMETRIC_TRENDS_ENDPOINT = f"{CHARTMETRIC_SERVICE_URL}/api/trends"
-ANALYST_ANALYZE_ENDPOINT = f"{ANALYST_SERVICE_URL}/api/analyze"
-MARKETING_GENERATE_ENDPOINT = f"{MARKETING_AGENT_URL}/api/generate"
-OPTIMIZER_OPTIMIZE_ENDPOINT = f"{OPTIMIZER_SERVICE_URL}/api/optimize"
+# Endpoints API - MODIFIÉS POUR CORRIGER LES ERREURS 404
+# Suppression du préfixe "/api" pour correspondre aux routes réelles
+CHARTMETRIC_TRENDS_ENDPOINT = f"{CHARTMETRIC_SERVICE_URL}/trends"
+ANALYST_ANALYZE_ENDPOINT = f"{ANALYST_SERVICE_URL}/analyze"
+MARKETING_GENERATE_ENDPOINT = f"{MARKETING_AGENT_URL}/generate"
+OPTIMIZER_OPTIMIZE_ENDPOINT = f"{OPTIMIZER_SERVICE_URL}/optimize"
 
 # Stockage temporaire des campagnes en cours de génération
 # Dans une application de production, utilisez une base de données
 campaigns = {}
 
-@app.route('/')
+@app.route('/') 
 def index():
     template = env.get_template('index.html')
     
@@ -124,266 +125,178 @@ def generate_campaign():
 @app.route('/campaign_status')
 def campaign_status():
     campaign_id = request.args.get('id')
-    if not campaign_id or campaign_id not in campaigns:
-        return jsonify({"status": "error", "message": "Campagne non trouvée"}), 404
-    
-    return jsonify({
-        "status": campaigns[campaign_id]["status"],
-        "campaign_id": campaign_id,
-        "progress": campaigns[campaign_id]["progress"]
-    })
+    if campaign_id in campaigns:
+        return jsonify({
+            "status": campaigns[campaign_id]["status"],
+            "progress": campaigns[campaign_id]["progress"]
+        })
+    return jsonify({"status": "not_found"})
 
 @app.route('/campaign_results/<campaign_id>')
 def campaign_results(campaign_id):
-    if not campaign_id or campaign_id not in campaigns:
-        return redirect('/')
+    if campaign_id in campaigns:
+        campaign = campaigns[campaign_id]
+        return render_template('results.html', 
+                              campaign_id=campaign_id,
+                              campaign_status=campaign["status"],
+                              campaign_data=campaign["data"],
+                              campaign_results=campaign["results"],
+                              analysis=campaign["data"])  # Utiliser les données de la campagne comme analyse
+    return render_template('error.html', message="Campagne non trouvée")
+
+def orchestrate_campaign_generation(campaign_id):
+    """
+    Fonction qui orchestre la génération de la campagne en appelant les différents services
+    """
+    if campaign_id not in campaigns:
+        logger.error(f"Campaign ID {campaign_id} not found")
+        return
     
     campaign = campaigns[campaign_id]
+    artist_name = campaign["data"]["artist"]
+    song_name = campaign["data"]["song"]
+    genres = campaign["data"]["genres"]
+    lyrics = campaign["data"]["lyrics"]
+    language = campaign["data"]["language"]
+    promotion_type = campaign["data"]["promotion_type"]
+    bio = campaign["data"]["bio"]
+    song_link = campaign["data"]["song_link"]
     
-    return render_template('results.html',
-                          campaign_id=campaign_id,
-                          campaign_status=campaign["status"],
-                          analysis=campaign["data"],
-                          campaign_results=campaign["results"] if campaign["results"] else {},
-                          progress=campaign["progress"])
+    # Appel au service Chartmetric pour obtenir des tendances et des artistes similaires
+    logger.info(f"Appel au service Chartmetric pour l'artiste {artist_name}")
+    chartmetric_data = None
+    try:
+        response = requests.post(
+            CHARTMETRIC_TRENDS_ENDPOINT,
+            json={
+                "artist": artist_name,
+                "genres": genres
+            },
+            timeout=30
+        )
+        if response.status_code == 200:
+            chartmetric_data = response.json()
+            campaign["progress"]["chartmetric"] = "completed"
+        else:
+            logger.warning(f"Erreur lors de l'appel à Chartmetric: {response.status_code}")
+            campaign["progress"]["chartmetric"] = "error"
+    except Exception as e:
+        logger.error(f"Exception lors de l'appel à Chartmetric: {str(e)}")
+        campaign["progress"]["chartmetric"] = "error"
+    
+    # Appel au service Analyst pour analyser l'artiste et la chanson
+    logger.info(f"Appel au service Analyst pour l'artiste {artist_name}")
+    analyst_data = None
+    try:
+        response = requests.post(
+            ANALYST_ANALYZE_ENDPOINT,
+            json={
+                "artist": artist_name,
+                "song": song_name,
+                "genres": genres,
+                "lyrics": lyrics,
+                "chartmetric_data": chartmetric_data
+            },
+            timeout=30
+        )
+        if response.status_code == 200:
+            analyst_data = response.json()
+            campaign["progress"]["analyst"] = "completed"
+        else:
+            logger.warning(f"Erreur lors de l'appel à Analyst: {response.status_code}")
+            campaign["progress"]["analyst"] = "error"
+    except Exception as e:
+        logger.error(f"Exception lors de l'appel à Analyst: {str(e)}")
+        campaign["progress"]["analyst"] = "error"
+    
+    # Appel au service Marketing pour générer des annonces
+    logger.info(f"Appel au service Marketing pour l'artiste {artist_name}")
+    marketing_data = None
+    try:
+        response = requests.post(
+            MARKETING_GENERATE_ENDPOINT,
+            json={
+                "artist": artist_name,
+                "song": song_name,
+                "genres": genres,
+                "lyrics": lyrics,
+                "language": language,
+                "promotion_type": promotion_type,
+                "bio": bio,
+                "song_link": song_link,
+                "analyst_data": analyst_data,
+                "chartmetric_data": chartmetric_data
+            },
+            timeout=60
+        )
+        if response.status_code == 200:
+            marketing_data = response.json()
+            campaign["progress"]["marketing"] = "completed"
+        else:
+            logger.warning(f"Erreur lors de l'appel à Marketing: {response.status_code}")
+            campaign["progress"]["marketing"] = "error"
+    except Exception as e:
+        logger.error(f"Exception lors de l'appel à Marketing: {str(e)}")
+        campaign["progress"]["marketing"] = "error"
+    
+    # Appel au service Optimizer pour optimiser les annonces
+    logger.info(f"Appel au service Optimizer pour l'artiste {artist_name}")
+    optimizer_data = None
+    try:
+        response = requests.post(
+            OPTIMIZER_OPTIMIZE_ENDPOINT,
+            json={
+                "artist": artist_name,
+                "song": song_name,
+                "genres": genres,
+                "marketing_data": marketing_data
+            },
+            timeout=30
+        )
+        if response.status_code == 200:
+            optimizer_data = response.json()
+            campaign["progress"]["optimizer"] = "completed"
+        else:
+            logger.warning(f"Erreur lors de l'appel à Optimizer: {response.status_code}")
+            campaign["progress"]["optimizer"] = "error"
+    except Exception as e:
+        logger.error(f"Exception lors de l'appel à Optimizer: {str(e)}")
+        campaign["progress"]["optimizer"] = "error"
+    
+    # Mise à jour des résultats de la campagne
+    campaign["results"] = {
+        "chartmetric": chartmetric_data,
+        "analyst": analyst_data,
+        "marketing": marketing_data,
+        "optimizer": optimizer_data
+    }
+    
+    # Mise à jour du statut de la campagne
+    if all(status == "completed" for status in campaign["progress"].values()):
+        campaign["status"] = "completed"
+    elif any(status == "error" for status in campaign["progress"].values()):
+        campaign["status"] = "error"
+    else:
+        campaign["status"] = "partial"
+    
+    logger.info(f"Génération de campagne terminée pour {artist_name}")
 
 def check_service_status(service_url):
-    """Vérifie si un service est opérationnel"""
+    """
+    Vérifie si un service est disponible
+    """
     try:
         response = requests.get(f"{service_url}/health", timeout=5)
         if response.status_code == 200:
-            return "Opérationnel", "status-ok"
+            return "Opérationnel", "status-operational"
         else:
-            return "Dégradé", "status-pending"
+            return "Dégradé", "status-degraded"
     except:
-        try:
-            # Essayer simplement de se connecter au service
-            response = requests.get(service_url, timeout=5)
-            if response.status_code < 500:
-                return "Opérationnel", "status-ok"
-            else:
-                return "Dégradé", "status-pending"
-        except:
-            return "Indisponible", "status-error"
+        return "Indisponible", "status-unavailable"
 
-def orchestrate_campaign_generation(campaign_id):
-    """Fonction qui orchestre la génération de campagne en appelant les différents services"""
-    if campaign_id not in campaigns:
-        return
-    
-    campaign_data = campaigns[campaign_id]["data"]
-    artist = campaign_data["artist"]
-    song = campaign_data["song"]
-    genres = campaign_data["genres"]
-    lyrics = campaign_data["lyrics"]
-    
-    try:
-        # 1. Appeler Chartmetric Service pour obtenir les tendances et données d'artistes
-        logger.info(f"Appel au service Chartmetric pour l'artiste {artist}")
-        campaigns[campaign_id]["progress"]["chartmetric"] = "in_progress"
-        
-        try:
-            chartmetric_response = requests.post(
-                CHARTMETRIC_TRENDS_ENDPOINT,
-                json={
-                    "artist": artist,
-                    "song": song,
-                    "genres": genres
-                },
-                timeout=30
-            )
-            
-            if chartmetric_response.status_code == 200:
-                chartmetric_data = chartmetric_response.json()
-                campaigns[campaign_id]["progress"]["chartmetric"] = "completed"
-                logger.info(f"Données Chartmetric reçues pour {artist}")
-            else:
-                # En cas d'erreur, utiliser des données fictives pour continuer le flux
-                logger.warning(f"Erreur lors de l'appel à Chartmetric: {chartmetric_response.status_code}")
-                chartmetric_data = {
-                    "trends": ["metal", "rock alternatif", "électro"],
-                    "lookalike_artists": ["Nine Inch Nails", "Mass Hysteria", "Celldweller"],
-                    "metrics": {
-                        "spotify": {"followers": 15000, "monthly_listeners": 8000, "popularity": 45},
-                        "youtube": {"subscribers": 5000, "views": 120000},
-                        "social_media": {"instagram": 3000, "tiktok": 1500, "twitter": 2000}
-                    }
-                }
-                campaigns[campaign_id]["progress"]["chartmetric"] = "completed_with_fallback"
-        except Exception as e:
-            logger.error(f"Exception lors de l'appel à Chartmetric: {str(e)}")
-            # En cas d'exception, utiliser des données fictives pour continuer le flux
-            chartmetric_data = {
-                "trends": ["metal", "rock alternatif", "électro"],
-                "lookalike_artists": ["Nine Inch Nails", "Mass Hysteria", "Celldweller"],
-                "metrics": {
-                    "spotify": {"followers": 15000, "monthly_listeners": 8000, "popularity": 45},
-                    "youtube": {"subscribers": 5000, "views": 120000},
-                    "social_media": {"instagram": 3000, "tiktok": 1500, "twitter": 2000}
-                }
-            }
-            campaigns[campaign_id]["progress"]["chartmetric"] = "completed_with_fallback"
-        
-        # 2. Appeler Analyst pour l'analyse
-        logger.info(f"Appel au service Analyst pour l'artiste {artist}")
-        campaigns[campaign_id]["progress"]["analyst"] = "in_progress"
-        
-        try:
-            analyst_response = requests.post(
-                ANALYST_ANALYZE_ENDPOINT,
-                json={
-                    "artist": artist,
-                    "song": song,
-                    "genres": genres,
-                    "lyrics": lyrics,
-                    "chartmetric_data": chartmetric_data
-                },
-                timeout=30
-            )
-            
-            if analyst_response.status_code == 200:
-                analyst_data = analyst_response.json()
-                campaigns[campaign_id]["progress"]["analyst"] = "completed"
-                logger.info(f"Analyse reçue pour {artist}")
-            else:
-                # En cas d'erreur, utiliser des données fictives pour continuer le flux
-                logger.warning(f"Erreur lors de l'appel à Analyst: {analyst_response.status_code}")
-                analyst_data = {
-                    "insights": {
-                        "audience": "Fans de metal et d'électro, 25-40 ans",
-                        "key_themes": ["intensité", "dualité", "engagement social"],
-                        "unique_selling_points": ["fusion de styles", "paroles engagées", "énergie live"]
-                    }
-                }
-                campaigns[campaign_id]["progress"]["analyst"] = "completed_with_fallback"
-        except Exception as e:
-            logger.error(f"Exception lors de l'appel à Analyst: {str(e)}")
-            # En cas d'exception, utiliser des données fictives pour continuer le flux
-            analyst_data = {
-                "insights": {
-                    "audience": "Fans de metal et d'électro, 25-40 ans",
-                    "key_themes": ["intensité", "dualité", "engagement social"],
-                    "unique_selling_points": ["fusion de styles", "paroles engagées", "énergie live"]
-                }
-            }
-            campaigns[campaign_id]["progress"]["analyst"] = "completed_with_fallback"
-        
-        # 3. Appeler Marketing Agent pour générer les annonces
-        logger.info(f"Appel au service Marketing pour l'artiste {artist}")
-        campaigns[campaign_id]["progress"]["marketing"] = "in_progress"
-        
-        try:
-            marketing_response = requests.post(
-                MARKETING_GENERATE_ENDPOINT,
-                json={
-                    "artist": artist,
-                    "song": song,
-                    "genres": genres,
-                    "lyrics": lyrics,
-                    "chartmetric_data": chartmetric_data,
-                    "analyst_data": analyst_data,
-                    "language": campaign_data["language"]
-                },
-                timeout=30
-            )
-            
-            if marketing_response.status_code == 200:
-                marketing_data = marketing_response.json()
-                campaigns[campaign_id]["progress"]["marketing"] = "completed"
-                logger.info(f"Annonces générées pour {artist}")
-            else:
-                # En cas d'erreur, utiliser des données fictives pour continuer le flux
-                logger.warning(f"Erreur lors de l'appel à Marketing: {marketing_response.status_code}")
-                marketing_data = {
-                    "ads": {
-                        "short_title": f"Découvrez {song} par {artist}",
-                        "long_title": f"{artist} - {song} | Nouvelle sortie à ne pas manquer",
-                        "description": f"Écoutez le nouveau titre de {artist}, {song}. Une expérience musicale unique qui vous transportera.",
-                        "youtube_short": f"{artist} présente {song}. Écoutez maintenant sur toutes les plateformes de streaming.",
-                        "youtube_full": f"Découvrez {song}, le nouveau titre de {artist}.\n\nParoles:\n{lyrics[:500]}...\n\nSuivez {artist} sur les réseaux sociaux pour ne rien manquer des prochaines sorties."
-                    }
-                }
-                campaigns[campaign_id]["progress"]["marketing"] = "completed_with_fallback"
-        except Exception as e:
-            logger.error(f"Exception lors de l'appel à Marketing: {str(e)}")
-            # En cas d'exception, utiliser des données fictives pour continuer le flux
-            marketing_data = {
-                "ads": {
-                    "short_title": f"Découvrez {song} par {artist}",
-                    "long_title": f"{artist} - {song} | Nouvelle sortie à ne pas manquer",
-                    "description": f"Écoutez le nouveau titre de {artist}, {song}. Une expérience musicale unique qui vous transportera.",
-                    "youtube_short": f"{artist} présente {song}. Écoutez maintenant sur toutes les plateformes de streaming.",
-                    "youtube_full": f"Découvrez {song}, le nouveau titre de {artist}.\n\nParoles:\n{lyrics[:500]}...\n\nSuivez {artist} sur les réseaux sociaux pour ne rien manquer des prochaines sorties."
-                }
-            }
-            campaigns[campaign_id]["progress"]["marketing"] = "completed_with_fallback"
-        
-        # 4. Appeler Optimizer pour optimiser les annonces
-        logger.info(f"Appel au service Optimizer pour l'artiste {artist}")
-        campaigns[campaign_id]["progress"]["optimizer"] = "in_progress"
-        
-        try:
-            optimizer_response = requests.post(
-                OPTIMIZER_OPTIMIZE_ENDPOINT,
-                json={
-                    "artist": artist,
-                    "song": song,
-                    "genres": genres,
-                    "chartmetric_data": chartmetric_data,
-                    "analyst_data": analyst_data,
-                    "marketing_data": marketing_data
-                },
-                timeout=30
-            )
-            
-            if optimizer_response.status_code == 200:
-                optimizer_data = optimizer_response.json()
-                campaigns[campaign_id]["progress"]["optimizer"] = "completed"
-                logger.info(f"Annonces optimisées pour {artist}")
-            else:
-                # En cas d'erreur, utiliser les données du Marketing Agent
-                logger.warning(f"Erreur lors de l'appel à Optimizer: {optimizer_response.status_code}")
-                optimizer_data = {
-                    "optimized_ads": marketing_data["ads"]
-                }
-                campaigns[campaign_id]["progress"]["optimizer"] = "completed_with_fallback"
-        except Exception as e:
-            logger.error(f"Exception lors de l'appel à Optimizer: {str(e)}")
-            # En cas d'exception, utiliser les données du Marketing Agent
-            optimizer_data = {
-                "optimized_ads": marketing_data["ads"]
-            }
-            campaigns[campaign_id]["progress"]["optimizer"] = "completed_with_fallback"
-        
-        # 5. Stocker les résultats finaux
-        campaigns[campaign_id]["results"] = {
-            "short_title": optimizer_data["optimized_ads"]["short_title"],
-            "long_title": optimizer_data["optimized_ads"]["long_title"],
-            "description": optimizer_data["optimized_ads"]["description"],
-            "youtube_short": optimizer_data["optimized_ads"]["youtube_short"],
-            "youtube_full": optimizer_data["optimized_ads"]["youtube_full"]
-        }
-        
-        # Mettre à jour les données de l'artiste avec les informations de Chartmetric
-        campaigns[campaign_id]["data"]["trends"] = chartmetric_data["trends"]
-        campaigns[campaign_id]["data"]["lookalike_artists"] = chartmetric_data["lookalike_artists"]
-        campaigns[campaign_id]["data"]["metrics"] = chartmetric_data["metrics"]
-        
-        # Mettre à jour le statut
-        campaigns[campaign_id]["status"] = "completed"
-        logger.info(f"Génération de campagne terminée pour {artist}")
-        
-    except Exception as e:
-        logger.error(f"Erreur lors de l'orchestration de la campagne: {str(e)}")
-        # En cas d'erreur globale, générer des résultats fictifs
-        campaigns[campaign_id]["results"] = {
-            "short_title": f"Découvrez {song} par {artist}",
-            "long_title": f"{artist} - {song} | Nouvelle sortie à ne pas manquer",
-            "description": f"Écoutez le nouveau titre de {artist}, {song}. Une expérience musicale unique qui vous transportera.",
-            "youtube_short": f"{artist} présente {song}. Écoutez maintenant sur toutes les plateformes de streaming.",
-            "youtube_full": f"Découvrez {song}, le nouveau titre de {artist}.\n\nParoles:\n{lyrics[:500]}...\n\nSuivez {artist} sur les réseaux sociaux pour ne rien manquer des prochaines sorties."
-        }
-        campaigns[campaign_id]["status"] = "completed_with_errors"
-
-# Créer l'application ASGI à partir de l'application WSGI
+# Point d'entrée ASGI pour uvicorn
 asgi_app = WsgiToAsgi(app)
+
+if __name__ == "__main__":
+    # Démarrer l'application Flask en mode développement
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
