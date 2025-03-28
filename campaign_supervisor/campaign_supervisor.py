@@ -170,9 +170,23 @@ def call_optimizer_service(artist, song, genres, language, promotion_type, chart
 @app.route('/generate_campaign', methods=['POST'])
 def generate_campaign():
     if request.method == 'POST':
-        # Récupérer les données JSON
-        data = request.get_json()
-        logger.info(f"Données JSON reçues: {data}")
+        # Récupérer les données (JSON ou formulaire)
+        if request.is_json:
+            data = request.get_json()
+        else:
+            # Récupérer les données du formulaire
+            data = {
+                'artist': request.form.get('artist', ''),
+                'song': request.form.get('song', ''),
+                'genres': request.form.get('genres', '').split(',') if request.form.get('genres') else [],
+                'language': request.form.get('language', 'français'),
+                'promotion_type': request.form.get('promotion_type', 'sortie'),
+                'lyrics': request.form.get('lyrics', ''),
+                'bio': request.form.get('bio', ''),
+                'song_link': request.form.get('song_link', '')
+            }
+        
+        logger.info(f"Données reçues: {data}")
         
         # Extraire les données
         artist = data.get('artist', '')
@@ -214,8 +228,12 @@ def generate_campaign():
         # Lancer la génération de la campagne en arrière-plan
         threading.Thread(target=generate_campaign_background, args=(campaign_id, artist, song, genres, language, promotion_type, lyrics, bio, song_link)).start()
         
-        # Renvoyer une réponse JSON avec l'URL de redirection
-        return jsonify({"success": True, "redirect": f"/view_results?id={campaign_id}"})
+        # Si la requête est JSON, renvoyer une réponse JSON
+        if request.is_json:
+            return jsonify({"success": True, "redirect": f"/view_results?id={campaign_id}"})
+        # Sinon, rediriger directement
+        else:
+            return redirect(f"/view_results?id={campaign_id}")
     
     # Si la méthode n'est pas POST, rediriger vers la page d'accueil
     return redirect(url_for('index'))
