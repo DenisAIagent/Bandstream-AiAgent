@@ -34,7 +34,7 @@ API_SERVER_URL = "https://api-server-production-e858.up.railway.app"
 # Suppression du préfixe "/api" pour correspondre aux routes réelles
 CHARTMETRIC_TRENDS_ENDPOINT = f"{CHARTMETRIC_SERVICE_URL}/trends"
 ANALYST_ANALYZE_ENDPOINT = f"{ANALYST_SERVICE_URL}/analyze"
-MARKETING_GENERATE_ENDPOINT = f"{MARKETING_AGENT_URL}/generate"
+MARKETING_GENERATE_ENDPOINT = f"{MARKETING_AGENT_URL}/generate_ads"  # Modifié de /generate à /generate_ads
 OPTIMIZER_OPTIMIZE_ENDPOINT = f"{OPTIMIZER_SERVICE_URL}/optimize"
 
 # Stockage temporaire des campagnes en cours de génération
