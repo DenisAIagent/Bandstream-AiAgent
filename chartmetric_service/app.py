@@ -1,17 +1,15 @@
-from fastapi import FastAPI, Response
+from fastapi import FastAPI
 import os
 from dotenv import load_dotenv
 import logging
-from api.routes import register_routes  # Fonction adaptée pour FastAPI
+from api.routes import register_routes  # Vous devrez adapter cette fonction pour FastAPI
 from auth.chartmetric_auth import ChartmetricAuth
 from cache.cache_manager import CacheManager
 from client.chartmetric_client import ChartmetricClient
 
-# Configuration des logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Chargement des variables d'environnement
 load_dotenv()
 chartmetric_refresh_token = os.getenv("CHARTMETRIC_REFRESH_TOKEN")
 
@@ -19,18 +17,16 @@ if not chartmetric_refresh_token:
     logger.critical("CHARTMETRIC_REFRESH_TOKEN manquant")
     raise ValueError("CHARTMETRIC_REFRESH_TOKEN manquant")
 
-# Initialisation de l'application FastAPI
 app = FastAPI(title="Chartmetric Service", version="1.0.0")
 
-# Initialisation des gestionnaires
+# Initialisation avec le TTL par défaut de 3600 secondes (1 heure)
 cache_manager = CacheManager(default_ttl=3600)
 auth_manager = ChartmetricAuth(chartmetric_refresh_token)
 chartmetric_client = ChartmetricClient(auth_manager, cache_manager)
 
-# Enregistrement des routes
-register_routes(app, chartmetric_client)
+# Vous devrez adapter cette fonction pour FastAPI
+# register_routes(app, chartmetric_client)
 
-# Route de santé
 @app.get('/health')
 async def health_check():
     return {
@@ -38,3 +34,8 @@ async def health_check():
         "service": "Chartmetric Service",
         "version": "1.0.0"
     }
+
+# Exemple de route adaptée pour FastAPI
+# @app.get('/api/artist/{artist_id}')
+# async def get_artist(artist_id: int):
+#     return await chartmetric_client.get_artist(artist_id)
