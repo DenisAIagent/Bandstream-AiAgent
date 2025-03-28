@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify
-import openai
 import os
 from dotenv import load_dotenv
 from cachetools import TTLCache
@@ -20,8 +19,19 @@ if not openai_api_key:
     logger.critical("OPENAI_API_KEY manquant")
     raise ValueError("OPENAI_API_KEY manquant")
 
-# Initialisation du client OpenAI (version compatible avec les anciennes versions)
-openai.api_key = openai_api_key
+# Détection de la version de l'API OpenAI et initialisation appropriée
+try:
+    # Tentative d'utilisation de l'API moderne (1.0.0+)
+    from openai import OpenAI
+    client = OpenAI()  # Utilise la variable d'environnement OPENAI_API_KEY automatiquement
+    use_modern_api = True
+    logger.info("Utilisation de l'API OpenAI moderne (1.0.0+)")
+except (ImportError, TypeError):
+    # Fallback sur l'API ancienne (0.28 et antérieure)
+    import openai
+    openai.api_key = openai_api_key
+    use_modern_api = False
+    logger.info("Utilisation de l'API OpenAI ancienne (0.28 et antérieure)")
 
 # Cache avec TTL de 24h
 cache = TTLCache(maxsize=100, ttl=86400)
@@ -112,19 +122,28 @@ def generate_ads():
         prompt = generate_prompt(data)
         logger.info("Prompt généré avec succès")
 
-        # Ajout de logs pour le débogage
-        logger.info("Appel à l'API OpenAI...")
-        
+        # Appel à l'API OpenAI avec détection automatique de la version
         try:
-            # Version compatible avec les anciennes versions de l'API OpenAI
-            response = openai.ChatCompletion.create(
-                model="gpt-4o",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=2000,
-                temperature=0.7
-            )
+            logger.info("Appel à l'API OpenAI...")
+            if use_modern_api:
+                # Version moderne (1.0.0+)
+                response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=2000,
+                    temperature=0.7
+                )
+                result = response.choices[0].message.content
+            else:
+                # Version ancienne (0.28 et antérieure)
+                response = openai.ChatCompletion.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=2000,
+                    temperature=0.7
+                )
+                result = response.choices[0].message.content
             logger.info("Réponse OpenAI reçue avec succès")
-            result = response.choices[0].message.content
         except Exception as e:
             logger.error(f"Erreur lors de l'appel à l'API OpenAI : {str(e)}")
             return jsonify({"error": f"Erreur lors de l'appel à l'API OpenAI : {str(e)}"}), 500
