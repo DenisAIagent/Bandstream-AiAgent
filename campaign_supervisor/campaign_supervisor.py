@@ -61,6 +61,12 @@ def generate_campaign():
     # Log des données reçues pour le débogage
     logger.info(f"Données de formulaire reçues: {data}")
     
+    # Correction du traitement des genres
+    # Vérifier si genres est déjà une liste ou une chaîne de caractères
+    genres = data.get('genres', [])
+    if isinstance(genres, str):
+        genres = genres.split(',') if genres else []
+    
     # Traitement des données (à implémenter selon vos besoins)
     # Pour l'instant, redirigeons simplement vers la page d'accueil avec les données du formulaire
     return render_template('index.html', 
@@ -69,7 +75,8 @@ def generate_campaign():
                           analysis={
                               "artist": data.get('artist', "Aucun artiste sélectionné"),
                               "song": data.get('song', "Aucune chanson sélectionnée"),
-                              "genres": data.get('genres', "").split(',') if data.get('genres') else [],
+                              "genres": genres,
+                              "lyrics": data.get('lyrics', ""),
                               "trends": [],
                               "lookalike_artists": [],
                               "metrics": {
