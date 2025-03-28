@@ -252,7 +252,7 @@
         }
         
         .section-content {
-            display: none;
+            display: block;
             padding: 1rem 0;
         }
         
@@ -262,6 +262,30 @@
         
         .section-header.active .section-icon {
             transform: rotate(180deg);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-left: 1rem;
+        }
+        
+        .status-generating {
+            background-color: rgba(255, 193, 7, 0.15);
+            color: var(--warning);
+        }
+        
+        .status-completed {
+            background-color: rgba(40, 167, 69, 0.15);
+            color: var(--success);
+        }
+        
+        .status-error {
+            background-color: rgba(220, 53, 69, 0.15);
+            color: var(--danger);
         }
         
         @media (max-width: 768px) {
@@ -313,23 +337,35 @@
                 </div>
             </div>
             
-            <h2>Génération de votre campagne marketing</h2>
+            <h2>
+                Génération de votre campagne marketing
+                {% if campaign_status == "generating" %}
+                <span class="status-badge status-generating">En cours</span>
+                {% elif campaign_status == "completed" %}
+                <span class="status-badge status-completed">Terminée</span>
+                {% else %}
+                <span class="status-badge status-error">Erreur</span>
+                {% endif %}
+            </h2>
             
             {% if campaign_status == "generating" %}
             <div class="loading">
                 <div class="loading-spinner"></div>
                 <p>Génération de votre campagne en cours...</p>
                 <p>Cela peut prendre quelques instants</p>
+                <p>Les résultats partiels sont affichés ci-dessous et seront mis à jour automatiquement</p>
             </div>
-            {% elif campaign_status == "completed" %}
+            {% endif %}
+
+            <!-- Afficher les résultats disponibles même si la campagne est en cours -->
             <div class="result-section">
                 <!-- Section Google Ads -->
                 <div class="section-container">
-                    <div class="section-header">
+                    <div class="section-header active">
                         <div class="section-title">Annonces Google Ads</div>
                         <div class="section-icon"><i class="fas fa-chevron-down"></i></div>
                     </div>
-                    <div class="section-content">
+                    <div class="section-content" style="display: block;">
                         <div class="result-grid">
                             <div class="result-item">
                                 <div class="result-title">Titre court</div>
@@ -351,11 +387,11 @@
                 
                 <!-- Section YouTube -->
                 <div class="section-container">
-                    <div class="section-header">
+                    <div class="section-header active">
                         <div class="section-title">Descriptions YouTube</div>
                         <div class="section-icon"><i class="fas fa-chevron-down"></i></div>
                     </div>
-                    <div class="section-content">
+                    <div class="section-content" style="display: block;">
                         <div class="result-grid">
                             <div class="result-item">
                                 <div class="result-title">Description courte</div>
@@ -370,7 +406,6 @@
                     </div>
                 </div>
             </div>
-            {% endif %}
             
             <a href="/" class="btn">Retour à l'accueil</a>
         </div>
@@ -401,7 +436,6 @@
     </script>
     {% endif %}
     
-    {% if campaign_status == "completed" %}
     <script>
         // Fonctionnalité pour plier/déplier les sections
         document.addEventListener('DOMContentLoaded', function() {
@@ -420,6 +454,5 @@
             });
         });
     </script>
-    {% endif %}
 </body>
 </html>
