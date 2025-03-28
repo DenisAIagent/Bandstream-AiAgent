@@ -31,6 +31,58 @@ ANALYST_SERVICE_URL = os.environ.get('ANALYST_SERVICE_URL', 'https://analyst-pro
 MARKETING_SERVICE_URL = os.environ.get('MARKETING_SERVICE_URL', 'https://marketing-agent-production.up.railway.app') 
 OPTIMIZER_SERVICE_URL = os.environ.get('OPTIMIZER_SERVICE_URL', 'https://optimizer-production.up.railway.app') 
 
+# Fonction pour générer des descriptions YouTube professionnelles
+def generate_youtube_descriptions(artist, song, genres, language):
+    # Déterminer le type de musique pour adapter la description
+    music_type = "chanson"
+    if any(genre in genres for genre in ['rap', 'hip hop', 'hip-hop']):
+        music_type = "track"
+    elif any(genre in genres for genre in ['rock', 'metal', 'punk']):
+        music_type = "titre"
+    elif any(genre in genres for genre in ['electro', 'electronic', 'edm', 'house', 'techno']):
+        music_type = "morceau"
+    elif any(genre in genres for genre in ['reggae', 'dancehall', 'reggaeton']):
+        music_type = "riddim"
+    
+    # Générer une URL fictive mais réaliste
+    artist_url = artist.lower().replace(' ', '')
+    song_url = song.lower().replace(' ', '')
+    
+    # Description courte (environ 120 caractères)
+    short_desc = f"{artist} - \"{song}\" ({music_type} officiel) | Disponible sur toutes les plateformes 👉 https://{artist_url}.lnk.to/{song_url}"
+    
+    # Description longue (format professionnel) 
+    long_desc = f"""{artist} - "{song}" ({music_type} officiel) disponible 👉 https://{artist_url}.lnk.to/{song_url}
+
+🔔 Abonnez-vous à ma chaîne 👉 https://bit.ly/{artist.replace(' ', '') }Youtube
+🎤 {artist} en tournée 👉 https://bnds.us/{artist.lower() .replace(' ', '')}
+
+PAROLES :
+[Insérer les paroles de la chanson ici]
+
+🎥 Crédits 🎥
+Réalisateur : [Nom du réalisateur]
+Directeur de la photographie : [Nom du DP]
+Montage : [Nom du monteur]
+Chorégraphie : [Nom du chorégraphe]
+Artiste : {artist}
+Production : [Nom de la maison de production]
+Mix & Mastering : [Nom du studio]
+
+🇫🇷 {artist} présente son nouveau {music_type} "{song}". {"Une chanson qui parle d'amour et d'émotions, avec des mélodies entraînantes et des paroles touchantes." if language == "français" else "A song about love and emotions, with catchy melodies and touching lyrics."}
+
+Label: contact@{artist.lower().replace(' ', '')}.com
+Booking: booking@{artist.lower().replace(' ', '')}.com
+
+Suivez {artist} sur :
+Instagram : /{artist.lower().replace(' ', '')}officiel
+TikTok : /{artist.lower().replace(' ', '')}
+Facebook : /{artist.lower().replace(' ', '')}
+
+#{artist.replace(' ', '')} #{song.replace(' ', '')} #Nouveau{music_type.capitalize()}"""
+    
+    return short_desc, long_desc
+
 # Route principale
 @app.route('/')
 def index():
@@ -105,8 +157,66 @@ def call_chartmetric_service(artist, genres):
         return response.json()
     except Exception as e:
         logger.error(f"Erreur lors de l'appel au service Chartmetric: {str(e)}")
+        # Génération d'artistes similaires basée sur le genre musical
+        similar_artists = []
+        
+        # Normaliser les genres pour la recherche
+        normalized_genres = [genre.lower() for genre in genres]
+        
+        if any(genre in normalized_genres for genre in ['chanson francaise', 'variété française', 'variete francaise']):
+            similar_artists = [
+                "Patrick Bruel", "Calogero", "Vianney", "Amir", "Kendji Girac",
+                "Zaz", "Jean-Jacques Goldman", "Florent Pagny", "M. Pokora", "Slimane"
+            ]
+        elif any(genre in normalized_genres for genre in ['rock', 'metal', 'punk', 'alternative']):
+            similar_artists = [
+                "AC/DC", "Foo Fighters", "Muse", "Red Hot Chili Peppers", "Radiohead",
+                "Arctic Monkeys", "The Killers", "Queens of the Stone Age", "Imagine Dragons", "Coldplay"
+            ]
+        elif any(genre in normalized_genres for genre in ['rap', 'hip hop', 'hip-hop', 'trap']):
+            similar_artists = [
+                "Booba", "Damso", "Nekfeu", "PNL", "SCH",
+                "Ninho", "Jul", "Orelsan", "Kaaris", "Niska"
+            ]
+        elif any(genre in normalized_genres for genre in ['pop', 'pop music']):
+            similar_artists = [
+                "Ed Sheeran", "Taylor Swift", "Dua Lipa", "The Weeknd", "Billie Eilish",
+                "Justin Bieber", "Ariana Grande", "Harry Styles", "Adele", "Bruno Mars"
+            ]
+        elif any(genre in normalized_genres for genre in ['electro', 'electronic', 'edm', 'house', 'techno']):
+            similar_artists = [
+                "David Guetta", "Calvin Harris", "Martin Garrix", "Avicii", "Daft Punk",
+                "Skrillex", "Marshmello", "Kygo", "Diplo", "Swedish House Mafia"
+            ]
+        elif any(genre in normalized_genres for genre in ['reggae', 'dancehall', 'reggaeton', 'ska']):
+            similar_artists = [
+                "Bob Marley", "Damian Marley", "Sean Paul", "Shaggy", "Alpha Blondy",
+                "Tiken Jah Fakoly", "Steel Pulse", "Burning Spear", "Chronixx", "Protoje"
+            ]
+        elif any(genre in normalized_genres for genre in ['r&b', 'rnb', 'soul', 'funk']):
+            similar_artists = [
+                "The Weeknd", "Beyoncé", "Rihanna", "Frank Ocean", "SZA",
+                "H.E.R.", "Daniel Caesar", "Jorja Smith", "Alicia Keys", "John Legend"
+            ]
+        elif any(genre in normalized_genres for genre in ['jazz', 'blues']):
+            similar_artists = [
+                "Miles Davis", "John Coltrane", "Ella Fitzgerald", "Louis Armstrong", "Herbie Hancock",
+                "Nina Simone", "B.B. King", "Muddy Waters", "Billie Holiday", "Duke Ellington"
+            ]
+        elif any(genre in normalized_genres for genre in ['classique', 'classical', 'orchestra']):
+            similar_artists = [
+                "Ludwig van Beethoven", "Wolfgang Amadeus Mozart", "Johann Sebastian Bach", "Frédéric Chopin", "Pyotr Ilyich Tchaikovsky",
+                "Claude Debussy", "Franz Schubert", "Johannes Brahms", "Antonio Vivaldi", "Richard Wagner"
+            ]
+        else:
+            # Artistes populaires génériques si le genre n'est pas reconnu
+            similar_artists = [
+                "Drake", "Taylor Swift", "The Weeknd", "Billie Eilish", "Bad Bunny",
+                "Dua Lipa", "Ed Sheeran", "Ariana Grande", "Justin Bieber", "BTS"
+            ]
+        
         return {"trends": ["Tendance générique 1", "Tendance générique 2", "Tendance générique 3"], 
-                "lookalike_artists": ["Artiste similaire 1", "Artiste similaire 2", "Artiste similaire 3", "Artiste similaire 4", "Artiste similaire 5"],
+                "lookalike_artists": similar_artists,
                 "artist_id": None}
 
 def call_analyst_service(artist, song, genres, chartmetric_data):
@@ -142,11 +252,34 @@ def call_marketing_service(artist, song, genres, language, promotion_type, lyric
         return response.json()
     except Exception as e:
         logger.error(f"Erreur lors de l'appel au service Marketing: {str(e)}")
-        return {"short_title": f"Découvrez {song} par {artist}", 
-                "long_title": f"Écoutez le nouveau titre {song} de {artist} maintenant", 
-                "description": f"Le nouveau titre {song} de {artist} est maintenant disponible. Écoutez-le dès maintenant sur toutes les plateformes de streaming.", 
-                "youtube_short": f"Nouveau clip de {artist} - {song}", 
-                "youtube_full": f"{artist} présente son nouveau clip {song}. Abonnez-vous à la chaîne pour plus de contenu."}
+        # Générer des descriptions YouTube professionnelles
+        youtube_short, youtube_full = generate_youtube_descriptions(artist, song, genres, language)
+        
+        return {
+            "short_titles": [
+                f"Découvrez {song} par {artist}",
+                f"{artist} - {song} - Nouveau",
+                f"{song} - Clip officiel - {artist}",
+                f"{artist} revient avec {song}",
+                f"{song} - Nouvelle sortie"
+            ],
+            "long_titles": [
+                f"Écoutez le nouveau titre {song} de {artist} maintenant sur toutes les plateformes",
+                f"{artist} présente son nouveau single {song} - Une mélodie qui vous transportera",
+                f"{song} - Le nouveau titre émouvant de {artist} qui parle d'amour et d'émotions",
+                f"Découvrez la nouvelle chanson de {artist} - {song} - Un hymne musical incontournable",
+                f"{artist} revient avec {song} - Une chanson qui vous touchera en plein cœur"
+            ],
+            "descriptions": [
+                f"Le nouveau titre {song} de {artist} est disponible. Écoutez-le sur toutes les plateformes.",
+                f"{artist} nous présente {song}, une chanson sur l'amour et les relations humaines.",
+                f"{song} explore les thèmes de l'amour et des émotions avec des mélodies entraînantes.",
+                f"Avec {song}, {artist} nous offre une chanson sincère et touchante sur les relations.",
+                f"Découvrez {song}, le nouveau single de {artist} qui parle d'amour et d'émotions."
+            ],
+            "youtube_short": youtube_short,
+            "youtube_full": youtube_full
+        }
 
 def call_optimizer_service(artist, song, genres, language, promotion_type, chartmetric_data, analyst_data, marketing_data):
     try:
@@ -248,13 +381,23 @@ def view_results():
     # Si la campagne n'est pas trouvée, créer une campagne factice pour démonstration
     if campaign_id not in campaigns_store:
         logger.warning(f"Campagne {campaign_id} non trouvée, création d'une campagne de démonstration")
+        
+        # Définir l'artiste et la chanson pour la démo
+        artist = 'Christophe Maé'
+        song = "On S'Attache"
+        genres = ['chanson francaise']
+        language = 'français'
+        
+        # Générer des descriptions YouTube professionnelles
+        youtube_short, youtube_full = generate_youtube_descriptions(artist, song, genres, language)
+        
         # Créer une campagne de démonstration avec plusieurs titres, descriptions, etc.
         campaigns_store[campaign_id] = {
             'id': campaign_id,
-            'artist': 'Christophe Maé',
-            'song': "On S'Attache",
-            'genres': ['chanson francaise'],
-            'language': 'français',
+            'artist': artist,
+            'song': song,
+            'genres': genres,
+            'language': language,
             'promotion_type': 'clip',
             'status': 'completed',
             'marketing_data': {
@@ -279,8 +422,8 @@ def view_results():
                     "Avec On S'Attache, Christophe Maé nous offre une chanson sincère et touchante sur les relations.",
                     "Découvrez On S'Attache, le nouveau single de Christophe Maé qui parle d'amour et d'émotions."
                 ],
-                'youtube_short': "Nouveau clip de Christophe Maé - On S'Attache",
-                'youtube_full': "Christophe Maé présente son nouveau clip On S'Attache. Une chanson qui parle d'amour et d'attachement, avec des mélodies entraînantes et des paroles touchantes. Abonnez-vous à la chaîne pour plus de contenu.",
+                'youtube_short': youtube_short,
+                'youtube_full': youtube_full,
                 'long_tail_keywords': [
                     "meilleure chanson française 2025",
                     "Christophe Maé nouveau single",
@@ -317,6 +460,16 @@ def view_results():
     if 'marketing_data' not in campaign:
         artist = campaign.get('artist', '')
         song = campaign.get('song', '')
+        genres = campaign.get('genres', [])
+        language = campaign.get('language', 'français')
+        
+        # Générer des descriptions YouTube professionnelles
+        youtube_short, youtube_full = generate_youtube_descriptions(artist, song, genres, language)
+        
+        # Obtenir des artistes similaires basés sur le genre
+        chartmetric_data = call_chartmetric_service(artist, genres)
+        similar_artists = chartmetric_data.get('lookalike_artists', [])
+        
         campaign['marketing_data'] = {
             'short_titles': [
                 f"Découvrez {song} par {artist}",
@@ -339,8 +492,8 @@ def view_results():
                 f"Avec {song}, {artist} nous offre une chanson sincère et touchante sur les relations.",
                 f"Découvrez {song}, le nouveau single de {artist} qui parle d'amour et d'émotions."
             ],
-            'youtube_short': f"Nouveau clip de {artist} - {song}",
-            'youtube_full': f"{artist} présente son nouveau clip {song}. Abonnez-vous à la chaîne pour plus de contenu.",
+            'youtube_short': youtube_short,
+            'youtube_full': youtube_full,
             'long_tail_keywords': [
                 "meilleure chanson 2025",
                 f"{artist} nouveau single",
@@ -353,27 +506,25 @@ def view_results():
                 "musique contemporaine",
                 "hits 2025"
             ],
-            'similar_artists': [
-                "Artiste similaire 1",
-                "Artiste similaire 2",
-                "Artiste similaire 3",
-                "Artiste similaire 4",
-                "Artiste similaire 5",
-                "Artiste similaire 6",
-                "Artiste similaire 7",
-                "Artiste similaire 8",
-                "Artiste similaire 9",
-                "Artiste similaire 10"
-            ]
+            'similar_artists': similar_artists
         }
     # Conversion de l'ancien format vers le nouveau format si nécessaire
     elif 'short_titles' not in campaign['marketing_data'] and 'short_title' in campaign['marketing_data']:
         marketing_data = campaign['marketing_data']
         artist = campaign.get('artist', '')
         song = campaign.get('song', '')
+        genres = campaign.get('genres', [])
+        language = campaign.get('language', 'français')
         short_title = marketing_data.get('short_title', '')
         long_title = marketing_data.get('long_title', '')
         description = marketing_data.get('description', '')
+        
+        # Générer des descriptions YouTube professionnelles
+        youtube_short, youtube_full = generate_youtube_descriptions(artist, song, genres, language)
+        
+        # Obtenir des artistes similaires basés sur le genre
+        chartmetric_data = call_chartmetric_service(artist, genres)
+        similar_artists = chartmetric_data.get('lookalike_artists', [])
         
         campaign['marketing_data']['short_titles'] = [
             short_title,
@@ -396,6 +547,8 @@ def view_results():
             f"Avec {song}, {artist} nous offre une chanson sincère et touchante sur les relations.",
             f"Découvrez {song}, le nouveau single de {artist} qui parle d'amour et d'émotions."
         ]
+        campaign['marketing_data']['youtube_short'] = youtube_short
+        campaign['marketing_data']['youtube_full'] = youtube_full
         campaign['marketing_data']['long_tail_keywords'] = [
             "meilleure chanson 2025",
             f"{artist} nouveau single",
@@ -408,18 +561,7 @@ def view_results():
             "musique contemporaine",
             "hits 2025"
         ]
-        campaign['marketing_data']['similar_artists'] = [
-            "Patrick Bruel",
-            "Calogero",
-            "Vianney",
-            "Amir",
-            "Kendji Girac",
-            "Zaz",
-            "Jean-Jacques Goldman",
-            "Florent Pagny",
-            "M. Pokora",
-            "Slimane"
-        ]
+        campaign['marketing_data']['similar_artists'] = similar_artists
     
     # Préparer les données d'analyse pour le template
     analysis = {
