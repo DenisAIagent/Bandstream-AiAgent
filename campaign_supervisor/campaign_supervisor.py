@@ -34,7 +34,35 @@ async def fetch_data(session, url, data, retries=5):
 @app.route('/')
 def index():
     template = env.get_template('index.html')
-    return template.render()
+    # Fournir des valeurs par défaut pour toutes les variables utilisées dans le template
+    return template.render(
+        analysis={
+            "artist": "Aucun artiste sélectionné",
+            "song": "Aucune chanson sélectionnée",
+            "genres": [],
+            "trends": [],
+            "lookalike_artists": [],
+            "metrics": {
+                "spotify": {"followers": 0, "monthly_listeners": 0, "popularity": 0},
+                "youtube": {"subscribers": 0, "views": 0},
+                "social_media": {"instagram": 0, "tiktok": 0, "twitter": 0}
+            }
+        },
+        ads={
+            "social_media": [],
+            "email": "",
+            "press_release": "",
+            "announcement": ""
+        },
+        strategy={
+            "recommendations": [],
+            "platforms": [],
+            "timeline": [],
+            "target_audience": ""
+        },
+        chartmetric_status="En attente",
+        chartmetric_status_class="status-pending"
+    )
 
 @app.route('/generate_campaign', methods=['POST'])
 async def generate_campaign():
@@ -91,7 +119,9 @@ async def generate_campaign():
         result = {
             "analysis": analysis_data,
             "ads": ad_data,
-            "strategy": optimizer_data["strategy"]
+            "strategy": optimizer_data["strategy"],
+            "chartmetric_status": "Opérationnel",
+            "chartmetric_status_class": "status-ok"
         }
 
         template = env.get_template('result.html')
