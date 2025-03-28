@@ -19,8 +19,15 @@ if not chartmetric_refresh_token:
     logger.critical("CHARTMETRIC_REFRESH_TOKEN manquant")
     raise ValueError("CHARTMETRIC_REFRESH_TOKEN manquant")
 
-# Initialisation de l'application
-app = Quart(__name__)
+# Sous-classer Quart pour initialiser la configuration manquante
+class CustomQuart(Quart):
+    def __init__(self, *args, **kwargs):
+        # Initialiser la configuration avant d'appeler le constructeur parent
+        self.config = {"PROVIDE_AUTOMATIC_OPTIONS": True}
+        super().__init__(*args, **kwargs)
+
+# Utiliser la classe personnalisée au lieu de Quart directement
+app = CustomQuart(__name__)
 
 # Initialisation des gestionnaires
 cache_manager = CacheManager(default_ttl=3600)  # 1 heure par défaut
