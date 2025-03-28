@@ -73,17 +73,23 @@ def index():
 @app.route('/generate_campaign', methods=['POST'])
 def generate_campaign():
     if request.method == 'POST':
-        # Récupérer les données du formulaire
-        artist = request.form.get('artist', '')
-        song = request.form.get('song', '')
-        genres = request.form.getlist('genres')
-        language = request.form.get('language', 'français')
-        promotion_type = request.form.get('promotion_type', 'sortie')
-        lyrics = request.form.get('lyrics', '')
-        bio = request.form.get('bio', '')
-        song_link = request.form.get('song_link', '')
+        # Récupérer les données JSON au lieu des données de formulaire
+        data = request.get_json()
+        if not data:
+            logger.info("Aucune donnée JSON reçue")
+            return redirect(url_for('index'))
         
-        logger.info(f"Données de formulaire reçues: {request.form}")
+        # Extraire les données du JSON
+        artist = data.get('artist', '')
+        song = data.get('song', '')
+        genres = data.get('genres', [])
+        language = data.get('language', 'français')
+        promotion_type = data.get('promotion_type', 'sortie')
+        lyrics = data.get('lyrics', '')
+        bio = data.get('bio', '')
+        song_link = data.get('song_link', '')
+        
+        logger.info(f"Données JSON reçues: {data}")
 
         # Générer un ID unique pour la campagne
         campaign_id = str(uuid.uuid4())
@@ -109,7 +115,7 @@ def generate_campaign():
             }
         }
         
-        # Stocker la campagne dans le dictionnaire global au lieu de la session
+        # Stocker la campagne dans le dictionnaire global
         campaigns_store[campaign_id] = campaign
         
         # Lancer la génération de la campagne en arrière-plan
