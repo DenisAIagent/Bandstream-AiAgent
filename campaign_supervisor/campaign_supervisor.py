@@ -1,9 +1,9 @@
-import asyncio
 import logging
 import os
 import uuid
+import threading
+import time
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
-import aiohttp
 from jinja2 import Environment, FileSystemLoader
 from asgiref.wsgi import WsgiToAsgi
 
@@ -24,18 +24,6 @@ env = Environment(loader=FileSystemLoader(templates_dir))
 # Stockage temporaire des campagnes en cours de génération
 # Dans une application de production, utilisez une base de données
 campaigns = {}
-
-async def fetch_data(session, url, data, retries=5):
-    for attempt in range(retries):
-        try:
-            async with session.post(url, json=data, timeout=10) as response:
-                response.raise_for_status()
-                return await response.json()
-        except Exception as e:
-            logger.warning(f"Attempt {attempt + 1}/{retries} failed for {url}: {str(e)}")
-            if attempt + 1 == retries:
-                raise Exception(f"Failed to call {url} after {retries} attempts: {str(e)}. Please try again later.")
-            await asyncio.sleep(2 ** attempt)
 
 @app.route('/')
 def index():
@@ -92,9 +80,11 @@ def generate_campaign():
         "results": None
     }
     
-    # Lancer la génération de la campagne en arrière-plan (simulation)
-    # Dans une application réelle, vous utiliseriez Celery ou un autre système de tâches asynchrones
-    asyncio.create_task(generate_campaign_async(campaign_id))
+    # Lancer la génération de la campagne en arrière-plan avec un thread
+    # au lieu d'utiliser asyncio.create_task()
+    thread = threading.Thread(target=generate_campaign_thread, args=(campaign_id,))
+    thread.daemon = True  # Le thread s'arrêtera quand le programme principal s'arrête
+    thread.start()
     
     # Rediriger vers la page de résultats
     return render_template('results.html', 
@@ -131,13 +121,13 @@ def campaign_results(campaign_id):
                           analysis=campaign["data"],
                           campaign_results=campaign["results"] if campaign["results"] else {})
 
-async def generate_campaign_async(campaign_id):
-    """Fonction asynchrone pour générer la campagne marketing"""
+def generate_campaign_thread(campaign_id):
+    """Fonction exécutée dans un thread séparé pour générer la campagne marketing"""
     if campaign_id not in campaigns:
         return
     
     # Simuler un délai de traitement
-    await asyncio.sleep(10)
+    time.sleep(10)
     
     # Générer des résultats fictifs pour la démonstration
     # Dans une application réelle, vous appelleriez ici vos services d'IA
