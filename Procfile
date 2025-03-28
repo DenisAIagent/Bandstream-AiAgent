@@ -1,1 +1,1 @@
-web: hypercorn campaign_analyst.campaign_analyst:app --bind 0.0.0.0:$PORT
+web: uvicorn asgi:asgi_app --host=0.0.0.0 --port=$PORT
