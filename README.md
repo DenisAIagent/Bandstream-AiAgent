@@ -1,102 +1,195 @@
-# Band Stream Crew IA Agent - Marketing Agent
+# Band Stream Crew IA Agent
 
-Ce module fait partie du projet Band Stream Crew IA Agent, une application modulaire pour générer des campagnes marketing pour des artistes musicaux.
+## Vue d'ensemble
 
-## Description
+Band Stream Crew IA Agent est une application modulaire sophistiquée conçue pour générer des campagnes marketing optimisées pour les artistes musicaux. Ce système utilise l'intelligence artificielle pour analyser les tendances du marché musical, identifier les artistes similaires, et créer des annonces publicitaires efficaces qui respectent les règles de Google Ads.
 
-Le Marketing Agent est responsable de la génération de contenu publicitaire pour les artistes musicaux. Il utilise l'API OpenAI pour créer des titres courts, des titres longs et des descriptions détaillées qui peuvent être utilisés dans des campagnes Google Ads.
+## Architecture du système
 
-## Fonctionnalités
+Le système est composé de 5 agents autonomes, chacun hébergé dans son propre conteneur Docker, fonctionnant de manière asynchrone pour maximiser l'efficacité et la réactivité :
 
-- Génération de 5 titres courts accrocheurs (maximum 30 caractères)
-- Génération de 5 titres longs plus descriptifs (maximum 90 caractères)
-- Génération de 5 descriptions longues détaillées (environ 150-200 mots chacune)
-- Affichage des résultats dans un template HTML élégant et responsive
-- API REST pour l'intégration avec d'autres modules du projet
+1. **MAIN** - Interface utilisateur
+   * Point d'entrée principal du système
+   * Gère les interactions avec l'utilisateur en temps réel
+   * Coordonne les flux de travail entre les différents agents
+   * Implémente des websockets pour les mises à jour en direct
 
-## Installation
+2. **SUPERVISOR** - Chef de projet
+   * Supervise l'ensemble du processus de génération de campagne
+   * Assure la cohérence entre les différentes étapes
+   * Valide les résultats avant leur présentation à l'utilisateur
+   * Gère les files d'attente de tâches et la distribution du travail
 
-1. Décompressez le fichier `band_stream_marketing_agent.zip`
-2. Installez les dépendances :
+3. **ANALYST** - Recherche d'insights
+   * Collecte et analyse les données sur les artistes et les tendances musicales
+   * Utilise les APIs externes pour obtenir des informations pertinentes
+   * Génère des insights stratégiques pour orienter la création de campagnes
+   * Exécute des tâches d'analyse parallèles pour accélérer le traitement
+
+4. **MARKETING** - Rédaction d'annonces
+   * Crée des textes publicitaires adaptés au style de l'artiste
+   * Optimise les messages en fonction des tendances identifiées
+   * Assure la conformité avec les bonnes pratiques marketing
+   * Génère plusieurs variantes de contenu simultanément
+
+5. **OPTIMIZER** - Optimisation
+   * Affine les annonces pour maximiser leur efficacité
+   * Vérifie la conformité avec les règles de Google Ads
+   * Propose des améliorations basées sur les performances prévues
+   * Effectue des tests A/B automatisés pour affiner les résultats
+
+## Communication entre les agents
+
+Les agents communiquent via une API Flask centrale avec un système de messagerie asynchrone qui :
+* Facilite l'échange de données entre les différents modules sans blocage
+* Maintient la cohérence des informations à travers le système
+* Permet une architecture découplée où chaque agent peut évoluer indépendamment
+* Utilise des files d'attente Redis pour la gestion des tâches asynchrones
+* Implémente des websockets pour les communications en temps réel
+* Gère les retries automatiques en cas d'échec de communication
+* Permet l'exécution parallèle de multiples tâches pour optimiser les performances
+
+## Sources de données
+
+Le système s'appuie sur plusieurs APIs externes pour obtenir des données pertinentes, toutes intégrées avec un traitement asynchrone pour optimiser les performances :
+
+* **Spotify API** - Pour accéder aux métadonnées des artistes, aux statistiques d'écoute et aux caractéristiques musicales
+  * Utilisation des endpoints `/artists`, `/audio-features` et `/recommendations`
+  * Extraction des données de popularité, genres et artistes similaires
+  * Analyse des caractéristiques audio (danceability, energy, tempo)
+
+* **Deezer API** - Pour obtenir des informations complémentaires sur les artistes et leur audience
+  * Endpoints `/artist` et `/chart` pour les données de classement
+  * Analyse des fans et de leur répartition géographique
+  * Statistiques d'écoute par plateforme
+
+* **YouTube/SerpApi** - Pour analyser la présence des artistes sur YouTube et leur visibilité en ligne
+  * Extraction des statistiques de vidéos (vues, likes, commentaires)
+  * Analyse des tendances de recherche liées à l'artiste
+  * Évaluation de l'engagement du public sur les contenus
+
+* **Google Trends** - Pour identifier les tendances actuelles liées aux genres musicaux et aux artistes
+  * Données d'intérêt au fil du temps
+  * Comparaisons régionales et saisonnières
+  * Requêtes associées et sujets connexes
+
+* **Chartmetrics** - Pour des analyses approfondies de performance et de positionnement
+  * Suivi des performances sur les plateformes de streaming
+  * Analyse comparative avec les concurrents
+  * Métriques d'engagement social et de croissance d'audience
+  * Données démographiques détaillées des auditeurs
+
+## Fonctionnalités principales
+
+### Analyse de marché
+* Identification des artistes similaires à l'artiste cible
+* Analyse des tendances actuelles dans le genre musical concerné
+* Évaluation de la concurrence et des opportunités de marché
+
+### Génération de contenu
+* Création d'annonces publicitaires adaptées au style de l'artiste
+* Rédaction de textes optimisés pour différentes plateformes
+* Suggestions visuelles cohérentes avec l'identité de l'artiste
+
+### Optimisation des campagnes
+* Conformité avec les règles de Google Ads
+* Maximisation du taux de conversion potentiel
+* Recommandations pour le ciblage d'audience
+
+## Flux de travail typique
+
+1. L'utilisateur soumet une demande via l'interface MAIN
+2. Le SUPERVISOR établit un plan de travail et distribue les tâches
+3. L'ANALYST collecte et analyse les données pertinentes
+4. Le MARKETING génère des propositions d'annonces
+5. L'OPTIMIZER affine et optimise les annonces
+6. Le SUPERVISOR valide les résultats
+7. MAIN présente les campagnes finalisées à l'utilisateur
+
+## Avantages du système
+
+* **Automatisation** - Réduit considérablement le temps nécessaire pour créer des campagnes marketing efficaces
+* **Intelligence** - Utilise l'IA pour identifier les tendances et opportunités que les humains pourraient manquer
+* **Cohérence** - Assure une qualité constante dans toutes les campagnes générées
+* **Conformité** - Garantit que toutes les annonces respectent les règles des plateformes publicitaires
+* **Évolutivité** - L'architecture modulaire permet d'ajouter facilement de nouvelles fonctionnalités
+
+## Prérequis techniques
+
+* Docker et Docker Compose pour l'exécution des conteneurs
+* Accès aux APIs (Spotify, Deezer, YouTube/SerpApi, Google Trends)
+* Connexion Internet stable pour les communications entre agents et APIs externes
+
+## Installation et déploiement
+
+Le système utilise Docker pour faciliter le déploiement :
 
 ```bash
-pip install -r requirements.txt
-```
+# Cloner le dépôt
+git clone https://github.com/votre-organisation/band-stream-crew.git
 
-3. Configurez votre clé API OpenAI dans le fichier `.env` :
+# Accéder au répertoire
+cd band-stream-crew
 
-```
-OPENAI_API_KEY=votre_clé_api_openai
+# Configurer les variables d'environnement
+cp .env.example .env
+# Éditer le fichier .env avec vos clés d'API
+
+# Lancer les conteneurs
+docker-compose up -d
 ```
 
 ## Utilisation
 
-### Démarrer le serveur
+Une fois le système déployé, accédez à l'interface utilisateur via :
+
+```
+http://localhost:8080
+```
+
+Suivez les instructions à l'écran pour :
+1. Saisir les informations sur l'artiste
+2. Définir les objectifs de la campagne
+3. Spécifier les contraintes (budget, plateformes, etc.)
+4. Lancer la génération de campagne
+5. Examiner et exporter les résultats
+
+## Maintenance et mise à jour
+
+Le système est conçu pour être facilement maintenu et mis à jour :
 
 ```bash
-python marketing_agent.py
+# Mettre à jour le code source
+git pull
+
+# Reconstruire les conteneurs avec les dernières modifications
+docker-compose build
+
+# Redémarrer les services
+docker-compose down
+docker-compose up -d
 ```
 
-Le serveur démarre sur le port 5000 par défaut.
+## Dépannage
 
-### Prévisualisation avec des données d'exemple
+Problèmes courants et solutions :
 
-Accédez à `http://localhost:5000/preview` pour voir un exemple de résultat avec des données prédéfinies.
+* **Erreurs d'API** - Vérifiez la validité de vos clés d'API dans le fichier .env
+* **Problèmes de communication entre agents** - Assurez-vous que tous les conteneurs sont en cours d'exécution
+* **Résultats incomplets** - Vérifiez les journaux pour identifier l'agent qui rencontre des difficultés
 
-### Générer du contenu via l'API
+## Contribution
 
-Envoyez une requête POST à `http://localhost:5000/generate` avec un payload JSON comme celui-ci :
+Les contributions au projet sont les bienvenues. Veuillez suivre ces étapes :
 
-```json
-{
-    "artist_name": "Nom de l'artiste",
-    "single_name": "Nom du single",
-    "similar_artists": ["Artiste similaire 1", "Artiste similaire 2", "Artiste similaire 3"],
-    "genre": "Genre musical",
-    "mood": "Ambiance"
-}
-```
+1. Forker le dépôt
+2. Créer une branche pour votre fonctionnalité
+3. Soumettre une pull request avec une description détaillée
 
-La réponse contiendra à la fois le HTML généré et les données structurées :
+## Licence
 
-```json
-{
-    "html": "...",
-    "data": {
-        "artist_name": "Nom de l'artiste",
-        "single_name": "Nom du single",
-        "similar_artists": ["..."],
-        "short_titles": ["..."],
-        "long_titles": ["..."],
-        "long_descriptions": ["..."],
-        "artist_image_url": null
-    }
-}
-```
+Ce projet est sous licence [insérer type de licence]. Voir le fichier LICENSE pour plus de détails.
 
-## Intégration avec Band Stream Crew IA Agent
+---
 
-Ce module est conçu pour s'intégrer avec les autres agents du projet Band Stream Crew IA Agent :
-
-1. **MAIN** (interface utilisateur) peut appeler l'API `/generate` pour obtenir du contenu publicitaire
-2. **SUPERVISOR** (chef de projet) peut orchestrer les appels entre l'ANALYST et le MARKETING agent
-3. **ANALYST** (recherche d'insights) peut fournir les données d'entrée (artistes similaires, etc.)
-4. **OPTIMIZER** (optimisation) peut utiliser les résultats pour optimiser les campagnes
-
-## Personnalisation
-
-Le template HTML (`template.html`) peut être modifié pour correspondre à votre charte graphique. Il utilise le moteur de template Jinja2 avec les variables suivantes :
-
-- `{{ artist_name }}` - Nom de l'artiste
-- `{{ single_name }}` - Nom du single
-- `{{ similar_artists }}` - Liste des artistes similaires
-- `{{ short_titles }}` - Liste des titres courts
-- `{{ long_titles }}` - Liste des titres longs
-- `{{ long_descriptions }}` - Liste des descriptions longues
-- `{{ artist_image_url }}` - URL de l'image de l'artiste (si disponible)
-
-## Notes techniques
-
-- Le serveur Flask est configuré pour le développement. Pour la production, utilisez un serveur WSGI comme Gunicorn.
-- La fonction `get_artist_image_url()` est un placeholder. Dans une implémentation réelle, vous pourriez utiliser l'API Spotify ou une autre source pour obtenir des images d'artistes.
-- Si la clé API OpenAI n'est pas configurée ou si une erreur se produit, le système utilisera des réponses par défaut.
+Développé avec ❤️ par [Votre Organisation]
