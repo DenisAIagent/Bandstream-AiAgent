@@ -109,6 +109,15 @@
             border-radius: 3px;
         }
         
+        h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin: 1.5rem 0 1rem 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+        
         p {
             margin-bottom: 1.5rem;
             font-size: 1.05rem;
@@ -366,21 +375,55 @@
                         <div class="section-icon"><i class="fas fa-chevron-down"></i></div>
                     </div>
                     <div class="section-content" style="display: block;">
+                        <h3>Titres courts (30 caractères) </h3>
                         <div class="result-grid">
-                            <div class="result-item">
-                                <div class="result-title">Titre court</div>
-                                <div class="result-content">{{ campaign_results.short_title }}</div>
-                            </div>
-                            
-                            <div class="result-item">
-                                <div class="result-title">Titre long</div>
-                                <div class="result-content">{{ campaign_results.long_title }}</div>
-                            </div>
-                            
-                            <div class="result-item">
-                                <div class="result-title">Description</div>
-                                <div class="result-content">{{ campaign_results.description }}</div>
-                            </div>
+                            {% if campaign_results.short_titles %}
+                                {% for title in campaign_results.short_titles %}
+                                <div class="result-item">
+                                    <div class="result-title">Titre {{ loop.index }}</div>
+                                    <div class="result-content">{{ title }}</div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="result-item">
+                                    <div class="result-title">Titre court</div>
+                                    <div class="result-content">{{ campaign_results.short_title }}</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <h3>Titres longs (90 caractères)</h3>
+                        <div class="result-grid">
+                            {% if campaign_results.long_titles %}
+                                {% for title in campaign_results.long_titles %}
+                                <div class="result-item">
+                                    <div class="result-title">Titre {{ loop.index }}</div>
+                                    <div class="result-content">{{ title }}</div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="result-item">
+                                    <div class="result-title">Titre long</div>
+                                    <div class="result-content">{{ campaign_results.long_title }}</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <h3>Descriptions (90 caractères)</h3>
+                        <div class="result-grid">
+                            {% if campaign_results.descriptions %}
+                                {% for description in campaign_results.descriptions %}
+                                <div class="result-item">
+                                    <div class="result-title">Description {{ loop.index }}</div>
+                                    <div class="result-content">{{ description }}</div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="result-item">
+                                    <div class="result-title">Description</div>
+                                    <div class="result-content">{{ campaign_results.description }}</div>
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -405,6 +448,56 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Section Long Tail Keywords -->
+                <div class="section-container">
+                    <div class="section-header active">
+                        <div class="section-title">Long Tail Keywords</div>
+                        <div class="section-icon"><i class="fas fa-chevron-down"></i></div>
+                    </div>
+                    <div class="section-content" style="display: block;">
+                        <div class="result-grid">
+                            {% if campaign_results.long_tail_keywords %}
+                                {% for keyword in campaign_results.long_tail_keywords %}
+                                <div class="result-item">
+                                    <div class="result-title">Keyword {{ loop.index }}</div>
+                                    <div class="result-content">{{ keyword }}</div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="result-item">
+                                    <div class="result-title">Aucun keyword disponible</div>
+                                    <div class="result-content">Les long tail keywords seront générés lors de la prochaine campagne.</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Section Artistes Similaires -->
+                <div class="section-container">
+                    <div class="section-header active">
+                        <div class="section-title">Artistes Similaires</div>
+                        <div class="section-icon"><i class="fas fa-chevron-down"></i></div>
+                    </div>
+                    <div class="section-content" style="display: block;">
+                        <div class="result-grid">
+                            {% if campaign_results.similar_artists %}
+                                {% for artist in campaign_results.similar_artists %}
+                                <div class="result-item">
+                                    <div class="result-title">Artiste {{ loop.index }}</div>
+                                    <div class="result-content">{{ artist }}</div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="result-item">
+                                    <div class="result-title">Aucun artiste similaire disponible</div>
+                                    <div class="result-content">Les artistes similaires seront générés lors de la prochaine campagne.</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <a href="/" class="btn">Retour à l'accueil</a>
@@ -418,7 +511,7 @@
     {% if campaign_status == "generating" %}
     <script>
         // Vérifier l'état de la génération toutes les 5 secondes
-        setTimeout(function checkStatus()  {
+        setTimeout(function checkStatus() {
             fetch('/campaign_status?id={{ campaign_id }}')
                 .then(response => response.json())
                 .then(data => {
