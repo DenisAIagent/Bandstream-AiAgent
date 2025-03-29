@@ -188,8 +188,8 @@ Les contributions au projet sont les bienvenues. Veuillez suivre ces étapes :
 
 ## Licence
 
-Ce projet est sous licence [insérer type de licence]. Voir le fichier LICENSE pour plus de détails.
+Ce projet est sous licence propriétaire. Voir le fichier LICENSE pour plus de détails.
 
 ---
 
-Développé avec ❤️ par [Votre Organisation]
+Développé avec ❤️ par Band Stream
